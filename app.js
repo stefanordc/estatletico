@@ -1219,6 +1219,11 @@ const populateFilter = (id, values) => {
 const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
     const inp = document.getElementById(id); if (!inp) return;
     
+    // Check if already initialized
+    if (inp.parentElement.classList.contains('autocomplete-container')) {
+        return;
+    }
+
     // Create a dedicated wrapper for the input to ensure correct absolute positioning
     const wrapper = document.createElement('div');
     wrapper.className = 'autocomplete-container';
@@ -2247,7 +2252,14 @@ const setupAutofillHandler = () => {
 };
 
 // INITIAL LISTENERS
-tabButtons.forEach(btn => btn.addEventListener('click', () => { tabButtons.forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderTab(btn.dataset.tab); }));
+tabButtons.forEach(btn => btn.addEventListener('click', () => { 
+    // Only handle if it's a Cadastros tab
+    if (!btn.closest('#cadastros-section')) return;
+    
+    tabButtons.forEach(b => b.classList.remove('active')); 
+    btn.classList.add('active'); 
+    renderTab(btn.dataset.tab); 
+}));
 document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     const page = item.dataset.page;
     if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'cadastros'].includes(page)) {
