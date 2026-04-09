@@ -1290,7 +1290,38 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 </div>
                 <div class="form-block" id="block-3"><div class="stats-section"><div class="stats-section-title">Pênaltis</div><div class="p-4"><div class="form-group" style="width:200px;"><label>Pênaltis</label><select name="penaltis" id="game-penaltis-toggle"><option value="Não" ${jogoToEdit?.penaltis === 'Não' ? 'selected' : ''}>Não</option><option value="Sim" ${jogoToEdit?.penaltis === 'Sim' ? 'selected' : ''}>Sim</option></select></div><div id="penaltis-placar" style="display:${jogoToEdit?.penaltis === 'Sim' ? 'grid' : 'none'};" class="form-grid"><div class="form-group"><label>Gols Pênaltis Casa</label><input type="number" name="penaltisCasa" id="game-pen-casa" value="${jogoToEdit?.penaltisCasa || 0}"></div><div class="form-group"><label>Gols Pênaltis Fora</label><input type="number" name="penaltisFora" id="game-pen-fora" value="${jogoToEdit?.penaltisFora || 0}"></div></div><div class="form-group" style="margin-top:2rem;"><label>Observações</label><textarea name="observacao" rows="6" placeholder="Observações da partida...">${jogoToEdit?.observacao || ''}</textarea></div></div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(2)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(4)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
                 <div class="form-block" id="block-4"><div class="stats-section"><div class="stats-section-title">Cartões - Atlético <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-galo"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('galo')">+ Adicionar Cartão</button></div><div class="stats-section"><div class="stats-section-title">Cartões - Adversário <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-adv"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-adv-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('adv')">+ Adicionar Cartão</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(3)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(5)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
-                <div class="form-block" id="block-5"><div class="stats-section"><div class="stats-section-title">Escalação do Atlético</div><table class="stats-table"><thead><tr><th class="col-mini">Foto</th><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Idade</th><th class="col-mini" title="Gols Marcados">GM *</th><th class="col-small">Min. GM</th><th class="col-small">T. GM</th><th class="col-mini" title="Gols Sofridos">GS *</th><th class="col-small">Min. GS</th><th class="col-small">T. GS</th><th class="col-mini">Titular</th><th class="col-mini">Subst.</th><th class="col-mini"></th></tr></thead><tbody id="lineup-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addLineupRow('galo')">+ Adicionar Jogador</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button><button type="button" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button></div></div>
+                <div class="form-block" id="block-5">
+                    <div class="stats-section">
+                        <div class="stats-section-title">Escalação do Atlético</div>
+                        <div style="overflow-x: auto;">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-mini">Foto</th>
+                                        <th class="col-player">Jogador *</th>
+                                        <th class="col-med">Posição *</th>
+                                        <th class="col-mini">Idade</th>
+                                        <th class="col-mini" title="Gols Marcados">GM *</th>
+                                        <th class="col-small">Min. GM</th>
+                                        <th class="col-small">T. GM</th>
+                                        <th class="col-mini" title="Gols Sofridos">GS *</th>
+                                        <th class="col-small">Min. GS</th>
+                                        <th class="col-small">T. GS</th>
+                                        <th class="col-mini">Titular</th>
+                                        <th class="col-mini">Subst.</th>
+                                        <th class="col-mini"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lineup-galo-body"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addLineupRow('galo')">+ Adicionar Jogador</button>
+                    </div>
+                    <div class="flex-end">
+                        <button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button>
+                        <button type="button" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
+                    </div>
+                </div>
             </form>
         </div>
     `;
@@ -1378,8 +1409,26 @@ const addCardRow = (team, data = null) => {
 };
 
 const addLineupRow = (team, data = null) => {
-    const isAdv = team === 'adv'; const tbody = document.getElementById(`lineup-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
-    row.innerHTML = `<td><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td><td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || '' }">` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}"></div>`}</td><td><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-' }"></td><td><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-' }"></td><td><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;"></td><td class="min-goals-td"></td><td class="tempo-goals-td"></td><td><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;"></td><td class="min-gs-td"></td><td class="tempo-gs-td"></td><td><input type="checkbox" class="titular-ck" ${ (data ? data.titular : true) ? 'checked' : '' }></td><td><input type="checkbox" class="sub-ck" ${ (data ? data.substituido : false) ? 'checked' : '' }></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    const isAdv = team === 'adv';
+    const tbody = document.getElementById(`lineup-${team}-body`);
+    const row = document.createElement('tr');
+    const season = document.getElementById('game-temporada').value;
+
+    row.innerHTML = `
+        <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
+        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}">` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}"></div>`}</td>
+        <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}"></td>
+        <td class="col-mini"><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-'}"></td>
+        <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;"></td>
+        <td class="min-goals-td col-small"></td>
+        <td class="tempo-goals-td col-small"></td>
+        <td class="col-mini"><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;"></td>
+        <td class="min-gs-td col-small"></td>
+        <td class="tempo-gs-td col-small"></td>
+        <td class="col-mini"><input type="checkbox" class="titular-ck" ${(data ? data.titular : true) ? 'checked' : ''}></td>
+        <td class="col-mini"><input type="checkbox" class="sub-ck" ${(data ? data.substituido : false) ? 'checked' : ''}></td>
+        <td class="col-mini"><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>
+    `;
     
     const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
     const updateGoals = () => { 
@@ -1698,28 +1747,32 @@ const renderGoalDistributionCharts = (filteredJogos) => {
     filteredJogos.forEach(j => {
         j.lineupGalo?.forEach(l => {
             // Processing Gols Marcados (GM)
-            (l.golsMin || []).forEach((m, idx) => {
-                let min = parseInt(m);
-                if (isNaN(min)) return;
-                
-                const tempo = parseInt(l.golsTempo?.[idx] || 1);
-                if (tempo === 2) min += 45; // Logic: 15' 2T = 60'
-                
-                const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
-                if (binIdx >= 0) gmData[binIdx]++;
-            });
+            if (l.golsCount > 0 && l.golsMin) {
+                l.golsMin.forEach((m, idx) => {
+                    let min = parseInt(m);
+                    if (isNaN(min)) return;
+                    
+                    const tempo = parseInt(l.golsTempo?.[idx] || 1);
+                    if (tempo === 2) min += 45; // Ex: 15' 2T = 60'
+                    
+                    const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                    if (binIdx >= 0) gmData[binIdx]++;
+                });
+            }
 
             // Processing Gols Sofridos (GS)
-            (l.gsMin || []).forEach((m, idx) => {
-                let min = parseInt(m);
-                if (isNaN(min)) return;
-                
-                const tempo = parseInt(l.gsTempo?.[idx] || 1);
-                if (tempo === 2) min += 45;
-                
-                const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
-                if (binIdx >= 0) gsData[binIdx]++;
-            });
+            if (l.gsCount > 0 && l.gsMin) {
+                l.gsMin.forEach((m, idx) => {
+                    let min = parseInt(m);
+                    if (isNaN(min)) return;
+                    
+                    const tempo = parseInt(l.gsTempo?.[idx] || 1);
+                    if (tempo === 2) min += 45; // Ex: 15' 2T = 60'
+                    
+                    const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                    if (binIdx >= 0) gsData[binIdx]++;
+                });
+            }
         });
     });
 
