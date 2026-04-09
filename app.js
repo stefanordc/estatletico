@@ -1723,6 +1723,16 @@ const saveNewJogo = () => {
         return;
     }
 
+    // Checar duplicatas na escalação
+    const lineupNames = jogo.lineupGalo.map(l => l.jogador.trim().toLowerCase()).filter(n => n && n !== 'jogador');
+    const duplicates = lineupNames.filter((name, idx) => lineupNames.indexOf(name) !== idx);
+    if (duplicates.length > 0) {
+        const dupNames = [...new Set(duplicates)].join(', ');
+        showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" está(ão) inserido(s) mais de uma vez na escalação.`, 'error');
+        return;
+    }
+
+
     const gsTotal = jogo.lineupGalo.reduce((acc, obj) => acc + obj.gsCount, 0);
     const advGols = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa) || 0;
     if (gsTotal !== advGols) {
