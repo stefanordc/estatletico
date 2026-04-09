@@ -1274,18 +1274,18 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             <form id="multi-step-form">
                 <div class="form-block active" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" value="${jogoToEdit?.data || '2026-01-01'}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" value="${jogoToEdit?.rodada || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" value="${jogoToEdit?.fora || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || '2026-01-01'}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-2">
                     <div class="stats-section"><div class="stats-section-title">Arbitragem e Público</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Árbitro *</label><input type="text" name="arbitro" id="game-arbitro" value="${jogoToEdit?.arbitro || ''}"><label class="checkbox-inline"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Idade do Árbitro</label><input type="text" name="arbitroIdade" id="game-arbitro-idade" readonly value="${jogoToEdit?.arbitroIdade || ''}"></div><div class="form-group"><label>Federação do Árbitro</label><input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Árbitro *</label><input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}"><label class="checkbox-inline"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Idade do Árbitro</label><input type="text" name="arbitroIdade" id="game-arbitro-idade" readonly value="${jogoToEdit?.arbitroIdade || ''}"></div><div class="form-group"><label>Federação do Árbitro</label><input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Assistente 1</label><input type="text" name="assistente1" id="game-assistente1" value="${jogoToEdit?.assistente1 || ''}"></div><div class="form-group"><label>Assistente 2</label><input type="text" name="assistente2" id="game-assistente2" value="${jogoToEdit?.assistente2 || ''}"></div><div class="form-group"><label>VAR</label><input type="text" name="varArbitro" id="game-var" value="${jogoToEdit?.varArbitro || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" required value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-3"><div class="stats-section"><div class="stats-section-title">Pênaltis</div><div class="p-4"><div class="form-group" style="width:200px;"><label>Pênaltis</label><select name="penaltis" id="game-penaltis-toggle"><option value="Não" ${jogoToEdit?.penaltis === 'Não' ? 'selected' : ''}>Não</option><option value="Sim" ${jogoToEdit?.penaltis === 'Sim' ? 'selected' : ''}>Sim</option></select></div><div id="penaltis-placar" style="display:${jogoToEdit?.penaltis === 'Sim' ? 'grid' : 'none'};" class="form-grid"><div class="form-group"><label>Gols Pênaltis Casa</label><input type="number" name="penaltisCasa" id="game-pen-casa" value="${jogoToEdit?.penaltisCasa || 0}"></div><div class="form-group"><label>Gols Pênaltis Fora</label><input type="number" name="penaltisFora" id="game-pen-fora" value="${jogoToEdit?.penaltisFora || 0}"></div></div><div class="form-group" style="margin-top:2rem;"><label>Observações</label><textarea name="observacao" rows="6" placeholder="Observações da partida...">${jogoToEdit?.observacao || ''}</textarea></div></div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(2)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(4)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
@@ -1376,7 +1376,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
     const yellowVal = data ? data.amarelo : 1;
-    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário">' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}"></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }"></td>`}<td><select class="yellow-sel"><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel"><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
     if(!isAdv) { 
         const inp = row.querySelector('.card-player-inp'); 
         const id = 'cq-'+Date.now()+Math.random(); 
@@ -1416,13 +1416,13 @@ const addLineupRow = (team, data = null) => {
 
     row.innerHTML = `
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
-        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}">` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}"></div>`}</td>
-        <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}"></td>
+        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}" required></div>`}</td>
+        <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
         <td class="col-mini"><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-'}"></td>
-        <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;"></td>
+        <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
         <td class="tempo-goals-td col-small"></td>
-        <td class="col-mini"><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;"></td>
+        <td class="col-mini"><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;" required></td>
         <td class="min-gs-td col-small"></td>
         <td class="tempo-gs-td col-small"></td>
         <td class="col-mini"><input type="checkbox" class="titular-ck" ${(data ? data.titular : true) ? 'checked' : ''}></td>
@@ -1548,11 +1548,20 @@ const saveNewJogo = () => {
 
 // COMPARATIVO FUNCTIONS
 const renderComparativo = () => {
-    const seasons = [...new Set(state.jogos.map(j => j.temporada))].sort((a,b) => b - a);
-    [1,2,3,4,5].forEach(i => populateFilter(`comp-t${i}`, seasons));
+
+    [1,2,3,4,5].forEach(i => {
+        populateFilter(`comp-t${i}`, seasons);
+        populateFilter(`comp-tec${i}`, coaches);
+        populateFilter(`comp-jog${i}`, players);
+    });
     
     const updateComparativo = () => {
-        const selected = [1,2,3,4,5].map(i => document.getElementById(`comp-t${i}`).value);
+        const scenarios = [1,2,3,4,5].map(i => ({
+            temporada: document.getElementById(`comp-t${i}`).value,
+            tecnico: document.getElementById(`comp-tec${i}`).value,
+            jogador: document.getElementById(`comp-jog${i}`).value
+        }));
+        
         const container = document.getElementById('comparativo-content-container');
         
         const metricsTemplate = [
@@ -1564,84 +1573,151 @@ const renderComparativo = () => {
             { key: 'gm', label: 'Gols Marcados' },
             { key: 'gs', label: 'Gols Sofridos' },
             { key: 'saldo', label: 'Saldo de Gols' },
-            { key: 'artilheiro', label: 'Artilheiro' }
+            { key: 'artilheiro', label: 'Melhor do Perfil' }
         ];
 
-        const stats = selected.map(s => {
-            if (!s) return null;
-            const jogos = state.jogos.filter(j => j.temporada === s);
+        const datasetsGM = [];
+        const datasetsGS = [];
+        const colors = ['#d4af37', '#27ae60', '#2980b9', '#8e44ad', '#e67e22'];
+
+        const stats = scenarios.map((scen, idx) => {
+            if (!scen.temporada && !scen.tecnico && !scen.jogador) return null;
+            
+            const jogos = state.jogos.filter(j => {
+                if (scen.temporada && j.temporada !== scen.temporada) return false;
+                if (scen.tecnico && j.tecnicoGalo !== scen.tecnico) return false;
+                if (scen.jogador) {
+                    const inLineup = j.lineupGalo?.some(l => l.jogador === scen.jogador);
+                    if (!inLineup) return false;
+                }
+                return true;
+            });
+
             let jCount=0, v=0, e=0, d=0, gm=0, gs=0;
             const golsPorJogador = {};
+            const binsGM = [0,0,0,0,0,0];
+            const binsGS = [0,0,0,0,0,0];
             
             jogos.forEach(j => {
                 jCount++;
                 const isCasa = j.casa === 'Atlético';
                 const golGalo = parseInt(isCasa ? j.golsCasa : j.golsFora);
                 const golAdv = parseInt(isCasa ? j.golsFora : j.golsCasa);
-                gm += golGalo; gs += golAdv;
+                
+                // If a specific player is chosen for the column, GM should be HIS goals
+                if (scen.jogador) {
+                    const l = j.lineupGalo?.find(ply => ply.jogador === scen.jogador);
+                    const pGoals = parseInt(l?.golsCount || 0);
+                    gm += pGoals;
+                    gs += parseInt(l?.gsCount || 0);
+                    
+                    // Calc bins for this specific player
+                    if (l?.golsMin) {
+                        l.golsMin.forEach((m, idx) => {
+                            let min = parseInt(m); if (isNaN(min)) return;
+                            const tempo = parseInt(l.golsTempo?.[idx] || 1);
+                            if (tempo === 2) min += 45;
+                            const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                            if (bIdx >= 0) binsGM[bIdx]++;
+                        });
+                    }
+                    if (l?.gsMin) {
+                        l.gsMin.forEach((m, idx) => {
+                            let min = parseInt(m); if (isNaN(min)) return;
+                            const tempo = parseInt(l.gsTempo?.[idx] || 1);
+                            if (tempo === 2) min += 45;
+                            const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                            if (bIdx >= 0) binsGS[bIdx]++;
+                        });
+                    }
+                } else {
+                    gm += golGalo;
+                    gs += golAdv;
+                    
+                    // Full team distribution
+                    j.lineupGalo?.forEach(l => {
+                        (l.golsMin || []).forEach((m, idx) => {
+                            let min = parseInt(m); if (isNaN(min)) return;
+                            const tempo = parseInt(l.golsTempo?.[idx] || 1);
+                            if (tempo === 2) min += 45;
+                            const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                            if (bIdx >= 0) binsGM[bIdx]++;
+                        });
+                        (l.gsMin || []).forEach((m, idx) => {
+                            let min = parseInt(m); if (isNaN(min)) return;
+                            const tempo = parseInt(l.gsTempo?.[idx] || 1);
+                            if (tempo === 2) min += 45;
+                            const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                            if (bIdx >= 0) binsGS[bIdx]++;
+                        });
+                    });
+                }
+
                 if (golGalo > golAdv) v++; else if (golGalo === golAdv) e++; else d++;
 
                 (j.lineupGalo || []).forEach(l => {
                     const g = parseInt(l.golsCount || 0);
-                    if (g > 0) {
-                        golsPorJogador[l.jogador] = (golsPorJogador[l.jogador] || 0) + g;
-                    }
+                    if (g > 0) golsPorJogador[l.jogador] = (golsPorJogador[l.jogador] || 0) + g;
                 });
             });
 
-            // Find artilheiro
-            let topGol = parseInt(0), topName = '-';
-            Object.keys(golsPorJogador).forEach(k => {
-                if (golsPorJogador[k] > topGol) { topGol = golsPorJogador[k]; topName = k; }
-            });
-            const artilheiroStr = topGol > 0 ? `${topName} (${topGol})` : '-';
-            const aprov = jCount > 0 ? ((v * 3 + e) / (jCount * 3) * 100).toFixed(1) + '%' : '0%';
-            const saldo = gm - gs > 0 ? `+${gm - gs}` : gm - gs;
+            let topGol = 0, topName = '-';
+            Object.keys(golsPorJogador).forEach(k => { if (golsPorJogador[k] > topGol) { topGol = golsPorJogador[k]; topName = k; } });
             
-            // Format colors
-            const vText = `<span style="color:#27ae60">${v}</span>`;
-            const eText = `<span style="color:#f39c12">${e}</span>`;
-            const dText = `<span style="color:#e74c3c">${d}</span>`;
-            const saldoText = gm - gs > 0 ? `<span style="color:#27ae60;font-weight:bold;">${saldo}</span>` : `<span style="color:${gm - gs < 0 ? '#e74c3c' : 'black'};font-weight:bold;">${saldo}</span>`;
-            
+            const label = scen.temporada || scen.tecnico || scen.jogador || `Seleção ${idx+1}`;
+            datasetsGM.push({ label: label, data: binsGM, backgroundColor: colors[idx], borderColor: colors[idx], borderWidth: 1 });
+            datasetsGS.push({ label: label, data: binsGS, backgroundColor: colors[idx].replace(')', ', 0.7)').replace('rgb', 'rgba'), borderColor: colors[idx], borderWidth: 1 });
+
             return {
-                temporada: s, jogos: jCount, vitorias: vText, empates: eText, derrotas: dText,
-                aprov: `<strong>${aprov}</strong>`, gm: gm, gs: gs, saldo: saldoText, artilheiro: artilheiroStr
+                label: label, jogos: jCount, vitorias: `<span style="color:#27ae60">${v}</span>`, empates: `<span style="color:#f39c12">${e}</span>`, derrotas: `<span style="color:#e74c3c">${d}</span>`,
+                aprov: `<strong>${jCount > 0 ? ((v * 3 + e) / (jCount * 3) * 100).toFixed(1) + '%' : '0%'}</strong>`, gm: gm, gs: gs, saldo: gm - gs, artilheiro: topGol > 0 ? `${topName} (${topGol})` : '-'
             };
         });
 
-        // Headers
-        const headerHtml = selected.map(s => `<th>${s || '-'}</th>`).join('');
-        // Rows
+        const headerHtml = stats.map(st => `<th>${st ? st.label : '-'}</th>`).join('');
         const tbodyHtml = metricsTemplate.map(m => {
             const rowTds = stats.map(st => `<td>${st ? st[m.key] : '-'}</td>`).join('');
-            return `<tr><td style="font-weight:bold; width:200px; text-align:left; border-right: 1px solid #eee;">${m.label}</td>${rowTds}</tr>`;
+            return `<tr><td style="font-weight:bold; text-align:left; border-right: 1px solid #eee;">${m.label}</td>${rowTds}</tr>`;
         }).join('');
 
-        container.innerHTML = `
-            <table class="data-table" style="text-align:center;">
-                <thead>
-                    <tr><th style="padding-left:1.5rem; text-align:left; border-right: 1px solid #eee;">Métrica</th>${headerHtml}</tr>
-                </thead>
-                <tbody>
-                    ${tbodyHtml}
-                </tbody>
-            </table>
-        `;
+        container.innerHTML = `<table class="data-table" style="text-align:center;"><thead><tr><th style="padding-left:1.5rem; text-align:left; border-right: 1px solid #eee;">Métrica</th>${headerHtml}</tr></thead><tbody>${tbodyHtml}</tbody></table>`;
+        renderComparativoCharts(datasetsGM, datasetsGS);
     };
 
-    const listenersCheck = document.getElementById('comp-t1').getAttribute('data-listener');
-    if (!listenersCheck) {
-        [1,2,3,4,5].forEach(i => {
-            const el = document.getElementById(`comp-t${i}`);
-            el.setAttribute('data-listener', 'true');
-            el.addEventListener('change', updateComparativo);
-        });
-    }
+    const selectors = document.querySelectorAll('.comp-select');
+    selectors.forEach(s => {
+        if (!s.getAttribute('data-listener')) {
+            s.setAttribute('data-listener', 'true');
+            s.addEventListener('change', updateComparativo);
+        }
+    });
 
     updateComparativo();
 };
 
+let compChartGM = null;
+let compChartGS = null;
+
+const renderComparativoCharts = (dsGM, dsGS) => {
+    const bins = ["0-15", "16-30", "31-45", "46-60", "61-75", "76-90"];
+    
+    if (compChartGM) compChartGM.destroy();
+    if (compChartGS) compChartGS.destroy();
+
+    const ctxGM = document.getElementById('chart-comp-goals-marked').getContext('2d');
+    compChartGM = new Chart(ctxGM, {
+        type: 'bar',
+        data: { labels: bins, datasets: dsGM },
+        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+
+    const ctxGS = document.getElementById('chart-comp-goals-conceded').getContext('2d');
+    compChartGS = new Chart(ctxGS, {
+        type: 'bar',
+        data: { labels: bins, datasets: dsGS },
+        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+};
 // ESTATESTICAS FUNCTIONS
 const switchStatsTab = (tab) => {
     document.getElementById('btn-stats-coletivas').classList.toggle('active', tab === 'coletivas');
@@ -1671,14 +1747,24 @@ const renderEstatisticas = () => {
 const renderStatsColetivas = (container) => {
     const fTemp = document.getElementById('stc-filter-temporada').value;
     const fCamp = document.getElementById('stc-filter-campeonato').value;
+    const fTec  = document.getElementById('stc-filter-tecnico').value;
     const fTipo = document.getElementById('stc-filter-tipo').value;
 
-    const stats = {};
-    state.jogos.forEach(j => {
+    const filteredJogos = state.jogos.filter(j => {
         const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
-        if (fTemp && j.temporada !== fTemp) return;
-        if (fCamp && j.campeonato !== fCamp) return;
-        if (fTipo && comp?.tipo !== fTipo) return;
+        if (fTemp && j.temporada !== fTemp) return false;
+        if (fCamp && j.campeonato !== fCamp) return false;
+        if (fTec && j.tecnicoGalo !== fTec) return false;
+        if (fTipo && comp?.tipo !== fTipo) return false;
+        return true;
+    });
+
+    populateFilter('stc-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
+    populateFilter('stc-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+    populateFilter('stc-filter-tecnico', [...new Set(state.jogos.map(j => j.tecnicoGalo))]);
+
+    const stats = {};
+    filteredJogos.forEach(j => {
 
         if (!stats[j.campeonato]) stats[j.campeonato] = { nome: j.campeonato, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0 };
         
@@ -1729,10 +1815,6 @@ const renderStatsColetivas = (container) => {
     `;
 
     // Render Charts
-    const filteredJogos = state.jogos.filter(j => {
-        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
-        return (!fTemp || j.temporada === fTemp) && (!fCamp || j.campeonato === fCamp) && (!fTipo || comp?.tipo === fTipo);
-    });
     renderGoalDistributionCharts(filteredJogos);
 };
 
@@ -1904,9 +1986,18 @@ const deleteJogo = async (id) => {
 const validateBlock = (n) => {
     const block = document.getElementById(`block-${n}`);
     if (!block) return true;
-    const inputs = block.querySelectorAll('[name][required], [id][required]');
+    
+    // Select both inputs and selects that are required
+    const inputs = block.querySelectorAll('input[required], select[required], textarea[required]');
     let valid = true;
+
     inputs.forEach(inp => {
+        // Skip disabled inputs (like when N/I is checked)
+        if (inp.disabled) {
+            inp.classList.remove('invalid');
+            return;
+        }
+
         const val = inp.value ? inp.value.trim() : '';
         if (val === '' || val === 'Selecione...') {
             inp.classList.add('invalid');
@@ -1916,14 +2007,14 @@ const validateBlock = (n) => {
         }
     });
 
-    if (n === 2) {
-        if (!document.getElementById('game-arbitro').value && !document.getElementById('game-arb-ni').checked) {
-             document.getElementById('game-arbitro').classList.add('invalid'); valid = false;
-        }
-    }
-
     if (!valid) {
-        alert('Por favor, preencha todos os campos obrigatórios marcados em vermelho.');
+        showToast('Por favor, preencha todos os campos obrigatórios marcados em vermelho.', 'error');
+        // Scroll to the first invalid element
+        const firstInvalid = block.querySelector('.invalid');
+        if (firstInvalid) {
+            firstInvalid.focus();
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
     return valid;
 };

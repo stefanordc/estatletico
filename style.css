@@ -1049,3 +1049,16 @@ input.invalid, select.invalid {
     font-weight: 700;
     color: var(--text-main);
 }
+
+.stats-table .invalid, .form-group .invalid {
+    border-color: #e74c3c !important;
+    background-color: #fff5f5 !important;
+    box-shadow: 0 0 5px rgba(231, 76, 60, 0.2);
+}
+
+.invalid-feedback {
+    color: #e74c3c;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: block;
+}

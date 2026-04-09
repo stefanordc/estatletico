@@ -618,6 +618,7 @@
                 <div class="form-grid">
                     <div class="form-group"><label>Temporada</label><select id="stc-filter-temporada"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Campeonato</label><select id="stc-filter-campeonato"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Técnico</label><select id="stc-filter-tecnico"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Tipo</label><select id="stc-filter-tipo"><option value="">Todos</option></select></div>
                 </div>
                 
@@ -654,13 +655,44 @@
             </div>
 
             <div class="filters-card" style="margin-bottom: 2rem;">
-                <div style="font-weight:bold; margin-bottom:1rem;">Selecione até 5 temporadas para comparar</div>
-                <div class="form-grid" style="grid-template-columns: repeat(5, 1fr);">
+                <div style="font-weight:bold; margin-bottom:1rem;">Filtros de Comparação (Máximo 5 seleções)</div>
+                
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Filtro de Temporadas:</div>
+                <div class="form-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 1.5rem;">
                     <div class="form-group"><label>Temporada 1</label><select id="comp-t1" class="comp-select"><option value="">Selecione...</option></select></div>
                     <div class="form-group"><label>Temporada 2</label><select id="comp-t2" class="comp-select"><option value="">Selecione...</option></select></div>
                     <div class="form-group"><label>Temporada 3</label><select id="comp-t3" class="comp-select"><option value="">Selecione...</option></select></div>
                     <div class="form-group"><label>Temporada 4</label><select id="comp-t4" class="comp-select"><option value="">Selecione...</option></select></div>
                     <div class="form-group"><label>Temporada 5</label><select id="comp-t5" class="comp-select"><option value="">Selecione...</option></select></div>
+                </div>
+
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Filtro de Técnicos:</div>
+                <div class="form-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 1.5rem;">
+                    <div class="form-group"><label>Técnico 1</label><select id="comp-tec1" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Técnico 2</label><select id="comp-tec2" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Técnico 3</label><select id="comp-tec3" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Técnico 4</label><select id="comp-tec4" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Técnico 5</label><select id="comp-tec5" class="comp-select"><option value="">Selecione...</option></select></div>
+                </div>
+
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Filtro de Jogadores:</div>
+                <div class="form-grid" style="grid-template-columns: repeat(5, 1fr);">
+                    <div class="form-group"><label>Jogador 1</label><select id="comp-jog1" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Jogador 2</label><select id="comp-jog2" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Jogador 3</label><select id="comp-jog3" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Jogador 4</label><select id="comp-jog4" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Jogador 5</label><select id="comp-jog5" class="comp-select"><option value="">Selecione...</option></select></div>
+                </div>
+            </div>
+
+            <div id="comparativo-charts-container" style="display: flex; flex-direction: column; gap: 2rem; margin-bottom: 2rem;">
+                <div class="chart-box" style="background: #fff; padding: 1.5rem; border-radius: 8px; border: 1px solid #eee; width: 100%;">
+                    <h3 style="margin-bottom:1rem; text-align:center;">Comparativo: Gols Marcados por Minuto</h3>
+                    <canvas id="chart-comp-goals-marked" style="max-height: 400px; width: 100%;"></canvas>
+                </div>
+                <div class="chart-box" style="background: #fff; padding: 1.5rem; border-radius: 8px; border: 1px solid #eee; width: 100%;">
+                    <h3 style="margin-bottom:1rem; text-align:center;">Comparativo: Gols Sofridos por Minuto</h3>
+                    <canvas id="chart-comp-goals-conceded" style="max-height: 400px; width: 100%;"></canvas>
                 </div>
             </div>
 
