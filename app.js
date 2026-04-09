@@ -266,7 +266,7 @@ const renderEstadios = () => {
                     <div class="form-group"><label>País *</label><input type="text" name="pais" value="Brasil" required></div>
                 </div>
                 <div class="form-grid">
-                    <div class="form-group"><label>Mandante</label><select name="mandante"><option value="">Selecione</option>${opts}</select></div>
+                    <div class="form-group"><label>Mandante</label><div class="autocomplete-container"><input type="text" name="mandante" id="estadio-mandante" placeholder="Digite o mandante..." value="${state.editingId ? state.estadios.find(i => i.id === state.editingId).mandante : ''}"></div></div>
                     <div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="paste-area-estadio">Ctrl+V aqui</div><input type="hidden" name="foto" id="foto-input"></div>
                 </div>
                 <button type="submit" class="btn-primary">${state.editingId ? 'Atualizar' : 'Cadastrar'}</button>
@@ -279,6 +279,7 @@ const renderEstadios = () => {
         </div>
     `;
     setupPasteHandler('paste-area-estadio', 'foto-input');
+    setupAutocomplete('estadio-mandante', 'adversarios', 'clube');
     document.getElementById('form-estadios').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         const item = { id: state.editingId || Date.now(), nome: fd.get('nome'), estado: fd.get('estado'), pais: fd.get('pais'), mandante: fd.get('mandante'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
@@ -1548,19 +1549,44 @@ const saveNewJogo = () => {
 
 // COMPARATIVO FUNCTIONS
 const renderComparativo = () => {
+    const seasons = [...new Set(state.jogos.map(j => j.temporada))].sort((a,b) => b - a);
+    const coaches = [...new Set(state.jogos.map(j => j.tecnicoGalo))].sort();
+    
+    // Prepare players with formatted name for autocomplete
+    const playersFormatted = state.jogadores.map(p => ({
+        ...p,
+        searchName: `${p.nome_guerra} - ${p.nome_completo}`
+    })).sort((a,b) => a.nome_guerra.localeCompare(b.nome_guerra));
+
+    // For autocomplete to work with custom format, we update state momentarily or use a custom source
+    // But setupAutocomplete uses state[sourceKey], so we'll add a temporary field if not exists
+    state.jogadores.forEach(j => {
+        j.searchName = `${j.nome_guerra} - ${j.nome_completo}`;
+    });
 
     [1,2,3,4,5].forEach(i => {
         populateFilter(`comp-t${i}`, seasons);
-        populateFilter(`comp-tec${i}`, coaches);
-        populateFilter(`comp-jog${i}`, players);
+        setupAutocomplete(`comp-tec${i}`, 'jogos', 'tecnicoGalo', null); // Reusing games technicals
+        setupAutocomplete(`comp-jog${i}`, 'jogadores', 'searchName', null);
     });
     
+    // Add change listeners for autocomplete inputs (manual because setupAutocomplete doesn't trigger 'change' always)
+    document.querySelectorAll('.comp-inp').forEach(inp => {
+        inp.addEventListener('blur', () => setTimeout(updateComparativo, 200));
+    });
+
     const updateComparativo = () => {
-        const scenarios = [1,2,3,4,5].map(i => ({
-            temporada: document.getElementById(`comp-t${i}`).value,
-            tecnico: document.getElementById(`comp-tec${i}`).value,
-            jogador: document.getElementById(`comp-jog${i}`).value
-        }));
+        const scenarios = [1,2,3,4,5].map(i => {
+            const jogVal = document.getElementById(`comp-jog${i}`).value;
+            // Extract war name from "War Name - Full Name"
+            const warName = jogVal && jogVal.includes(' - ') ? jogVal.split(' - ')[0] : jogVal;
+
+            return {
+                temporada: document.getElementById(`comp-t${i}`).value,
+                tecnico: document.getElementById(`comp-tec${i}`).value,
+                jogador: warName
+            };
+        });
         
         const container = document.getElementById('comparativo-content-container');
         
@@ -1604,14 +1630,12 @@ const renderComparativo = () => {
                 const golGalo = parseInt(isCasa ? j.golsCasa : j.golsFora);
                 const golAdv = parseInt(isCasa ? j.golsFora : j.golsCasa);
                 
-                // If a specific player is chosen for the column, GM should be HIS goals
                 if (scen.jogador) {
                     const l = j.lineupGalo?.find(ply => ply.jogador === scen.jogador);
                     const pGoals = parseInt(l?.golsCount || 0);
                     gm += pGoals;
                     gs += parseInt(l?.gsCount || 0);
                     
-                    // Calc bins for this specific player
                     if (l?.golsMin) {
                         l.golsMin.forEach((m, idx) => {
                             let min = parseInt(m); if (isNaN(min)) return;
@@ -1634,7 +1658,6 @@ const renderComparativo = () => {
                     gm += golGalo;
                     gs += golAdv;
                     
-                    // Full team distribution
                     j.lineupGalo?.forEach(l => {
                         (l.golsMin || []).forEach((m, idx) => {
                             let min = parseInt(m); if (isNaN(min)) return;
@@ -1668,9 +1691,17 @@ const renderComparativo = () => {
             datasetsGM.push({ label: label, data: binsGM, backgroundColor: colors[idx], borderColor: colors[idx], borderWidth: 1 });
             datasetsGS.push({ label: label, data: binsGS, backgroundColor: colors[idx].replace(')', ', 0.7)').replace('rgb', 'rgba'), borderColor: colors[idx], borderWidth: 1 });
 
+            // Format metrics for table
+            const aprov = jCount > 0 ? ((v * 3 + e) / (jCount * 3) * 100).toFixed(1) + '%' : '0%';
+            const vText = `<span style="color:#27ae60">${v}</span>`;
+            const eText = `<span style="color:#f39c12">${e}</span>`;
+            const dText = `<span style="color:#e74c3c">${d}</span>`;
+            const saldo = gm - gs;
+            const saldoText = saldo > 0 ? `<span style="color:#27ae60;font-weight:bold;">+${saldo}</span>` : `<span style="color:${saldo < 0 ? '#e74c3c' : 'black'};font-weight:bold;">${saldo}</span>`;
+
             return {
-                label: label, jogos: jCount, vitorias: `<span style="color:#27ae60">${v}</span>`, empates: `<span style="color:#f39c12">${e}</span>`, derrotas: `<span style="color:#e74c3c">${d}</span>`,
-                aprov: `<strong>${jCount > 0 ? ((v * 3 + e) / (jCount * 3) * 100).toFixed(1) + '%' : '0%'}</strong>`, gm: gm, gs: gs, saldo: gm - gs, artilheiro: topGol > 0 ? `${topName} (${topGol})` : '-'
+                label: label, jogos: jCount, vitorias: vText, empates: eText, derrotas: dText,
+                aprov: `<strong>${aprov}</strong>`, gm: gm, gs: gs, saldo: saldoText, artilheiro: topGol > 0 ? `${topName} (${topGol})` : '-'
             };
         });
 
@@ -1684,12 +1715,8 @@ const renderComparativo = () => {
         renderComparativoCharts(datasetsGM, datasetsGS);
     };
 
-    const selectors = document.querySelectorAll('.comp-select');
-    selectors.forEach(s => {
-        if (!s.getAttribute('data-listener')) {
-            s.setAttribute('data-listener', 'true');
-            s.addEventListener('change', updateComparativo);
-        }
+    [1,2,3,4,5].forEach(i => {
+        document.getElementById(`comp-t${i}`).addEventListener('change', updateComparativo);
     });
 
     updateComparativo();

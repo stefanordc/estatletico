@@ -668,21 +668,25 @@
 
                 <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Filtro de Técnicos:</div>
                 <div class="form-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 1.5rem;">
-                    <div class="form-group"><label>Técnico 1</label><select id="comp-tec1" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Técnico 2</label><select id="comp-tec2" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Técnico 3</label><select id="comp-tec3" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Técnico 4</label><select id="comp-tec4" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Técnico 5</label><select id="comp-tec5" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Técnico 1</label><div class="autocomplete-container"><input type="text" id="comp-tec1" class="comp-inp" placeholder="Digite o técnico..."></div></div>
+                    <div class="form-group"><label>Técnico 2</label><div class="autocomplete-container"><input type="text" id="comp-tec2" class="comp-inp" placeholder="Digite o técnico..."></div></div>
+                    <div class="form-group"><label>Técnico 3</label><div class="autocomplete-container"><input type="text" id="comp-tec3" class="comp-inp" placeholder="Digite o técnico..."></div></div>
+                    <div class="form-group"><label>Técnico 4</label><div class="autocomplete-container"><input type="text" id="comp-tec4" class="comp-inp" placeholder="Digite o técnico..."></div></div>
+                    <div class="form-group"><label>Técnico 5</label><div class="autocomplete-container"><input type="text" id="comp-tec5" class="comp-inp" placeholder="Digite o técnico..."></div></div>
                 </div>
 
                 <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Filtro de Jogadores:</div>
                 <div class="form-grid" style="grid-template-columns: repeat(5, 1fr);">
-                    <div class="form-group"><label>Jogador 1</label><select id="comp-jog1" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Jogador 2</label><select id="comp-jog2" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Jogador 3</label><select id="comp-jog3" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Jogador 4</label><select id="comp-jog4" class="comp-select"><option value="">Selecione...</option></select></div>
-                    <div class="form-group"><label>Jogador 5</label><select id="comp-jog5" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Jogador 1</label><div class="autocomplete-container"><input type="text" id="comp-jog1" class="comp-inp" placeholder="Digite o jogador..."></div></div>
+                    <div class="form-group"><label>Jogador 2</label><div class="autocomplete-container"><input type="text" id="comp-jog2" class="comp-inp" placeholder="Digite o jogador..."></div></div>
+                    <div class="form-group"><label>Jogador 3</label><div class="autocomplete-container"><input type="text" id="comp-jog3" class="comp-inp" placeholder="Digite o jogador..."></div></div>
+                    <div class="form-group"><label>Jogador 4</label><div class="autocomplete-container"><input type="text" id="comp-jog4" class="comp-inp" placeholder="Digite o jogador..."></div></div>
+                    <div class="form-group"><label>Jogador 5</label><div class="autocomplete-container"><input type="text" id="comp-jog5" class="comp-inp" placeholder="Digite o jogador..."></div></div>
                 </div>
+            </div>
+
+            <div class="list-container" id="comparativo-content-container" style="overflow-x: auto; margin-bottom: 2rem;">
+                <!-- Tabela comparativa renderizada via JS -->
             </div>
 
             <div id="comparativo-charts-container" style="display: flex; flex-direction: column; gap: 2rem; margin-bottom: 2rem;">
@@ -696,9 +700,6 @@
                 </div>
             </div>
 
-            <div class="list-container" id="comparativo-content-container" style="overflow-x: auto;">
-                <!-- Tabela comparativa renderizada via JS -->
-            </div>
         </section>
 
         <!-- Cadastros Section -->
