@@ -440,7 +440,7 @@ const renderTableRows = (tab, filter = '') => {
         if (tab === 'competicoes') cells = `<td>${item.campeonato}</td><td>${item.tipo}</td>`;
         if (tab === 'arbitros') cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome}</td><td>${item.federacao}</td>`;
         if (tab === 'jogadores') {
-            const ageYear = item.foraDoElenco ? parseInt(item.temporada) : new Date().getFullYear();
+            const ageYear = parseInt(item.temporada) || new Date().getFullYear();
             cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome_guerra}</td><td>${item.posicao}</td><td>${item.temporada}</td><td>${calculateAgeAtEndOfYear(item.nascimento, ageYear)}</td>`;
         }
         return `<tr>${cells}<td class="actions"><button class="action-btn" onclick="prepareEdit('${tab}', ${item.id})"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
