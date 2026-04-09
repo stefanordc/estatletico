@@ -94,7 +94,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const parts = hash.split('/');
             const page = parts[0];
             const tab  = parts[1];
-            const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','comparativo','novo-jogo'];
+            const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
             const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
             
             if (page && validPages.includes(page)) {
@@ -103,6 +103,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                     renderTab(tab);
                 } else if (page === 'cadastros') {
                     renderTab('adversarios');
+                } else if (page === 'estatisticas' && tab) {
+                    switchStatsTab(tab);
                 }
             } else {
                 showSection('dashboard');
@@ -202,6 +204,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
+    if (sectionId === 'estatisticas') renderEstatisticas();
     if (sectionId === 'comparativo') renderComparativo();
 };
 
@@ -1343,16 +1346,65 @@ const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
     const yellowVal = data ? data.amarelo : 1;
     row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário">' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}"></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }"></td>`}<td><select class="yellow-sel"><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel"><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
-    if(!isAdv) { const inp = row.querySelector('.card-player-inp'); const id = 'cq-'+Date.now()+Math.random(); inp.id = id; setTimeout(() => { setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); inp.addEventListener('blur', () => { const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); if(p) row.querySelector('.pos-inp').value = p.posicao; }); }, 10); }
+    if(!isAdv) { 
+        const inp = row.querySelector('.card-player-inp'); 
+        const id = 'cq-'+Date.now()+Math.random(); 
+        inp.id = id; 
+        setTimeout(() => { 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); 
+            
+            // Vertical Tab Navigation Logic
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
+                    if (targetTr) {
+                        const targetInp = targetTr.querySelector('.card-player-inp');
+                        if (targetInp) {
+                            targetInp.focus();
+                            setTimeout(() => targetInp.select(), 0);
+                        }
+                    }
+                }
+            });
+
+            inp.addEventListener('blur', () => { 
+                const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); 
+                if(p) row.querySelector('.pos-inp').value = p.posicao; 
+            }); 
+        }, 10); 
+    }
     tbody.appendChild(row);
 };
 
 const addLineupRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`lineup-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
-    row.innerHTML = `<td><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td><td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || '' }">` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}"></div>`}</td><td><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-' }"></td><td><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-' }"></td><td><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:50px;"></td><td class="min-goals-td"></td><td><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:50px;"></td><td class="tempo-goals-td"></td><td><input type="checkbox" class="titular-ck" ${ (data ? data.titular : true) ? 'checked' : '' }></td><td><input type="checkbox" class="sub-ck" ${ (data ? data.substituido : false) ? 'checked' : '' }></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    row.innerHTML = `<td><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td><td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || '' }">` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}"></div>`}</td><td><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-' }"></td><td><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-' }"></td><td><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;"></td><td class="min-goals-td"></td><td class="tempo-goals-td"></td><td><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;"></td><td class="min-gs-td"></td><td class="tempo-gs-td"></td><td><input type="checkbox" class="titular-ck" ${ (data ? data.titular : true) ? 'checked' : '' }></td><td><input type="checkbox" class="sub-ck" ${ (data ? data.substituido : false) ? 'checked' : '' }></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    
     const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
-    const updateGoals = () => { minCont.innerHTML = ''; tempoCont.innerHTML = ''; for(let i=0; i<parseInt(gInp.value || 0); i++) { const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-g-inp'; mi.value = data?.golsMin?.[i] || ''; const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1'; mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }}); minCont.appendChild(mi); tempoCont.appendChild(ts); } };
+    const updateGoals = () => { 
+        minCont.innerHTML = ''; tempoCont.innerHTML = ''; 
+        for(let i=0; i<parseInt(gInp.value || 0); i++) { 
+            const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-g-inp'; mi.value = data?.golsMin?.[i] || ''; 
+            const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1'; 
+            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }}); 
+            minCont.appendChild(mi); tempoCont.appendChild(ts); 
+        } 
+    };
     gInp.addEventListener('input', updateGoals); if(data?.golsCount > 0) updateGoals();
+
+    const gsInp = row.querySelector('.gs-inp'), minGsCont = row.querySelector('.min-gs-td'), tempoGsCont = row.querySelector('.tempo-gs-td');
+    const updateGS = () => {
+        minGsCont.innerHTML = ''; tempoGsCont.innerHTML = '';
+        for(let i=0; i<parseInt(gsInp.value || 0); i++) {
+            const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-gs-inp'; mi.value = data?.gsMin?.[i] || '';
+            const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.gsTempo?.[i] || '1';
+            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }});
+            minGsCont.appendChild(mi); tempoGsCont.appendChild(ts);
+        }
+    };
+    gsInp.addEventListener('input', updateGS); if(data?.gsCount > 0) updateGS();
+
     if(!isAdv) { 
         const inp = row.querySelector('.line-player-inp'); 
         const id = 'lq-'+Date.now()+Math.random(); 
@@ -1363,19 +1415,12 @@ const addLineupRow = (team, data = null) => {
             // Vertical Tab Navigation Logic
             inp.addEventListener('keydown', (e) => {
                 if (e.key === 'Tab') {
-                    const dropdown = row.querySelector('.autocomplete-results');
-                    // Avoid interfering if user is actively using the autocomplete dropdown with Tab (though Tab usually enters anyway)
-                    // But if it's open, maybe we just navigate anyway as requested.
-                    
                     e.preventDefault();
-                    const currentTr = row;
-                    const targetTr = e.shiftKey ? currentTr.previousElementSibling : currentTr.nextElementSibling;
-                    
+                    const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
                     if (targetTr) {
                         const targetInp = targetTr.querySelector('.line-player-inp');
                         if (targetInp) {
                             targetInp.focus();
-                            // Select content for easier replacement
                             setTimeout(() => targetInp.select(), 0);
                         }
                     }
@@ -1553,6 +1598,11 @@ const switchStatsTab = (tab) => {
     document.getElementById('stats-filters-coletivas').classList.toggle('hidden', tab !== 'coletivas');
     document.getElementById('stats-filters-individuais').classList.toggle('hidden', tab !== 'individuais');
     state.currentStatsTab = tab;
+    
+    // Update URL hash without breaking the navigation
+    const newHash = '#estatisticas/' + tab;
+    if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
+    
     renderEstatisticas();
 };
 
@@ -1609,16 +1659,16 @@ const renderStatsColetivas = (container) => {
         const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        return `<tr><td><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
+        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
     populateFilter('stc-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
     populateFilter('stc-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
 
     container.innerHTML = `
-        <table class="data-table">
+        <table class="data-table" style="text-align:center;">
             <thead>
-                <tr><th>Campeonato</th><th>Pontos</th><th>Jogos</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th title="Amarelos Galo">CA (G)</th><th title="Vermelhos Galo">CV (G)</th><th title="Amarelos Adv">CA (A)</th><th title="Vermelhos Adv">CV (A)</th></tr>
+                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
             </thead>
             <tbody>
                 ${list.map(calcRow).join('')}
@@ -1626,6 +1676,66 @@ const renderStatsColetivas = (container) => {
             </tbody>
         </table>
     `;
+
+    // Render Charts
+    const filteredJogos = state.jogos.filter(j => {
+        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+        return (!fTemp || j.temporada === fTemp) && (!fCamp || j.campeonato === fCamp) && (!fTipo || comp?.tipo === fTipo);
+    });
+    renderGoalDistributionCharts(filteredJogos);
+};
+
+let goalsMarkedChart = null;
+let goalsConcededChart = null;
+
+const renderGoalDistributionCharts = (filteredJogos) => {
+    const bins = ["0-15", "16-30", "31-45", "46-60", "61-75", "76-90"];
+    const gmData = [0, 0, 0, 0, 0, 0];
+    const gsData = [0, 0, 0, 0, 0, 0];
+
+    filteredJogos.forEach(j => {
+        j.lineupGalo?.forEach(l => {
+            (l.golsMin || []).forEach(m => {
+                const min = parseInt(m);
+                if (isNaN(min)) return;
+                const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                if (binIdx >= 0) gmData[binIdx]++;
+            });
+            (l.gsMin || []).forEach(m => {
+                const min = parseInt(m);
+                if (isNaN(min)) return;
+                const binIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                if (binIdx >= 0) gsData[binIdx]++;
+            });
+        });
+    });
+
+    const createChart = (id, label, data, color, existingChart) => {
+        const ctx = document.getElementById(id);
+        if (!ctx) return null;
+        if (existingChart) existingChart.destroy();
+        
+        return new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: bins,
+                datasets: [{
+                    label: label,
+                    data: data,
+                    backgroundColor: color,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false }, title: { display: true, text: label, font: { size: 16 } } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    };
+
+    goalsMarkedChart = createChart('chart-goals-marked', 'Gols Marcados por Minuto', gmData, 'rgba(46, 204, 113, 0.7)', goalsMarkedChart);
+    goalsConcededChart = createChart('chart-goals-conceded', 'Gols Sofridos por Minuto', gsData, 'rgba(231, 76, 60, 0.7)', goalsConcededChart);
 };
 
 const renderStatsIndividuais = (container) => {
@@ -1675,14 +1785,23 @@ const renderStatsIndividuais = (container) => {
     container.innerHTML = `
         <table class="data-table">
             <thead>
-                <tr><th>Foto</th><th>Jogador</th><th>Posição</th><th>Jogos</th><th>Gols</th><th>V</th><th>D</th><th>Aprov.</th><th style="color:#f39c12;">CA</th><th style="color:#e74c3c;">CV</th><th>GS</th></tr>
+                <tr>
+                    <th>Foto</th>
+                    <th>Jogador <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Posição <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Jogos <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Gols <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Vitórias <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Derrotas <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th>Aprov. <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                </tr>
             </thead>
             <tbody>
                 ${list.sort((a,b) => b.jogos - a.jogos).map(s => {
                     const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
                     return `
                         <tr>
-                            <td><img src="${s.foto}" class="mini-foto"></td>
+                            <td><img src="${s.foto}" class="mini-foto" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #eee;"></td>
                             <td><strong>${s.nome}</strong></td>
                             <td>${s.posicao}</td>
                             <td>${s.jogos}</td>
@@ -1690,9 +1809,6 @@ const renderStatsIndividuais = (container) => {
                             <td><span class="win-text">${s.v}</span></td>
                             <td><span class="loss-text">${s.d}</span></td>
                             <td>${aprove}%</td>
-                            <td style="color:#f39c12; font-weight:bold;">${s.yellow}</td>
-                            <td style="color:#e74c3c; font-weight:bold;">${s.red}</td>
-                            <td>${s.posicao === 'Goleiro' ? `<strong>${s.gs}</strong>` : '-'}</td>
                         </tr>
                     `;
                 }).join('')}
