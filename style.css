@@ -578,9 +578,28 @@ body {
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
+.player-card.grayscale {
+    background: #f8f8f8;
+    border-color: #ddd;
+    box-shadow: none;
+}
+
 .player-card.grayscale img {
     filter: grayscale(100%);
-    opacity: 0.7;
+    opacity: 0.6;
+}
+
+.player-card.grayscale h3 {
+    color: #777;
+}
+
+.player-card.grayscale .pos {
+    color: #999;
+}
+
+.player-card.grayscale .number-badge {
+    background: #bbb;
+    color: #fff;
 }
 
 .player-card img {

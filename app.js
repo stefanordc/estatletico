@@ -447,17 +447,20 @@ const renderElenco = () => {
     populateFilter('elenco-filter-nacionalidade', [...new Set(state.jogadores.map(j => j.nacionalidade))]);
 
     grid.innerHTML = filtered.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum jogador encontrado para os filtros selecionados.</div>' : 
-        filtered.map(j => `
-            <div class="player-card ${j.foraDoElenco ? 'grayscale' : ''}" onclick="showPlayerDetail(${j.id}, event)">
-                <img src="${j.foto}" alt="${j.nome_guerra}">
-                <h3>${j.nome_guerra}</h3>
-                <div class="pos">${j.posicao}</div>
-                <div class="meta">
-                    <span>${calculateAgeAtEndOfYear(j.nascimento, parseInt(fTemp || 2026))} anos</span>
-                    <span class="number-badge">#${j.numero || '-'}</span>
+        filtered.map(j => {
+            const photoUrl = j.foto && j.foto.trim() !== '' ? j.foto : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+            return `
+                <div class="player-card ${j.foraDoElenco ? 'grayscale' : ''}" onclick="showPlayerDetail(${j.id}, event)">
+                    <img src="${photoUrl}" alt="${j.nome_guerra}" onerror="this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'">
+                    <h3>${j.nome_guerra}</h3>
+                    <div class="pos">${j.posicao}</div>
+                    <div class="meta">
+                        <span>${calculateAgeAtEndOfYear(j.nascimento, parseInt(fTemp || 2026)) || 'N/I'} anos</span>
+                        <span class="number-badge">#${j.numero || '-'}</span>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 };
 
 const showPlayerDetail = (playerId, event) => {
