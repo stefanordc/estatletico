@@ -414,7 +414,24 @@ const renderJogadores = () => {
     document.getElementById('form-jogadores').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         if (state.isSeasonFixed) { state.fixedSeason = fd.get('temporada'); localStorage.setItem('fixedSeason', state.fixedSeason); }
-        const item = { id: state.editingId || Date.now(), temporada: fd.get('temporada'), nome_completo: fd.get('nome_completo'), nome_guerra: fd.get('nome_guerra'), posicao: fd.get('posicao'), nacionalidade: fd.get('nacionalidade'), nascimento: fd.get('nascimento'), numero: fd.get('numero'), foto: fd.get('foto') || 'https://via.placeholder.com/40', observacao: fd.get('observacao'), foraDoElenco: document.getElementById('input-fora-do-elenco').checked };
+
+        const novaTemporada = fd.get('temporada');
+        const novoNomeCompleto = fd.get('nome_completo');
+        const novoNascimento = fd.get('nascimento');
+
+        const isDuplicate = state.jogadores.some(j => 
+            j.temporada === novaTemporada &&
+            j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase() &&
+            j.nascimento === novoNascimento &&
+            j.id !== state.editingId
+        );
+
+        if (isDuplicate) {
+            showToast('Já existe um jogador cadastrado com este mesmo nome e data de nascimento nesta temporada.', 'error');
+            return;
+        }
+
+        const item = { id: state.editingId || Date.now(), temporada: novaTemporada, nome_completo: novoNomeCompleto, nome_guerra: fd.get('nome_guerra'), posicao: fd.get('posicao'), nacionalidade: fd.get('nacionalidade'), nascimento: novoNascimento, numero: fd.get('numero'), foto: fd.get('foto') || 'https://via.placeholder.com/40', observacao: fd.get('observacao'), foraDoElenco: document.getElementById('input-fora-do-elenco').checked };
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
         saveData('jogadores', state.jogadores); renderTab('jogadores');
@@ -1409,7 +1426,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             <form id="multi-step-form">
                 <div class="form-block active" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || '2026-01-01'}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? state.fixedSeason + '-01-01' : '2026-01-01')}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
@@ -1465,6 +1482,18 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setupAutocomplete('game-arbitro', 'arbitros', 'nome');
     document.getElementById('game-arbitro').addEventListener('change', updateRefereeInfo);
     document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
+
+    // Sync the year in game-data when temporada changes
+    document.getElementById('game-temporada').addEventListener('input', () => {
+        const season = document.getElementById('game-temporada').value.trim();
+        if (/^\d{4}$/.test(season)) {
+            const dataInp = document.getElementById('game-data');
+            const parts = dataInp.value ? dataInp.value.split('-') : [];
+            const month = parts[1] || '01';
+            const day = parts[2] || '01';
+            dataInp.value = `${season}-${month}-${day}`;
+        }
+    });
     
     setupAutocomplete('game-assistente1', 'arbitros', 'nome');
     setupAutocomplete('game-assistente2', 'arbitros', 'nome');
@@ -1517,7 +1546,7 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
             
             // Vertical Tab Navigation Logic
             inp.addEventListener('keydown', (e) => {
@@ -1594,7 +1623,7 @@ const addLineupRow = (team, data = null) => {
         const id = 'lq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
             
             // Vertical Tab Navigation Logic
             inp.addEventListener('keydown', (e) => {
