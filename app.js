@@ -87,7 +87,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     } finally {
         const loader = document.getElementById('global-loader');
         if(loader) loader.style.display = 'none';
-        showSection('dashboard');
+
+        // Restore page from URL hash
+        const hash = window.location.hash.replace('#', '');
+        const parts = hash.split('/');
+        const page = parts[0];
+        const tab  = parts[1];
+        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','comparativo'];
+        const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
+        if (page && validPages.includes(page)) {
+            showSection(page, true);
+            if (page === 'cadastros' && tab && validTabs.includes(tab)) {
+                renderTab(tab);
+            } else if (page === 'cadastros') {
+                renderTab('adversarios');
+            }
+        } else {
+            showSection('dashboard');
+        }
     }
 });
 
@@ -159,14 +176,19 @@ const modalContainer = document.getElementById('modal-container');
 const novoJogoContainer = document.getElementById('novo-jogo-container');
 
 // Navigation
-const showSection = (sectionId) => {
+const showSection = (sectionId, skipHashUpdate = false) => {
     document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
     const section = document.getElementById(`${sectionId}-section`);
     if (section) section.classList.remove('hidden');
-    
+
     document.querySelectorAll('.nav-item').forEach(i => {
         i.classList.toggle('active', i.dataset.page === sectionId);
     });
+
+    if (!skipHashUpdate) {
+        const newHash = '#' + sectionId;
+        if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
+    }
 
     if (sectionId === 'jogos') renderJogos();
     if (sectionId === 'dashboard') renderDashboard();
@@ -181,6 +203,9 @@ const showSection = (sectionId) => {
 const renderTab = (tabName) => {
     state.currentTab = tabName;
     tabContent.innerHTML = '';
+    // Update URL hash to reflect tab
+    const newHash = '#cadastros/' + tabName;
+    if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
     switch(tabName) {
         case 'adversarios': renderAdversarios(); break;
         case 'estadios': renderEstadios(); break;

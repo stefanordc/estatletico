@@ -565,7 +565,7 @@ body {
     height: 120px;
     border-radius: 50%;
     object-fit: contain;
-    object-position: center;
+    object-position: top center;
     margin-bottom: 1rem;
     background: #f0f0f0;
 }
@@ -719,8 +719,8 @@ body {
     width: 150px;
     height: 150px;
     border-radius: 50%;
-    object-fit: cover;
-    object-position: top;
+    object-fit: contain;
+    object-position: top center;
     background: #eee;
 }
 
@@ -943,8 +943,8 @@ input.invalid, select.invalid {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    object-fit: cover;
-    object-position: top;
+    object-fit: contain;
+    object-position: top center;
     margin-bottom: 1rem;
     background: #f8f9fa;
 }
