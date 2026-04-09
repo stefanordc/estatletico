@@ -1373,7 +1373,23 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     } else if(type === 'arbitros') {
         formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div><div class="form-group"><label>Federação</label><input type="text" id="qa-federacao"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if (type === 'jogadores') {
-        formHtml = `<div class="form-group"><label>Nome Completo</label><input type="text" id="qa-nome-completo"></div><div class="form-group"><label>Nome de Guerra *</label><input type="text" id="qa-nome-guerra" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Posição *</label><select id="qa-pos"><option value="">Selecione</option><option value="Goleiro">Goleiro</option><option value="Lateral Direito">Lateral Direito</option><option value="Zagueiro">Zagueiro</option><option value="Lateral Esquerdo">Lateral Esquerdo</option><option value="Volante">Volante</option><option value="Meia">Meia</option><option value="Atacante">Atacante</option></select></div><div class="form-group"><label>Tempo.</label><input type="text" id="qa-temporada" value="${state.fixedSeason || 2026}"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-jogador">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
+        formHtml = `
+            <div class="form-group"><label>Nome Completo</label><input type="text" id="qa-nome-completo"></div>
+            <div class="form-group"><label>Nome de Guerra *</label><input type="text" id="qa-nome-guerra" value="${initialValue}"></div>
+            <div class="form-grid">
+                <div class="form-group"><label>Posição *</label><select id="qa-pos"><option value="">Selecione</option><option value="Goleiro">Goleiro</option><option value="Lateral-Direito">Lateral-Direito</option><option value="Lateral-Esquerdo">Lateral-Esquerdo</option><option value="Zagueiro">Zagueiro</option><option value="Volante">Volante</option><option value="Meia">Meia</option><option value="Atacante">Atacante</option></select></div>
+                <div class="form-group"><label>Temporada</label><input type="text" id="qa-temporada" value="${state.fixedSeason || 2026}"></div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div>
+                <div class="form-group"><label>Nacionalidade</label><input type="text" id="qa-nacionalidade" value="Brasil"></div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group"><label>Número</label><input type="number" id="qa-numero"></div>
+                <div class="form-group" style="align-self:flex-end; padding-bottom:0.5rem;"><label class="checkbox-inline"><input type="checkbox" id="qa-fora-do-elenco"> Fora do elenco atual</label></div>
+            </div>
+            <div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-jogador">Ctrl+V</div><input type="hidden" id="qa-foto"></div>
+        `;
     }
     miniModal.innerHTML = `<div class="modal-content small"><div class="block-header"><span>Cadastrar Novo ${name}</span><button onclick="document.getElementById('quick-add-modal').remove()"><i class="fas fa-times"></i></button></div><div class="p-4">${formHtml}<div class="flex-end" style="margin-top:2rem;"><button type="button" class="btn-primary" onclick="saveQuickAdd('${type}', '${targetInputId}')">Salvar e Continuar</button></div></div></div>`;
     document.body.appendChild(miniModal);
@@ -1388,7 +1404,17 @@ window.saveQuickAdd = (type, targetInputId) => {
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'adversarios') { item.clube = document.getElementById('qa-clube').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32'; }
     else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
-    else if(type === 'jogadores') { item.nome_guerra = document.getElementById('qa-nome-guerra').value; item.nome_completo = document.getElementById('qa-nome-completo').value; item.posicao = document.getElementById('qa-pos').value; item.temporada = document.getElementById('qa-temporada').value; item.nacionalidade = 'Brasil'; item.status = 'Ativo'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
+    else if(type === 'jogadores') { 
+        item.nome_guerra = document.getElementById('qa-nome-guerra').value; 
+        item.nome_completo = document.getElementById('qa-nome-completo').value; 
+        item.posicao = document.getElementById('qa-pos').value; 
+        item.temporada = document.getElementById('qa-temporada').value; 
+        item.nascimento = document.getElementById('qa-nascimento').value || ''; 
+        item.nacionalidade = document.getElementById('qa-nacionalidade').value || 'Brasil'; 
+        item.numero = document.getElementById('qa-numero').value || ''; 
+        item.foraDoElenco = document.getElementById('qa-fora-do-elenco').checked; 
+        item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; 
+    }
     state[type].push(item); saveData(type, state[type]);
     const inp = document.getElementById(targetInputId); 
     if(inp) { 
