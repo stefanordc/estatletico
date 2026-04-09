@@ -1360,8 +1360,13 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     const tabNames = { adversarios: 'Adversário', estadios: 'Estádio', arbitros: 'Árbitro', competicoes: 'Competição', jogadores: 'Jogador' };
     const name = tabNames[type];
     const miniModal = document.createElement('div');
-    miniModal.className = 'modal-overlay secondary';
     miniModal.id = 'quick-add-modal';
+    miniModal.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(0,0,0,0.55);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+    `;
     let formHtml = '';
     if(type === 'competicoes') {
         formHtml = `<div class="form-group"><label>Campeonato *</label><input type="text" id="qa-campeonato" value="${initialValue}"></div><div class="form-group"><label>Tipo *</label><select id="qa-tipo"><option value="Regional">Regional</option><option value="Nacional">Nacional</option><option value="Internacional">Internacional</option></select></div>`;
@@ -1391,7 +1396,20 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
             <div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-jogador">Ctrl+V</div><input type="hidden" id="qa-foto"></div>
         `;
     }
-    miniModal.innerHTML = `<div class="modal-content small"><div class="block-header"><span>Cadastrar Novo ${name}</span><button onclick="document.getElementById('quick-add-modal').remove()"><i class="fas fa-times"></i></button></div><div class="p-4">${formHtml}<div class="flex-end" style="margin-top:2rem;"><button type="button" class="btn-primary" onclick="saveQuickAdd('${type}', '${targetInputId}')">Salvar e Continuar</button></div></div></div>`;
+    miniModal.innerHTML = `
+        <div style="background:white; border-radius:12px; width:100%; max-width:520px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden;">
+            <div class="block-header" style="flex-shrink:0;">
+                <span>Cadastrar Novo ${name}</span>
+                <button onclick="document.getElementById('quick-add-modal').remove()" style="background:none; border:none; cursor:pointer; font-size:1.1rem; color:white;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4" style="overflow-y:auto; flex:1;">
+                ${formHtml}
+                <div class="flex-end" style="margin-top:2rem;">
+                    <button type="button" class="btn-primary" onclick="saveQuickAdd('${type}', '${targetInputId}')">Salvar e Continuar</button>
+                </div>
+            </div>
+        </div>
+    `;
     document.body.appendChild(miniModal);
     if(type === 'estadios') setupPasteHandler('qa-paste-estadio', 'qa-foto');
     if(type === 'arbitros') setupPasteHandler('qa-paste-arbitro', 'qa-foto');
