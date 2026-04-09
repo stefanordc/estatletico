@@ -150,7 +150,7 @@ const showSection = (sectionId) => {
     });
 
     if (sectionId === 'jogos') renderJogos();
-    if (sectionId === 'dashboard') updateStorageUsage();
+    if (sectionId === 'dashboard') renderDashboard();
     if (sectionId === 'arbitragem') renderArbitragem();
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
@@ -1613,14 +1613,125 @@ document.getElementById('export-artilheiros-csv')?.addEventListener('click', () 
 });
 
 // DASHBOARD & DATA MGMT
-const updateStorageUsage = () => {
-    const text = document.getElementById('storage-usage-text');
-    const bar = document.getElementById('storage-bar');
-    if(text) text.innerText = `Nuvem (Supabase) - Ilimitado`;
-    if(bar) {
-        bar.style.width = `100%`;
-        bar.style.background = '#27ae60';
+const renderDashboard = () => {
+    const isCurrentYearOnly = document.getElementById('dash-filtro-ano')?.checked;
+    const currentYear = new Date().getFullYear().toString();
+    
+    let jogos = state.jogos || [];
+    if (isCurrentYearOnly) {
+        jogos = jogos.filter(j => j.temporada === currentYear || j.data?.includes(currentYear));
     }
+    
+    let jogosTotal = jogos.length;
+    let v = 0, e = 0, d = 0;
+    let publicoTotal = 0, jogosComPublico = 0;
+    let rendaTotal = 0, jogosComRenda = 0;
+    let gm = 0, gs = 0;
+    
+    let artilheirosMap = {};
+    let amarelosMap = {};
+    let vermelhosMap = {};
+
+    jogos.forEach(j => {
+        // V, E, D
+        const isMandante = j.casa === 'Atlético-MG' || j.casa === 'Atlético';
+        const golsA = parseInt(j.golsCasa) || 0;
+        const golsB = parseInt(j.golsFora) || 0;
+        
+        let golsGalo = isMandante ? golsA : golsB;
+        let golsAdv = isMandante ? golsB : golsA;
+        
+        gm += golsGalo;
+        gs += golsAdv;
+        
+        if(golsGalo > golsAdv) v++;
+        else if(golsGalo === golsAdv) e++;
+        else d++;
+        
+        // Público e Renda
+        if (j.publico) {
+            let p = parseInt(j.publico.replace(/\D/g, ''));
+            if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
+        }
+        if (j.renda) {
+            let r = parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.'));
+            if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
+        }
+        
+        // Artilheiros
+        if(Array.isArray(j.lineupGalo)) {
+            j.lineupGalo.forEach(x => {
+                if(x.gols > 0) {
+                    artilheirosMap[x.id] = (artilheirosMap[x.id] || 0) + x.gols;
+                }
+            });
+        }
+        
+        // Cartões
+        if(Array.isArray(j.cartoesGalo)) {
+            j.cartoesGalo.forEach(c => {
+                const pId = c.jogadorId;
+                if(c.tipo === 'Amarelo') amarelosMap[pId] = (amarelosMap[pId] || 0) + 1;
+                else if(c.tipo === 'Vermelho' || c.tipo === '2º Amarelo') vermelhosMap[pId] = (vermelhosMap[pId] || 0) + 1;
+            });
+        }
+    });
+
+    // Top Cards
+    let aproveitamento = jogosTotal > 0 ? (((v * 3) + (e * 1)) / (jogosTotal * 3)) * 100 : 0;
+    let mediaP = jogosComPublico > 0 ? Math.round(publicoTotal / jogosComPublico) : 0;
+    let mediaR = jogosComRenda > 0 ? rendaTotal / jogosComRenda : 0;
+    
+    document.getElementById('dash-jogos-total').innerText = jogosTotal;
+    document.getElementById('dash-aproveitamento').innerText = aproveitamento.toFixed(1) + '%';
+    document.getElementById('dash-media-publico').innerText = mediaP.toLocaleString('pt-BR');
+    document.getElementById('dash-media-renda').innerText = mediaR.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    
+    // Mid Cards
+    document.getElementById('dash-vitorias').innerText = v;
+    document.getElementById('dash-empates').innerText = e;
+    document.getElementById('dash-derrotas').innerText = d;
+    
+    document.getElementById('dash-gm').innerText = gm;
+    document.getElementById('dash-gs').innerText = gs;
+    document.getElementById('dash-mgm').innerText = jogosTotal > 0 ? (gm / jogosTotal).toFixed(2) : '0.00';
+    document.getElementById('dash-mgs').innerText = jogosTotal > 0 ? (gs / jogosTotal).toFixed(2) : '0.00';
+    
+    const totaisAmarelos = Object.values(amarelosMap).reduce((a, b) => a + b, 0);
+    const totaisVermelhos = Object.values(vermelhosMap).reduce((a, b) => a + b, 0);
+    document.getElementById('dash-ca').innerText = totaisAmarelos;
+    document.getElementById('dash-cv').innerText = totaisVermelhos;
+
+    // Helper for Rankings
+    const renderRank = (mapHash, containerId, colorCount) => {
+        const sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        container.innerHTML = '';
+        if(sorted.length === 0) {
+            container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Nenhum registro.</span>';
+            return;
+        }
+        sorted.forEach((item, index) => {
+            const player = state.jogadores.find(p => p.id === parseInt(item[0]));
+            if(!player) return;
+            const photo = player.foto ? `<img src="${player.foto}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:0.7rem;"><i class="fas fa-user"></i></div>`;
+            container.innerHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <span style="color: #bdc3c7; font-weight: bold; width: 20px;">#${index+1}</span>
+                        ${photo}
+                        <span style="font-weight: 500; color: var(--text-main);">${player.nomeVulgar || player.nome}</span>
+                    </div>
+                    <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item[1]}</span>
+                </div>
+            `;
+        });
+    };
+
+    renderRank(artilheirosMap, 'dash-rank-artilheiros', 'var(--text-main)');
+    renderRank(amarelosMap, 'dash-rank-amarelos', '#f39c12');
+    renderRank(vermelhosMap, 'dash-rank-vermelhos', '#c0392b');
 };
 
 const clearAllData = () => {
