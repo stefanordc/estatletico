@@ -474,66 +474,146 @@ const renderElenco = () => {
 };
 
 const showPlayerDetail = (playerId, event) => {
-    const card = event.currentTarget;
+    const card = event.currentTarget.closest('.player-card') || event.currentTarget;
     const existing = document.getElementById(`detail-player-${playerId}`);
     document.querySelectorAll('.detail-inline-container').forEach(d => d.remove());
     if (existing) return;
 
     const player = state.jogadores.find(j => j.id === playerId);
     const seasons = [...new Set(state.jogos.map(j => j.temporada))].sort((a,b) => b-a);
-    const statsBySeason = seasons.map(s => {
+    const isTecnico = player.posicao === 'Técnico';
+    const isGoalie = player.posicao === 'Goleiro';
+
+    let statsBySeason = [];
+    let statsByTecnico = {};
+
+    seasons.forEach(s => {
         const seasonJogos = state.jogos.filter(j => j.temporada === s);
         let gamesCount = 0, goals = 0, gs = 0, wins = 0, draws = 0, losses = 0, yellow = 0, red = 0;
-        let titularesCount = 0, subOutCount = 0, reserveCount = 0;
+        let titularCount = 0, subOutCount = 0, enteredCount = 0;
 
         seasonJogos.forEach(jogo => {
-            const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
-            if (inLineup) {
-                gamesCount++;
-                goals += parseInt(inLineup.golsCount || 0);
-                gs += parseInt(inLineup.gsCount || 0);
-                if (inLineup.titular) titularesCount++;
-                if (inLineup.substituido) subOutCount++;
-                if (!inLineup.titular) reserveCount++;
+            let matches = false;
+            if (isTecnico) {
+                if (jogo.tecnicoGalo === player.nome_guerra) {
+                    matches = true;
+                    gamesCount++;
+                    const gm = parseInt(jogo.casa === 'Atlético' ? jogo.golsCasa : jogo.golsFora);
+                    const gc = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa);
+                    goals += gm; gs += gc;
+                    if (jogo.vencedor === 'Atlético') wins++;
+                    else if (jogo.vencedor === 'Empate') draws++;
+                    else losses++;
+                }
+            } else {
+                const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
+                if (inLineup) {
+                    matches = true;
+                    gamesCount++;
+                    goals += parseInt(inLineup.golsCount || 0);
+                    gs += parseInt(inLineup.gsCount || 0);
+                    if (inLineup.titular) titularCount++;
+                    if (inLineup.substituido) subOutCount++;
+                    if (!inLineup.titular) enteredCount++;
 
-                if (jogo.vencedor === 'Atlético') wins++;
-                else if (jogo.vencedor === 'Empate') draws++;
-                else losses++;
+                    if (jogo.vencedor === 'Atlético') wins++;
+                    else if (jogo.vencedor === 'Empate') draws++;
+                    else losses++;
+
+                    const cards = jogo.cartoesGalo?.filter(c => c.jogador === player.nome_guerra);
+                    cards?.forEach(c => { yellow += parseInt(c.amarelo || 0); red += parseInt(c.red || 0); });
+
+                    // Aggregate stats by técnico
+                    const tec = jogo.tecnicoGalo || 'Desconhecido';
+                    if (!statsByTecnico[tec]) statsByTecnico[tec] = { nome: tec, jogos: 0, titular: 0, subOut: 0, entered: 0, goals: 0, gs: 0 };
+                    const st = statsByTecnico[tec];
+                    st.jogos++;
+                    st.goals += parseInt(inLineup.golsCount || 0);
+                    st.gs += parseInt(inLineup.gsCount || 0);
+                    if (inLineup.titular) st.titular++;
+                    if (inLineup.substituido) st.subOut++;
+                    if (!inLineup.titular) st.entered++;
+                }
             }
-            const cards = jogo.cartoesGalo?.filter(c => c.jogador === player.nome_guerra);
-            cards?.forEach(c => { yellow += parseInt(c.amarelo || 0); red += parseInt(c.red || 0); });
         });
 
-        const aprov = gamesCount > 0 ? ((wins * 3 + draws) / (gamesCount * 3) * 100).toFixed(2) : "0";
-        return { season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularesCount, subOutCount, reserveCount };
-    }).filter(s => s.gamesCount > 0);
+        if (gamesCount > 0) {
+            const aprov = ((wins * 3 + draws) / (gamesCount * 3) * 100).toFixed(1) + '%';
+            statsBySeason.push({ season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularCount, subOutCount, enteredCount });
+        }
+    });
 
     const total = statsBySeason.reduce((acc, s) => {
         acc.gamesCount += s.gamesCount; acc.goals += s.goals; acc.gs += s.gs; acc.wins += s.wins; acc.draws += s.draws; acc.losses += s.losses; acc.yellow += s.yellow; acc.red += s.red;
-        acc.titularesCount += s.titularesCount; acc.subOutCount += s.subOutCount; acc.reserveCount += s.reserveCount;
+        acc.titularCount += s.titularCount; acc.subOutCount += s.subOutCount; acc.enteredCount += s.enteredCount;
         return acc;
-    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0, titularesCount: 0, subOutCount: 0, reserveCount: 0 });
-    total.aprov = total.gamesCount > 0 ? ((total.wins * 3 + total.draws) / (total.gamesCount * 3) * 100).toFixed(2) : "0";
+    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0, titularCount: 0, subOutCount: 0, enteredCount: 0 });
+    total.aprov = total.gamesCount > 0 ? ((total.wins * 3 + total.draws) / (total.gamesCount * 3) * 100).toFixed(1) + '%' : "0%";
 
     const detail = document.createElement('div');
     detail.id = `detail-player-${playerId}`;
     detail.className = 'detail-inline-container';
     detail.style.gridColumn = '1/-1';
     
-    const isGoalie = player.posicao === 'Goleiro';
-    
+    let seasonTableHeaders = isTecnico 
+        ? '<th>Temporada</th><th>Jogos</th><th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>GM</th><th>GS</th><th>Aprov.</th>'
+        : `<th>Temporada</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th>`;
+
+    let seasonTableBody = statsBySeason.map(s => {
+        if (isTecnico) {
+            return `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.goals}</td><td>${s.gs}</td><td><strong>${s.aprov}</strong></td></tr>`;
+        } else {
+            return `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td style="color:#2980b9; font-weight:600;">${s.titularCount}</td><td style="color:#7f8c8d;">${s.subOutCount}</td><td style="color:#27ae60;">${s.enteredCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}</td><td>${s.yellow}</td><td>${s.red}</td></tr>`;
+        }
+    }).join('');
+
+    let seasonTableFooter = isTecnico
+        ? `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.wins}</td><td>${total.draws}</td><td>${total.losses}</td><td>${total.goals}</td><td>${total.gs}</td><td>${total.aprov}</td></tr>`
+        : `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularCount}</td><td>${total.subOutCount}</td><td>${total.enteredCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}</td><td>${total.yellow}</td><td>${total.red}</td></tr>`;
+
+    // Analytics by Coach for players
+    let tecTableHtml = '';
+    if (!isTecnico && Object.keys(statsByTecnico).length > 0) {
+        const tecList = Object.values(statsByTecnico).sort((a,b) => b.jogos - a.jogos);
+        
+        // Explicitly answer user's "Top" questions
+        const topTitular = [...tecList].sort((a,b) => b.titular - a.titular)[0];
+        const topSub = [...tecList].sort((a,b) => b.subOut - a.subOut)[0];
+        const topEntrou = [...tecList].sort((a,b) => b.entered - a.entered)[0];
+
+        tecTableHtml = `
+            <div style="margin-top: 2rem;">
+                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Estatísticas por Técnico</h4>
+                
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#fcfcfc; border-radius:8px; border:1px solid #eee;">
+                    <div style="font-size:0.85rem;"><i class="fas fa-shield-halved" style="color:#2980b9;"></i> <strong>Mais titular com:</strong><br>${topTitular.titular > 0 ? topTitular.nome : '-'} (${topTitular.titular}x)</div>
+                    <div style="font-size:0.85rem;"><i class="fas fa-right-from-bracket" style="color:#e67e22;"></i> <strong>Mais substituído por:</strong><br>${topSub.subOut > 0 ? topSub.nome : '-'} (${topSub.subOut}x)</div>
+                    <div style="font-size:0.85rem;"><i class="fas fa-right-to-bracket" style="color:#27ae60;"></i> <strong>Mais utilizado reserva:</strong><br>${topEntrou.entered > 0 ? topEntrou.nome : '-'} (${topEntrou.entered}x)</div>
+                </div>
+
+                <table class="stats-table" style="font-size:0.9rem;">
+                    <thead>
+                        <tr><th>Técnico</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}</tr>
+                    </thead>
+                    <tbody>
+                        ${tecList.map(t => `<tr><td><strong>${t.nome}</strong></td><td>${t.jogos}</td><td>${t.titular}</td><td>${t.subOut}</td><td>${t.entered}</td><td>${t.goals}</td>${isGoalie ? `<td>${t.gs}</td>` : ''}</tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     detail.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
             <h3>Histórico: ${player.nome_guerra}</h3>
             <button class="btn-icon" onclick="this.closest('.detail-inline-container').remove()"><i class="fas fa-times"></i></button>
         </div>
         <table class="stats-table">
-            <thead><tr><th>Temporada</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th></tr></thead>
-            <tbody>
-                ${statsBySeason.map(s => `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td style="color:#2980b9; font-weight:600;">${s.titularesCount}</td><td style="color:#7f8c8d;">${s.subOutCount}</td><td style="color:#27ae60;">${s.reserveCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}%</td><td>${s.yellow}</td><td>${s.red}</td></tr>`).join('')}
-            </tbody>
-            <tfoot><tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularesCount}</td><td>${total.subOutCount}</td><td>${total.reserveCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}%</td><td>${total.yellow}</td><td>${total.red}</td></tr></tfoot>
+            <thead><tr>${seasonTableHeaders}</tr></thead>
+            <tbody>${seasonTableBody}</tbody>
+            <tfoot>${seasonTableFooter}</tfoot>
         </table>
+        ${tecTableHtml}
     `;
     card.after(detail);
 };
@@ -1993,7 +2073,7 @@ const renderStatsIndividuais = (container) => {
                 ${list.sort((a,b) => b.jogos - a.jogos).map(s => {
                     const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
                     return `
-                        <tr>
+                        <tr onclick="showPlayerDetail(${state.jogadores.find(p => p.nome_guerra === s.nome)?.id}, event)" style="cursor:pointer;">
                             <td><img src="${s.foto}" class="mini-foto" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #eee;"></td>
                             <td><strong>${s.nome}</strong></td>
                             <td>${s.posicao}</td>
