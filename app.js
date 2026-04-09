@@ -88,23 +88,29 @@ window.addEventListener('DOMContentLoaded', async () => {
         const loader = document.getElementById('global-loader');
         if(loader) loader.style.display = 'none';
 
-        // Restore page from URL hash
-        const hash = window.location.hash.replace('#', '');
-        const parts = hash.split('/');
-        const page = parts[0];
-        const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','comparativo'];
-        const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
-        if (page && validPages.includes(page)) {
-            showSection(page, true);
-            if (page === 'cadastros' && tab && validTabs.includes(tab)) {
-                renderTab(tab);
-            } else if (page === 'cadastros') {
-                renderTab('adversarios');
+        // Set up hash routing
+        const handleRouting = () => {
+            const hash = window.location.hash.replace('#', '');
+            const parts = hash.split('/');
+            const page = parts[0];
+            const tab  = parts[1];
+            const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','comparativo','novo-jogo'];
+            const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
+            
+            if (page && validPages.includes(page)) {
+                showSection(page, true);
+                if (page === 'cadastros' && tab && validTabs.includes(tab)) {
+                    renderTab(tab);
+                } else if (page === 'cadastros') {
+                    renderTab('adversarios');
+                }
+            } else {
+                showSection('dashboard');
             }
-        } else {
-            showSection('dashboard');
-        }
+        };
+
+        handleRouting();
+        window.addEventListener('hashchange', handleRouting);
     }
 });
 
@@ -733,7 +739,7 @@ const showCartoesDetail = (playerName, event) => {
             <h3>Detalhamento de Cartões: ${playerName}</h3>
             <button class="btn-icon" onclick="this.closest('.detail-inline-container').remove()"><i class="fas fa-times"></i></button>
         </div>
-        <div class="form-grid" style="gap:1rem;">
+        <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
             <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
                 <div class="stats-section-title">Por Campeonato</div>
                 <table class="stats-table">
@@ -746,6 +752,13 @@ const showCartoesDetail = (playerName, event) => {
                 <table class="stats-table">
                     <thead><tr><th>Adversário</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
                     <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                </table>
+            </div>
+            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                <div class="stats-section-title">Por Árbitro</div>
+                <table class="stats-table">
+                    <thead><tr><th>Árbitro</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
+                    <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
                 </table>
             </div>
         </div>
@@ -765,7 +778,7 @@ const renderArbitragem = () => {
     const fCamp = document.getElementById('arb-filter-campeonato').value;
     const fTipo = document.getElementById('arb-filter-tipo').value;
 
-    const stats = state.arbitros.map(arb => {
+    const statsArr = state.arbitros.map(arb => {
         let arbGames = state.jogos.filter(j => j.arbitro === arb.nome);
         
         // Filters
