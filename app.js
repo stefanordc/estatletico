@@ -1085,22 +1085,82 @@ const populateFilter = (id, values) => {
 const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
     const inp = document.getElementById(id); if (!inp) return;
     const cont = inp.parentElement; cont.classList.add('autocomplete-container');
+    let selectedIndex = -1;
+
     inp.addEventListener('input', (e) => {
-        const val = e.target.value.toLowerCase(); const old = cont.querySelector('.autocomplete-results'); if (old) old.remove();
+        const val = e.target.value.toLowerCase(); 
+        const old = cont.querySelector('.autocomplete-results'); 
+        if (old) old.remove();
+        selectedIndex = -1;
+        
         if (val.length < 1) return;
-        let ds = state[sourceKey]; if (filterFn) ds = ds.filter(filterFn);
+        let ds = state[sourceKey]; 
+        if (filterFn) ds = ds.filter(filterFn);
         const results = ds.filter(item => item[field].toLowerCase().includes(val));
-        const drop = document.createElement('div'); drop.className = 'autocomplete-results';
-        results.forEach(res => {
-            const item = document.createElement('div'); item.className = 'autocomplete-item'; item.textContent = res[field];
-            item.onclick = () => { inp.value = res[field]; drop.remove(); inp.dispatchEvent(new Event('change')); inp.dispatchEvent(new Event('blur')); };
+        
+        const drop = document.createElement('div'); 
+        drop.className = 'autocomplete-results';
+        
+        results.forEach((res, idx) => {
+            const item = document.createElement('div'); 
+            item.className = 'autocomplete-item'; 
+            item.textContent = res[field];
+            item.onclick = () => { 
+                inp.value = res[field]; 
+                drop.remove(); 
+                inp.dispatchEvent(new Event('change')); 
+                inp.dispatchEvent(new Event('blur')); 
+            };
             drop.appendChild(item);
         });
-        const add = document.createElement('div'); add.className = 'autocomplete-item new-item'; add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
+        
+        const add = document.createElement('div'); 
+        add.className = 'autocomplete-item new-item'; 
+        add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
         add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
-        drop.appendChild(add); cont.appendChild(drop);
+        drop.appendChild(add); 
+        cont.appendChild(drop);
     });
-    document.addEventListener('click', (e) => { if (!cont.contains(e.target)) { const d = cont.querySelector('.autocomplete-results'); if (d) d.remove(); }});
+
+    inp.addEventListener('keydown', (e) => {
+        const drop = cont.querySelector('.autocomplete-results');
+        if (!drop) return;
+        const items = drop.querySelectorAll('.autocomplete-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex++;
+            if (selectedIndex >= items.length) selectedIndex = 0;
+            updateSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex--;
+            if (selectedIndex < 0) selectedIndex = items.length - 1;
+            updateSelection(items);
+        } else if (e.key === 'Enter') {
+            if (selectedIndex > -1) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            }
+        }
+    });
+
+    const updateSelection = (items) => {
+        items.forEach((item, idx) => {
+            item.classList.toggle('selected', idx === selectedIndex);
+            if (idx === selectedIndex) {
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        });
+    };
+
+    document.addEventListener('click', (e) => { 
+        if (!cont.contains(e.target)) { 
+            const d = cont.querySelector('.autocomplete-results'); 
+            if (d) d.remove(); 
+        }
+    });
 };
 
 const openQuickAddModal = (type, initialValue, targetInputId) => {
@@ -1137,8 +1197,31 @@ window.saveQuickAdd = (type, targetInputId) => {
     else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'jogadores') { item.nome_guerra = document.getElementById('qa-nome-guerra').value; item.nome_completo = document.getElementById('qa-nome-completo').value; item.posicao = document.getElementById('qa-pos').value; item.temporada = document.getElementById('qa-temporada').value; item.nacionalidade = 'Brasil'; item.status = 'Ativo'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     state[type].push(item); saveData(type, state[type]);
-    const inp = document.getElementById(targetInputId); if(inp) { inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; inp.dispatchEvent(new Event('change')); }
+    const inp = document.getElementById(targetInputId); 
+    if(inp) { 
+        inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
+        inp.dispatchEvent(new Event('change')); 
+        if (type === 'arbitros' && targetInputId === 'game-arbitro') {
+            updateRefereeInfo();
+        }
+    }
     document.getElementById('quick-add-modal').remove();
+};
+
+const updateRefereeInfo = () => {
+    const arbName = document.getElementById('game-arbitro')?.value;
+    const matchDate = document.getElementById('game-data')?.value;
+    if (!arbName) return;
+
+    const arb = state.arbitros.find(a => a.nome === arbName);
+    if (arb) {
+        if (arb.nascimento) {
+            document.getElementById('game-arbitro-idade').value = calculateAge(arb.nascimento, matchDate);
+        } else {
+            document.getElementById('game-arbitro-idade').value = 'N/I';
+        }
+        document.getElementById('game-arbitro-federacao').value = arb.federacao || '';
+    }
 };
 
 const renderNovoJogoPage = (jogoToEdit = null) => {
@@ -1165,7 +1248,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-3"><div class="stats-section"><div class="stats-section-title">Pênaltis</div><div class="p-4"><div class="form-group" style="width:200px;"><label>Pênaltis</label><select name="penaltis" id="game-penaltis-toggle"><option value="Não" ${jogoToEdit?.penaltis === 'Não' ? 'selected' : ''}>Não</option><option value="Sim" ${jogoToEdit?.penaltis === 'Sim' ? 'selected' : ''}>Sim</option></select></div><div id="penaltis-placar" style="display:${jogoToEdit?.penaltis === 'Sim' ? 'grid' : 'none'};" class="form-grid"><div class="form-group"><label>Gols Pênaltis Casa</label><input type="number" name="penaltisCasa" id="game-pen-casa" value="${jogoToEdit?.penaltisCasa || 0}"></div><div class="form-group"><label>Gols Pênaltis Fora</label><input type="number" name="penaltisFora" id="game-pen-fora" value="${jogoToEdit?.penaltisFora || 0}"></div></div><div class="form-group" style="margin-top:2rem;"><label>Observações</label><textarea name="observacao" rows="6" placeholder="Observações da partida...">${jogoToEdit?.observacao || ''}</textarea></div></div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(2)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(4)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
-                <div class="form-block" id="block-4"><div class="stats-section"><div class="stats-section-title">Cartões - Atlético <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-galo"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini">Tempo</th><th class="col-mini">Tempo</th><th class="col-mini"></th></tr></thead><tbody id="cards-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('galo')">+ Adicionar Cartão</button></div><div class="stats-section"><div class="stats-section-title">Cartões - Adversário <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-adv"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini">Tempo</th><th class="col-mini">Tempo</th><th class="col-mini"></th></tr></thead><tbody id="cards-adv-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('adv')">+ Adicionar Cartão</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(3)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(5)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
+                <div class="form-block" id="block-4"><div class="stats-section"><div class="stats-section-title">Cartões - Atlético <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-galo"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('galo')">+ Adicionar Cartão</button></div><div class="stats-section"><div class="stats-section-title">Cartões - Adversário <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-adv"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-adv-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('adv')">+ Adicionar Cartão</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(3)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(5)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
                 <div class="form-block" id="block-5"><div class="stats-section"><div class="stats-section-title">Escalação do Atlético</div><table class="stats-table"><thead><tr><th class="col-mini">Foto</th><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Idade</th><th class="col-mini">Gols *</th><th class="col-small">Min. Gol</th><th class="col-small">GS *</th><th class="col-mini">Tempo</th><th class="col-mini">Titular</th><th class="col-mini">Substituído</th><th class="col-mini"></th></tr></thead><tbody id="lineup-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addLineupRow('galo')">+ Adicionar Jogador</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button><button type="button" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button></div></div>
             </form>
         </div>
@@ -1173,6 +1256,9 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
     setupAutocomplete('game-estadio', 'estadios', 'nome');
     setupAutocomplete('game-arbitro', 'arbitros', 'nome');
+    document.getElementById('game-arbitro').addEventListener('change', updateRefereeInfo);
+    document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
+    
     setupAutocomplete('game-assistente1', 'arbitros', 'nome');
     setupAutocomplete('game-assistente2', 'arbitros', 'nome');
     setupAutocomplete('game-var', 'arbitros', 'nome');
@@ -1217,7 +1303,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
 const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
-    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário">' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}"></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }"></td>`}<td><select class="yellow-sel"><option value="0" ${data?.amarelo == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.amarelo == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel"><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><input type="number" class="min-y-inp" placeholder="Min" style="width:50px;" value="${data?.minAmarelo || ''}"><select class="tempo-y-sel"><option value="1" ${data?.tempoAmarelo == 1 ? 'selected' : '' }>1T</option><option value="2" ${data?.tempoAmarelo == 2 ? 'selected' : '' }>2T</option></select></td><td><input type="number" class="min-r-inp" placeholder="Min" style="width:50px;" value="${data?.minVermelho || ''}"><select class="tempo-r-sel"><option value="1" ${data?.tempoVermelho == 1 ? 'selected' : '' }>1T</option><option value="2" ${data?.tempoVermelho == 2 ? 'selected' : '' }>2T</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário">' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}"></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }"></td>`}<td><select class="yellow-sel"><option value="0" ${data?.amarelo == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.amarelo == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel"><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
     if(!isAdv) { const inp = row.querySelector('.card-player-inp'); const id = 'cq-'+Date.now()+Math.random(); inp.id = id; setTimeout(() => { setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); inp.addEventListener('blur', () => { const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); if(p) row.querySelector('.pos-inp').value = p.posicao; }); }, 10); }
     tbody.appendChild(row);
 };
@@ -1244,8 +1330,8 @@ const saveNewJogo = () => {
     saveData('fixedSeason', state.fixedSeason); saveData('isSeasonFixed', state.isSeasonFixed);
     saveData('fixedCampeonato', state.fixedCampeonato); saveData('isCampeonatoFixed', state.isCampeonatoFixed);
     saveData('fixedTecnicoAtle', state.fixedTecnicoAtle); saveData('isTecnicoFixed', state.isTecnicoFixed);
-    jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value, posicao: row.querySelector('.pos-inp')?.value, amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: row.querySelector('.min-y-inp')?.value || '', tempoAmarelo: row.querySelector('.tempo-y-sel').value, minVermelho: row.querySelector('.min-r-inp')?.value || '', tempoVermelho: row.querySelector('.tempo-r-sel').value }));
-    jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: row.querySelector('.min-y-inp')?.value || '', tempoAmarelo: row.querySelector('.tempo-y-sel').value, minVermelho: row.querySelector('.min-r-inp')?.value || '', tempoVermelho: row.querySelector('.tempo-r-sel').value }));
+    jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value, posicao: row.querySelector('.pos-inp')?.value, amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
+    jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
     
     jogo.lineupGalo = [];
     Array.from(document.querySelectorAll('#lineup-galo-body tr')).forEach(r => {

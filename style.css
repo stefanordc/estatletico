@@ -411,7 +411,7 @@ body {
     transition: var(--transition);
 }
 
-.autocomplete-item:hover {
+.autocomplete-item:hover, .autocomplete-item.selected {
     background: #f8f9fa;
     color: var(--primary-color);
 }
