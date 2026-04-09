@@ -1552,22 +1552,23 @@ const renderComparativo = () => {
     const seasons = [...new Set(state.jogos.map(j => j.temporada))].sort((a,b) => b - a);
     const coaches = [...new Set(state.jogos.map(j => j.tecnicoGalo))].sort();
     
-    // Prepare players with formatted name for autocomplete
-    const playersFormatted = state.jogadores.map(p => ({
-        ...p,
-        searchName: `${p.nome_guerra} - ${p.nome_completo}`
-    })).sort((a,b) => a.nome_guerra.localeCompare(b.nome_guerra));
-
-    // For autocomplete to work with custom format, we update state momentarily or use a custom source
-    // But setupAutocomplete uses state[sourceKey], so we'll add a temporary field if not exists
+    // Prepare unique list of players with formatted name for autocomplete (avoids duplicates across seasons)
+    const uniquePlayersMap = {};
     state.jogadores.forEach(j => {
-        j.searchName = `${j.nome_guerra} - ${j.nome_completo}`;
+        const sn = `${j.nome_guerra} - ${j.nome_completo}`;
+        if (!uniquePlayersMap[sn]) {
+            uniquePlayersMap[sn] = { ...j, searchName: sn };
+        }
     });
+    state.jogadoresComparativo = Object.values(uniquePlayersMap).sort((a,b) => a.nome_guerra.localeCompare(b.nome_guerra));
+
+    // Helper to avoid duplicate coaches in autocomplete
+    state.tecnicosList = [...new Set(state.jogos.map(j => j.tecnicoGalo))].map(t => ({ nome: t }));
 
     [1,2,3,4,5].forEach(i => {
         populateFilter(`comp-t${i}`, seasons);
-        setupAutocomplete(`comp-tec${i}`, 'jogos', 'tecnicoGalo', null); // Reusing games technicals
-        setupAutocomplete(`comp-jog${i}`, 'jogadores', 'searchName', null);
+        setupAutocomplete(`comp-tec${i}`, 'tecnicosList', 'nome', null); 
+        setupAutocomplete(`comp-jog${i}`, 'jogadoresComparativo', 'searchName', null);
     });
     
     // Add change listeners for autocomplete inputs (manual because setupAutocomplete doesn't trigger 'change' always)
@@ -1720,6 +1721,23 @@ const renderComparativo = () => {
     });
 
     updateComparativo();
+};
+
+window.clearComparativoFilters = () => {
+    [1,2,3,4,5].forEach(i => {
+        const t = document.getElementById(`comp-t${i}`);
+        const tec = document.getElementById(`comp-tec${i}`);
+        const jog = document.getElementById(`comp-jog${i}`);
+        if(t) t.value = "";
+        if(tec) tec.value = "";
+        if(jog) jog.value = "";
+    });
+    // Trigger update
+    const container = document.getElementById('comparativo-content-container');
+    if (container) {
+        // Find existing updateComparativo in context or just re-render the page
+        renderComparativo();
+    }
 };
 
 let compChartGM = null;
