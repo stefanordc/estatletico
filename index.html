@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatlético - Portal de Estatísticas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        #global-loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(255,255,255,0.95); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #eee;
+            border-top-color: var(--primary-color); border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="global-loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 1rem; font-weight: bold; color: var(--text-main);">Conectando ao Banco de Dados...</p>
+    </div>
+
+    <aside class="sidebar">
+        <div class="logo-container">
+            <h1>Estatlético</h1>
+            <p>Portal de Estatísticas</p>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item" data-page="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </li>
+            <li class="nav-item active" data-page="cadastros">
+                <i class="fas fa-users-cog"></i>
+                <span>Cadastros</span>
+            </li>
+            <li class="nav-item" data-page="jogos">
+                <i class="fas fa-flag"></i>
+                <span>Jogos</span>
+            </li>
+            <li class="nav-item" data-page="elenco">
+                <i class="fas fa-users"></i>
+                <span>Elenco</span>
+            </li>
+            <li class="nav-item" data-page="artilheiros">
+                <i class="fas fa-soccer-ball"></i>
+                <span>Artilheiros</span>
+            </li>
+            <li class="nav-item" data-page="cartoes">
+                <i class="fas fa-clone"></i>
+                <span>Cartões</span>
+            </li>
+            <li class="nav-item" data-page="arbitragem">
+                <svg class="whistle-icon-sidebar" viewBox="0 0 512 512" style="width: 18px; height: 18px; fill: currentColor; margin-right: 12px;"><path d="M432 128H288v48h144a16 16 0 0 1 16 16v32a16 16 0 0 1-16 16h-48v48h48a64 64 0 0 0 64-64v-32a64 64 0 0 0-64-64zM240 128H64a64 64 0 0 0-64 64v128a64 64 0 0 0 64 64h176v-48h-16v-48h16v-48h-16v-48h16V128zM96 240a16 16 0 1 1 16-16 16 16 0 0 1-16 16z"/></svg>
+                <span>Arbitragem</span>
+            </li>
+            <li class="nav-item" data-page="equipe-arbitragem">
+                <i class="fas fa-users-cog"></i>
+                <span>Comissão de Arbitragem</span>
+            </li>
+            <li class="nav-item" data-page="estatisticas">
+                <i class="fas fa-chart-bar"></i>
+                <span>Estatísticas</span>
+            </li>
+            <li class="nav-item" data-page="comparativo">
+                <i class="fas fa-balance-scale"></i>
+                <span>Comparativo</span>
+            </li>
+        </ul>
+        <div class="user-profile">
+            <div class="user-avatar">SB</div>
+            <div class="user-info">
+                <p>Stéfano Bruno</p>
+                <span>stefanobrunofaria@gmail.c...</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="page-section">
+            <div class="page-header">
+                <h2>Dashboard</h2>
+                <p>Visão geral e Gerenciamento de Dados</p>
+            </div>
+            
+            <div class="form-grid">
+                <div class="card" style="border-top: 4px solid var(--primary-color);">
+                    <div class="card-title"><i class="fas fa-database"></i> Armazenamento (LocalStorage)</div>
+                    <div style="margin: 1rem 0;">
+                        <div id="storage-usage-container">
+                            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Uso estimado: <span id="storage-usage-text">Carregando...</span></p>
+                            <div style="width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
+                                <div id="storage-bar" style="width: 0%; height: 100%; background: var(--primary-color); transition: width 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #888; margin-bottom: 1.5rem;">Fotos pesadas são o principal motivo de falta de espaço. Tente usar fotos menores ou URLs.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn-secondary" onclick="exportData()" title="Backup de todos os dados"><i class="fas fa-download"></i> Exportar JSON</button>
+                        <button class="btn-primary" style="background: #e74c3c;" onclick="clearAllData()"><i class="fas fa-trash-alt"></i> Limpar Tudo</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Elenco Section -->
+        <section id="elenco-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <i class="fas fa-users" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <div>
+                        <h2 style="margin:0;">Elenco</h2>
+                        <p style="margin:0;">Veja todos os jogadores do Atlético Mineiro</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <select id="elenco-filter-temporada">
+                            <option value="2026" selected>2026</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome de Guerra</label>
+                        <select id="elenco-filter-nome">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Posição</label>
+                        <select id="elenco-filter-posicao">
+                            <option value="">Todas</option>
+                            <option value="Goleiro">Goleiro</option>
+                            <option value="Lateral-Direito">Lateral-Direito</option>
+                            <option value="Lateral-Esquerdo">Lateral-Esquerdo</option>
+                            <option value="Zagueiro">Zagueiro</option>
+                            <option value="Volante">Volante</option>
+                            <option value="Meia">Meia</option>
+                            <option value="Atacante">Atacante</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nacionalidade *</label>
+                        <input type="text" name="nacionalidade" id="input-nacionalidade" value="Brasil">
+                    </div>
+                    <div class="form-group">
+                        <label>Nacionalidade</label>
+                        <select id="elenco-filter-nacionalidade">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="elenco-filter-status">
+                            <option value="">Todos</option>
+                            <option value="no-elenco">No Elenco Atual</option>
+                            <option value="fora">Fora do Elenco</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Idade Mínima</label>
+                        <input type="number" id="elenco-filter-idade-min" placeholder="Mín.">
+                    </div>
+                    <div class="form-group">
+                        <label>Idade Máxima</label>
+                        <input type="number" id="elenco-filter-idade-max" placeholder="Máx.">
+                    </div>
+                </div>
+            </div>
+
+            <div id="elenco-grid-container" class="elenco-grid">
+                <!-- Jogadores renderizados aqui -->
+            </div>
+            
+            <!-- Detalhes do Jogador (Hidden by default) -->
+            <div id="player-detail-container" class="hidden" style="margin-top: 2rem;"></div>
+        </section>
+
+        <!-- Jogos Section -->
+        <section id="jogos-section" class="page-section hidden">
+            <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2>Jogos</h2>
+                    <p>Gerencie os jogos do Atlético Mineiro</p>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn-secondary" id="export-csv"><i class="fas fa-download"></i> CSV</button>
+                    <button class="btn-primary" id="btn-novo-jogo"><i class="fas fa-plus"></i> Novo Jogo</button>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-card">
+                <div class="filters-title"><i class="fas fa-filter"></i> Filtros</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <select id="filter-temporada">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="filter-campeonato">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>País *</label>
+                        <input type="text" name="pais" value="Brasil">
+                    </div>
+                    <div class="form-group">
+                        <label>Casa</label>
+                        <select id="filter-casa">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fora</label>
+                        <select id="filter-fora">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Estádio</label>
+                        <select id="filter-estadio">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Árbitro</label>
+                        <select id="filter-arbitro">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Público Mínimo</label>
+                        <input type="number" id="filter-publico-min" placeholder="Mínimo...">
+                    </div>
+                    <div class="form-group">
+                        <label>Público Máximo</label>
+                        <input type="number" id="filter-publico-max" placeholder="Máximo...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data <i class="fas fa-sort"></i></th>
+                            <th>Campeonato <i class="fas fa-sort"></i></th>
+                            <th>Casa</th>
+                            <th>Placar</th>
+                            <th>Fora</th>
+                            <th>Árbitro</th>
+                            <th>Público <i class="fas fa-sort"></i></th>
+                            <th>Renda</th>
+                            <th>Ticket Médio</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body-jogos">
+                        <!-- Jogos renderizados aqui -->
+                    </tbody>
+                </table>
+                <div id="pagination-container" style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+                    <!-- Paginação aqui -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Novo Jogo Section -->
+        <section id="novo-jogo-section" class="page-section hidden">
+            <!-- O conteúdo será gerado dinamicamente pelo app.js para suportar Edição -->
+            <div id="novo-jogo-container"></div>
+        </section>
+
+        <!-- Multi-step Form Modal Container (Keep for Quick Add Pop-ups) -->
+        <div id="modal-container"></div>
+
+        <!-- Artilheiros Section -->
+        <section id="artilheiros-section" class="page-section hidden">
+            <div class="page-header">
+                <div>
+                    <h2 style="margin:0;">Artilheiros</h2>
+                    <p style="margin:0;">Top 10 artilheiros do Atlético Mineiro</p>
+                </div>
+                <button class="btn-primary" id="export-artilheiros-csv" style="background: var(--primary-color); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-file-export"></i> Exportar CSV
+                </button>
+            </div>
+
+            <div class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <select id="art-filter-temporada">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jogador</label>
+                        <select id="art-filter-jogador">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Posição</label>
+                        <select id="art-filter-posicao">
+                            <option value="">Selecione...</option>
+                            <option value="Lateral-Direito">Lateral-Direito</option>
+                            <option value="Lateral-Esquerdo">Lateral-Esquerdo</option>
+                            <option value="Zagueiro">Zagueiro</option>
+                            <option value="Volante">Volante</option>
+                            <option value="Meia">Meia</option>
+                            <option value="Atacante">Atacante</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Adversário</label>
+                        <select id="art-filter-adversario">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Estádio</label>
+                        <select id="art-filter-estadio">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="art-filter-campeonato">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo do Campeonato</label>
+                        <select id="art-filter-tipo">
+                            <option value="">Selecione...</option>
+                            <option value="Regional">Regional</option>
+                            <option value="Nacional">Nacional</option>
+                            <option value="Internacional">Internacional</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nacionalidade</label>
+                        <select id="art-filter-nacionalidade">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="artilheiros-grid-container" class="elenco-grid">
+                <!-- Artilheiros renderizados aqui -->
+            </div>
+
+            <!-- Detalhes do Artilheiro (Hidden by default) -->
+            <div id="artilheiro-detail-container" class="hidden" style="margin-top: 2rem;"></div>
+        </section>
+
+        <section id="arbitragem-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+                    <div>
+                        <h2 style="margin:0;">Arbitragem</h2>
+                        <p style="margin:0;">Estatísticas de arbitragem nos jogos do Atlético</p>
+                    </div>
+                    <button class="btn-secondary" id="export-arbitragem-csv"><i class="fas fa-download"></i> Exportar CSV</button>
+                </div>
+            </div>
+
+            <div class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group"><label>Temporada</label><select id="arb-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Árbitro</label><select id="arb-filter-arbitro"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Adversário</label><select id="arb-filter-adversario"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Estádio</label><select id="arb-filter-estadio"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Campeonato</label><select id="arb-filter-campeonato"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Tipo</label><select id="arb-filter-tipo"><option value="">Todos</option></select></div>
+                </div>
+            </div>
+
+            <div class="list-container" style="overflow-x: auto;">
+                <table class="data-table" style="min-width: 1400px; font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th>Árbitro</th>
+                            <th>Idade Média</th>
+                            <th>Jogos</th>
+                            <th>Amarelos Atl</th>
+                            <th>Vermelhos Atl</th>
+                            <th>Média Amar/J Atl</th>
+                            <th>Média Verm/J Atl</th>
+                            <th>Amarelos Adv</th>
+                            <th>Vermelhos Adv</th>
+                            <th>Média Amar/J Adv</th>
+                            <th>Média Verm/J Adv</th>
+                            <th>Total Amar</th>
+                            <th>Total Verm</th>
+                            <th>Média Amar/J</th>
+                            <th>Média Verm/J</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body-arbitragem">
+                        <!-- Renderizado via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="equipe-arbitragem-section" class="page-section hidden">
+            <div class="page-header">
+                <div>
+                    <h2 style="margin:0;">Árbitro, Assistente e VAR</h2>
+                    <p style="margin:0;">Cards e estatísticas da equipe de arbitragem presente nos jogos do Galo</p>
+                </div>
+            </div>
+
+            <div class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group"><label>Temporada</label><select id="ea-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Campeonato</label><select id="ea-filter-campeonato"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Adversário</label><select id="ea-filter-adversario"><option value="">Todos</option></select></div>
+                </div>
+                <div class="form-grid" style="margin-top:1rem;">
+                    <div class="form-group"><label>Árbitro</label><select id="ea-filter-arbitro"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Assistente</label><select id="ea-filter-assistente"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>VAR</label><select id="ea-filter-var"><option value="">Todos</option></select></div>
+                </div>
+            </div>
+
+            <div id="equipe-arbitragem-grid-container" class="elenco-grid cartoes-grid">
+                <!-- Cards renderizados via JS -->
+            </div>
+            
+            <div id="equipe-arbitragem-detail-container"></div>
+        </section>
+
+        <section id="cartoes-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <div>
+                        <h2 style="margin:0;">Ranking de Cartões</h2>
+                        <p style="margin:0;">Jogadores com mais cartões amarelos e vermelhos</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <select id="cart-filter-temporada">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <select id="cart-filter-time">
+                            <option value="Atlético" selected>Atlético</option>
+                            <option value="Adversário">Adversário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Posição</label>
+                        <select id="cart-filter-posicao">
+                            <option value="">Todas</option>
+                            <option value="Goleiro">Goleiro</option>
+                            <option value="Zagueiro">Zagueiro</option>
+                            <option value="Lateral-Direito">Lateral-Direito</option>
+                            <option value="Lateral-Esquerdo">Lateral-Esquerdo</option>
+                            <option value="Volante">Volante</option>
+                            <option value="Meia">Meia</option>
+                            <option value="Atacante">Atacante</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cartoes-grid-container" class="elenco-grid">
+                <!-- Ranking de Cartões renderizado aqui -->
+            </div>
+
+            <!-- Detalhes do Jogador (Hidden by default) -->
+            <div id="cartoes-detail-container" class="hidden" style="margin-top: 2rem;"></div>
+        </section>
+
+        <section id="estatisticas-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+                    <div>
+                        <h2 style="margin:0;">Estatísticas</h2>
+                        <p style="margin:0;">Estatísticas detalhadas do Atlético Mineiro</p>
+                    </div>
+                    <button class="btn-secondary" id="export-stats-csv"><i class="fas fa-download"></i> Exportar CSV</button>
+                </div>
+            </div>
+
+            <div class="tabs-container" style="margin-bottom: 2rem;">
+                <button class="tab-btn active" id="btn-stats-coletivas" onclick="switchStatsTab('coletivas')">
+                    <i class="fas fa-trophy"></i> Coletivas
+                </button>
+                <button class="tab-btn" id="btn-stats-individuais" onclick="switchStatsTab('individuais')">
+                    <i class="fas fa-user"></i> Individuais
+                </button>
+            </div>
+
+            <div id="stats-filters-coletivas" class="filters-card">
+                <div class="form-grid">
+                    <div class="form-group"><label>Temporada</label><select id="stc-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Campeonato</label><select id="stc-filter-campeonato"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Tipo</label><select id="stc-filter-tipo"><option value="">Todos</option></select></div>
+                </div>
+            </div>
+
+            <div id="stats-filters-individuais" class="filters-card hidden">
+                <div class="form-grid">
+                    <div class="form-group"><label>Temporada</label><select id="sti-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Jogador</label><select id="sti-filter-jogador"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Posição</label><select id="sti-filter-posicao"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Campeonato</label><select id="sti-filter-campeonato"><option value="">Todos</option></select></div>
+                </div>
+            </div>
+
+            <div class="list-container" id="stats-content-container" style="overflow-x: auto;">
+                <!-- Tabelas renderizadas via JS -->
+            </div>
+        </section>
+
+        <section id="comparativo-section" class="page-section hidden">
+            <div class="page-header">
+                <div>
+                    <h2 style="margin:0;"><i style="color:var(--primary-color)" class="fas fa-chart-column"></i> Comparativo de Temporadas</h2>
+                    <p style="margin:0;">Compare estatísticas entre diferentes temporadas</p>
+                </div>
+            </div>
+
+            <div class="filters-card" style="margin-bottom: 2rem;">
+                <div style="font-weight:bold; margin-bottom:1rem;">Selecione até 5 temporadas para comparar</div>
+                <div class="form-grid" style="grid-template-columns: repeat(5, 1fr);">
+                    <div class="form-group"><label>Temporada 1</label><select id="comp-t1" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Temporada 2</label><select id="comp-t2" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Temporada 3</label><select id="comp-t3" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Temporada 4</label><select id="comp-t4" class="comp-select"><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Temporada 5</label><select id="comp-t5" class="comp-select"><option value="">Selecione...</option></select></div>
+                </div>
+            </div>
+
+            <div class="list-container" id="comparativo-content-container" style="overflow-x: auto;">
+                <!-- Tabela comparativa renderizada via JS -->
+            </div>
+        </section>
+
+        <!-- Cadastros Section -->
+        <section id="cadastros-section" class="page-section">
+            <div class="page-header">
+                <h2>Cadastros</h2>
+                <p>Gerencie todos os cadastros do Estatlético</p>
+            </div>
+
+            <div class="tabs-container">
+                <button class="tab-btn active" data-tab="adversarios">
+                    <i class="fas fa-users"></i> Adversários
+                </button>
+                <button class="tab-btn" data-tab="estadios">
+                    <i class="fas fa-map-marker-alt"></i> Estádios
+                </button>
+                <button class="tab-btn" data-tab="competicoes">
+                    <i class="fas fa-trophy"></i> Competições
+                </button>
+                <button class="tab-btn" data-tab="arbitros">
+                    <i class="fas fa-flag"></i> Árbitros
+                </button>
+                <button class="tab-btn" data-tab="jogadores">
+                    <i class="fas fa-user-friends"></i> Jogadores
+                </button>
+            </div>
+
+            <!-- Content Areas for Tabs -->
+            <div id="tab-content">
+                <!-- Tabs will be rendered here via JS -->
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
