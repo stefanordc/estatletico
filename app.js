@@ -686,8 +686,9 @@ const renderCartoes = () => {
     cardList.sort((a,b) => b.total - a.total || b.red - a.red);
     const top10 = cardList.slice(0, 10);
 
-    grid.innerHTML = top10.length === 0 ? '<div id="cartoes-grid" class="elenco-grid" style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum registro de cartão encontrado.</div>' : 
-        `<div id="cartoes-grid" class="elenco-grid cartoes-grid">` + top10.map((c, idx) => `
+    grid.className = 'cartoes-grid';
+    grid.innerHTML = top10.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum registro de cartão encontrado.</div>' : 
+        top10.map((c, idx) => `
             <div class="artilheiro-card" onclick="showCartoesDetail('${c.nome}', event)">
                 <div class="artilheiro-rank">${idx + 1}</div>
                 <img src="${c.player?.foto || 'https://via.placeholder.com/100'}" alt="${c.nome}">
@@ -701,7 +702,7 @@ const renderCartoes = () => {
                     <div class="artilheiro-sub-stat"><span>${c.red}</span><span style="color:#e74c3c;">vermelhos</span></div>
                 </div>
             </div>
-        `).join('') + `</div>`;
+        `).join('');
 };
 
 const showCartoesDetail = (playerName, event) => {

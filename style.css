@@ -615,10 +615,14 @@ body {
 }
 
 .cartoes-grid, .artilheiros-grid, .elenco-grid {
-    display: grid;
+    display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.5rem;
     width: 100%;
+}
+
+.cartoes-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
 }
 
 
