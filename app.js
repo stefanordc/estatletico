@@ -1113,7 +1113,14 @@ const populateFilter = (id, values) => {
 
 const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
     const inp = document.getElementById(id); if (!inp) return;
-    const cont = inp.parentElement; cont.classList.add('autocomplete-container');
+    
+    // Create a dedicated wrapper for the input to ensure correct absolute positioning
+    const wrapper = document.createElement('div');
+    wrapper.className = 'autocomplete-container';
+    inp.parentNode.insertBefore(wrapper, inp);
+    wrapper.appendChild(inp);
+    
+    const cont = wrapper;
     let selectedIndex = -1;
 
     inp.addEventListener('input', (e) => {
@@ -1149,6 +1156,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
         add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
         add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
         drop.appendChild(add); 
+        drop.style.width = inp.offsetWidth + 'px';
         cont.appendChild(drop);
     });
 
