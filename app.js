@@ -471,6 +471,7 @@ const showPlayerDetail = (playerId, event) => {
     const statsBySeason = seasons.map(s => {
         const seasonJogos = state.jogos.filter(j => j.temporada === s);
         let gamesCount = 0, goals = 0, gs = 0, wins = 0, draws = 0, losses = 0, yellow = 0, red = 0;
+        let titularesCount = 0, subOutCount = 0, reserveCount = 0;
 
         seasonJogos.forEach(jogo => {
             const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
@@ -478,6 +479,10 @@ const showPlayerDetail = (playerId, event) => {
                 gamesCount++;
                 goals += parseInt(inLineup.golsCount || 0);
                 gs += parseInt(inLineup.gsCount || 0);
+                if (inLineup.titular) titularesCount++;
+                if (inLineup.substituido) subOutCount++;
+                if (!inLineup.titular) reserveCount++;
+
                 if (jogo.vencedor === 'Atlético') wins++;
                 else if (jogo.vencedor === 'Empate') draws++;
                 else losses++;
@@ -487,13 +492,14 @@ const showPlayerDetail = (playerId, event) => {
         });
 
         const aprov = gamesCount > 0 ? ((wins * 3 + draws) / (gamesCount * 3) * 100).toFixed(2) : "0";
-        return { season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red };
+        return { season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularesCount, subOutCount, reserveCount };
     }).filter(s => s.gamesCount > 0);
 
     const total = statsBySeason.reduce((acc, s) => {
         acc.gamesCount += s.gamesCount; acc.goals += s.goals; acc.gs += s.gs; acc.wins += s.wins; acc.draws += s.draws; acc.losses += s.losses; acc.yellow += s.yellow; acc.red += s.red;
+        acc.titularesCount += s.titularesCount; acc.subOutCount += s.subOutCount; acc.reserveCount += s.reserveCount;
         return acc;
-    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0 });
+    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0, titularesCount: 0, subOutCount: 0, reserveCount: 0 });
     total.aprov = total.gamesCount > 0 ? ((total.wins * 3 + total.draws) / (total.gamesCount * 3) * 100).toFixed(2) : "0";
 
     const detail = document.createElement('div');
@@ -509,11 +515,11 @@ const showPlayerDetail = (playerId, event) => {
             <button class="btn-icon" onclick="this.closest('.detail-inline-container').remove()"><i class="fas fa-times"></i></button>
         </div>
         <table class="stats-table">
-            <thead><tr><th>Temporada</th><th>Jogos</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th></tr></thead>
+            <thead><tr><th>Temporada</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th></tr></thead>
             <tbody>
-                ${statsBySeason.map(s => `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}%</td><td>${s.yellow}</td><td>${s.red}</td></tr>`).join('')}
+                ${statsBySeason.map(s => `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td style="color:#2980b9; font-weight:600;">${s.titularesCount}</td><td style="color:#7f8c8d;">${s.subOutCount}</td><td style="color:#27ae60;">${s.reserveCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}%</td><td>${s.yellow}</td><td>${s.red}</td></tr>`).join('')}
             </tbody>
-            <tfoot><tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}%</td><td>${total.yellow}</td><td>${total.red}</td></tr></tfoot>
+            <tfoot><tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularesCount}</td><td>${total.subOutCount}</td><td>${total.reserveCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}%</td><td>${total.yellow}</td><td>${total.red}</td></tr></tfoot>
         </table>
     `;
     card.after(detail);
@@ -1110,7 +1116,8 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
         if (val.length < 1) return;
         let ds = state[sourceKey]; 
         if (filterFn) ds = ds.filter(filterFn);
-        const results = ds.filter(item => item[field].toLowerCase().includes(val));
+        const results = ds.filter(item => item[field].toLowerCase().includes(val))
+                          .sort((a,b) => a[field].localeCompare(b[field]));
         
         const drop = document.createElement('div'); 
         drop.className = 'autocomplete-results';
@@ -1368,6 +1375,12 @@ const saveNewJogo = () => {
             substituido: r.querySelector('.sub-ck').checked
         });
     });
+
+    const titularesCount = jogo.lineupGalo.filter(l => l.titular).length;
+    if (titularesCount > 11) {
+        alert(`Erro de Validação: Você marcou ${titularesCount} jogadores como titulares. O máximo permitido é 11.`);
+        return;
+    }
 
     const gsTotal = jogo.lineupGalo.reduce((acc, obj) => acc + obj.gsCount, 0);
     const advGols = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa) || 0;

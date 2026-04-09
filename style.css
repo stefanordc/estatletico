@@ -393,33 +393,56 @@ body {
 
 .autocomplete-results {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 5px);
     left: 0;
     right: 0;
     background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    z-index: 1000;
-    max-height: 200px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    z-index: 2000;
+    max-height: 250px;
     overflow-y: auto;
+    animation: fadeInScale 0.2s ease-out;
 }
 
 .autocomplete-item {
-    padding: 10px 15px;
+    padding: 0.85rem 1.2rem;
     cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f8f9fa;
     transition: var(--transition);
+    color: var(--text-main);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
 }
 
 .autocomplete-item:hover, .autocomplete-item.selected {
-    background: #f8f9fa;
+    background-color: #fcfcfc;
     color: var(--primary-color);
+    padding-left: 1.5rem;
 }
 
 .autocomplete-item.new-item {
-    border-top: 1px solid #eee;
+    background: #fffdf5;
     color: var(--primary-color);
     font-weight: 600;
+    border-top: 2px solid rgba(212, 175, 55, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.autocomplete-item.new-item:hover {
+    background: #fff9e6;
+    padding-left: 1.5rem;
+}
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: translateY(-5px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Modal and Blocks */
