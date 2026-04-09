@@ -360,7 +360,21 @@ const renderArbitros = () => {
     setupPasteHandler('paste-area-arbitro', 'foto-input-arbitro');
     document.getElementById('form-arbitros').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
-        const item = { id: state.editingId || Date.now(), nome: fd.get('nome'), nascimento: fd.get('nascimento'), federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
+        const novoNome = fd.get('nome');
+        const novoNascimento = fd.get('nascimento');
+        
+        const isDuplicate = state.arbitros.some(a => 
+            a.nome.toLowerCase() === novoNome.toLowerCase() && 
+            a.nascimento === novoNascimento &&
+            a.id !== state.editingId
+        );
+
+        if (isDuplicate) {
+            showToast('Já existe um árbitro cadastrado com este mesmo nome e data de nascimento.', 'error');
+            return;
+        }
+
+        const item = { id: state.editingId || Date.now(), nome: novoNome, nascimento: novoNascimento, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
         if (state.editingId) { state.arbitros[state.arbitros.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.arbitros.push(item);
         saveData('arbitros', state.arbitros); renderTab('arbitros');
@@ -1216,21 +1230,25 @@ const populateFilter = (id, values) => {
     s.innerHTML = '<option value="">Selecione...</option>' + values.sort().map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
 };
 
-const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
+const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
     const inp = document.getElementById(id); if (!inp) return;
     
-    // Check if already initialized
-    if (inp.parentElement.classList.contains('autocomplete-container')) {
+    // Check if bounds have already been attached
+    if (inp.dataset.autocompleteBound) {
         return;
     }
+    inp.dataset.autocompleteBound = 'true';
 
-    // Create a dedicated wrapper for the input to ensure correct absolute positioning
-    const wrapper = document.createElement('div');
-    wrapper.className = 'autocomplete-container';
-    inp.parentNode.insertBefore(wrapper, inp);
-    wrapper.appendChild(inp);
+    let cont = inp.parentElement;
+    // Ensure the wrapper exists for relative positioning
+    if (!cont.classList.contains('autocomplete-container')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'autocomplete-container';
+        inp.parentNode.insertBefore(wrapper, inp);
+        wrapper.appendChild(inp);
+        cont = wrapper;
+    }
     
-    const cont = wrapper;
     let selectedIndex = -1;
 
     inp.addEventListener('input', (e) => {
@@ -1241,7 +1259,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
         
         if (val.length < 1) return;
         let ds = state[sourceKey]; 
-        if (filterFn) ds = ds.filter(filterFn);
+        if (typeof filterFn === 'function') ds = ds.filter(filterFn);
         const results = ds.filter(item => item[field].toLowerCase().includes(val))
                           .sort((a,b) => a[field].localeCompare(b[field]));
         
@@ -1255,17 +1273,20 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null) => {
             item.onclick = () => { 
                 inp.value = res[field]; 
                 drop.remove(); 
+                if (typeof onSelect === 'function') onSelect(res);
                 inp.dispatchEvent(new Event('change')); 
                 inp.dispatchEvent(new Event('blur')); 
             };
             drop.appendChild(item);
         });
         
-        const add = document.createElement('div'); 
-        add.className = 'autocomplete-item new-item'; 
-        add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
-        add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
-        drop.appendChild(add); 
+        if (showQuickAdd) {
+            const add = document.createElement('div'); 
+            add.className = 'autocomplete-item new-item'; 
+            add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
+            add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
+            drop.appendChild(add); 
+        }
         drop.style.width = inp.offsetWidth + 'px';
         cont.appendChild(drop);
     });
@@ -2092,9 +2113,9 @@ const renderStatsIndividuais = (container) => {
 
     // Setup Autocomplete for Player
     state.jogadoresStatsIndividuais = availableJogadores;
-    setupAutocomplete('sti-filter-jogador', 'jogadoresStatsIndividuais', 'nome_guerra', () => {
+    setupAutocomplete('sti-filter-jogador', 'jogadoresStatsIndividuais', 'nome_guerra', null, () => {
         renderStatsIndividuais(container);
-    });
+    }, false);
 
     container.innerHTML = `
         <table class="data-table">
