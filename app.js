@@ -1353,7 +1353,45 @@ const addLineupRow = (team, data = null) => {
     const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
     const updateGoals = () => { minCont.innerHTML = ''; tempoCont.innerHTML = ''; for(let i=0; i<parseInt(gInp.value || 0); i++) { const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-g-inp'; mi.value = data?.golsMin?.[i] || ''; const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1'; mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }}); minCont.appendChild(mi); tempoCont.appendChild(ts); } };
     gInp.addEventListener('input', updateGoals); if(data?.golsCount > 0) updateGoals();
-    if(!isAdv) { const inp = row.querySelector('.line-player-inp'); const id = 'lq-'+Date.now()+Math.random(); inp.id = id; setTimeout(() => { setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); inp.addEventListener('blur', () => { const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); if(p) { row.querySelector('.mini-foto').src = p.foto; row.querySelector('.pos-inp').value = p.posicao; row.querySelector('.age-inp').value = calculateAge(p.nascimento, document.getElementById('game-data').value); } }); }, 10); }
+    if(!isAdv) { 
+        const inp = row.querySelector('.line-player-inp'); 
+        const id = 'lq-'+Date.now()+Math.random(); 
+        inp.id = id; 
+        setTimeout(() => { 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => p.temporada === season); 
+            
+            // Vertical Tab Navigation Logic
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    const dropdown = row.querySelector('.autocomplete-results');
+                    // Avoid interfering if user is actively using the autocomplete dropdown with Tab (though Tab usually enters anyway)
+                    // But if it's open, maybe we just navigate anyway as requested.
+                    
+                    e.preventDefault();
+                    const currentTr = row;
+                    const targetTr = e.shiftKey ? currentTr.previousElementSibling : currentTr.nextElementSibling;
+                    
+                    if (targetTr) {
+                        const targetInp = targetTr.querySelector('.line-player-inp');
+                        if (targetInp) {
+                            targetInp.focus();
+                            // Select content for easier replacement
+                            setTimeout(() => targetInp.select(), 0);
+                        }
+                    }
+                }
+            });
+
+            inp.addEventListener('blur', () => { 
+                const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); 
+                if(p) { 
+                    row.querySelector('.mini-foto').src = p.foto; 
+                    row.querySelector('.pos-inp').value = p.posicao; 
+                    row.querySelector('.age-inp').value = calculateAge(p.nascimento, document.getElementById('game-data').value); 
+                } 
+            }); 
+        }, 10); 
+    }
     tbody.appendChild(row);
 };
 
