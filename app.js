@@ -27,6 +27,24 @@ const state = {
     rowsPerPage: 50
 };
 
+const showToast = (message, type = 'error') => {
+    const existing = document.getElementById('app-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'app-toast';
+    toast.style.cssText = `
+        position: fixed; bottom: 2rem; right: 2rem; z-index: 99999;
+        padding: 1rem 1.5rem; border-radius: 10px; max-width: 380px;
+        font-size: 0.88rem; font-weight: 500; box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        background: ${type === 'error' ? '#e74c3c' : '#2ecc71'};
+        color: white; animation: slideInRight 0.3s ease;
+        display: flex; align-items: flex-start; gap: 0.8rem;
+    `;
+    toast.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+};
+
 const saveData = async (key, data) => {
     try {
         if (!supabaseClient) return;
@@ -34,13 +52,14 @@ const saveData = async (key, data) => {
             const { error } = await supabaseClient.from(key).upsert(data);
             if (error) {
                 console.error('Supabase Error:', error);
-                alert(`Erro de banco de dados na tabela (${key}): ` + (error.message || JSON.stringify(error)));
+                showToast(`Erro ao salvar (${key}): ${error.message || JSON.stringify(error)}`);
             }
         } else {
             localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data));
         }
     } catch (e) {
         console.error('Network/Internal Error:', e);
+        showToast('Erro de conexão com o banco de dados.');
     }
 };
 
