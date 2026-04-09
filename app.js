@@ -405,7 +405,7 @@ const renderJogadores = () => {
         </div>
         <div class="list-container">
             <div class="list-header"><h3>Jogadores (${state.jogadores.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Posição</th><th>Idade</th><th>Ações</th></tr></thead><tbody id="table-body-jogadores">${renderTableRows('jogadores')}</tbody></table>
+            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Posição</th><th>Temporada</th><th>Idade</th><th>Ações</th></tr></thead><tbody id="table-body-jogadores">${renderTableRows('jogadores')}</tbody></table>
         </div>
     `;
     setupPasteHandler('paste-area-jogador', 'foto-input-jogador');
@@ -439,7 +439,10 @@ const renderTableRows = (tab, filter = '') => {
         if (tab === 'estadios') cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome}</td><td>${item.estado}</td><td>${item.mandante || '-'}</td>`;
         if (tab === 'competicoes') cells = `<td>${item.campeonato}</td><td>${item.tipo}</td>`;
         if (tab === 'arbitros') cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome}</td><td>${item.federacao}</td>`;
-        if (tab === 'jogadores') cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome_guerra}</td><td>${item.posicao}</td><td>${calculateAgeAtEndOfYear(item.nascimento, parseInt(item.temporada))}</td>`;
+        if (tab === 'jogadores') {
+            const ageYear = item.foraDoElenco ? parseInt(item.temporada) : new Date().getFullYear();
+            cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome_guerra}</td><td>${item.posicao}</td><td>${item.temporada}</td><td>${calculateAgeAtEndOfYear(item.nascimento, ageYear)}</td>`;
+        }
         return `<tr>${cells}<td class="actions"><button class="action-btn" onclick="prepareEdit('${tab}', ${item.id})"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
     }).join('');
 };
