@@ -621,7 +621,7 @@ const showPlayerDetail = (playerId, event) => {
                 <h4 style="margin-bottom:1rem; color:var(--primary-color);">Estatísticas por Técnico</h4>
                 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#fcfcfc; border-radius:8px; border:1px solid #eee;">
-                    <div style="font-size:0.85rem;"><i class="fas fa-shield-halved" style="color:#2980b9;"></i> <strong>Mais titular com:</strong><br>${topTitular.titular > 0 ? topTitular.nome : '-'} (${topTitular.titular}x)</div>
+                    <div style="font-size:0.85rem;"><i class="fas fa-shield-halved" style="color:#333;"></i> <strong>Mais titular com:</strong><br>${topTitular.titular > 0 ? topTitular.nome : '-'} (${topTitular.titular}x)</div>
                     <div style="font-size:0.85rem;"><i class="fas fa-right-from-bracket" style="color:#e67e22;"></i> <strong>Mais substituído por:</strong><br>${topSub.subOut > 0 ? topSub.nome : '-'} (${topSub.subOut}x)</div>
                     <div style="font-size:0.85rem;"><i class="fas fa-right-to-bracket" style="color:#27ae60;"></i> <strong>Mais utilizado reserva:</strong><br>${topEntrou.entered > 0 ? topEntrou.nome : '-'} (${topEntrou.entered}x)</div>
                 </div>
@@ -1071,14 +1071,18 @@ const renderEquipeArbitragem = () => {
         populateFilter('ea-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
         populateFilter('ea-filter-adversario', [...new Set(state.jogos.map(j => j.casa === 'Atlético' ? j.fora : j.casa))]);
         
-        let allNames = new Set();
+        let arbNames = new Set();
+        let assNames = new Set();
+        let varNames = new Set();
         state.jogos.forEach(j => {
-            [j.arbitro, j.assistente1, j.assistente2, j.varArbitro].forEach(n => { if (n && n !== 'N/I' && n !== '-') allNames.add(n); });
+            if (j.arbitro && j.arbitro !== 'N/I' && j.arbitro !== '-') arbNames.add(j.arbitro);
+            if (j.assistente1 && j.assistente1 !== 'N/I' && j.assistente1 !== '-') assNames.add(j.assistente1);
+            if (j.assistente2 && j.assistente2 !== 'N/I' && j.assistente2 !== '-') assNames.add(j.assistente2);
+            if (j.varArbitro && j.varArbitro !== 'N/I' && j.varArbitro !== '-') varNames.add(j.varArbitro);
         });
-        const arrNames = [...allNames].sort();
-        populateFilter('ea-filter-arbitro', arrNames);
-        populateFilter('ea-filter-assistente', arrNames);
-        populateFilter('ea-filter-var', arrNames);
+        populateFilter('ea-filter-arbitro', [...arbNames].sort());
+        populateFilter('ea-filter-assistente', [...assNames].sort());
+        populateFilter('ea-filter-var', [...varNames].sort());
         
         const attachUpdate = (id) => document.getElementById(id).addEventListener('change', renderEquipeArbitragem);
         ['temporada','campeonato','adversario','arbitro','assistente','var'].forEach(t => attachUpdate(`ea-filter-${t}`));
@@ -1669,7 +1673,7 @@ const saveNewJogo = () => {
     }
 
     state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
-    saveData('jogos', state.jogos);
+    saveData('jogos', [jogo]);
     renderJogos();
     showSection('jogos');
 };
