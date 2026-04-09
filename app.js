@@ -88,6 +88,21 @@ window.addEventListener('DOMContentLoaded', async () => {
         const loader = document.getElementById('global-loader');
         if(loader) loader.style.display = 'none';
 
+        // Sidebar functionality for mobile
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        
+        hamburgerBtn?.addEventListener('click', () => {
+            sidebar?.classList.toggle('active');
+            sidebarOverlay?.classList.toggle('active');
+        });
+        
+        sidebarOverlay?.addEventListener('click', () => {
+            sidebar?.classList.remove('active');
+            sidebarOverlay?.classList.remove('active');
+        });
+
         // Set up hash routing
         const handleRouting = () => {
             const hash = window.location.hash.replace('#', '');
@@ -196,6 +211,12 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (!skipHashUpdate) {
         const newHash = '#' + sectionId;
         if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
+    }
+
+    // Close mobile menu on navigation
+    if (window.innerWidth <= 1024) {
+        document.querySelector('.sidebar')?.classList.remove('active');
+        document.getElementById('sidebar-overlay')?.classList.remove('active');
     }
 
     if (sectionId === 'jogos') renderJogos();
@@ -2051,9 +2072,24 @@ const renderStatsIndividuais = (container) => {
     if (fJog) list = list.filter(l => l.nome === fJog);
     if (fPos) list = list.filter(l => l.posicao === fPos);
 
+    // Cascading Filter Logic
+    const availableJogadores = fTemp 
+        ? state.jogadores.filter(p => p.temporada === fTemp)
+        : state.jogadores;
+    const availableCampeonatos = fTemp
+        ? [...new Set(state.jogos.filter(j => j.temporada === fTemp).map(j => j.campeonato))]
+        : [...new Set(state.jogos.map(j => j.campeonato))];
+    const availablePosicoes = [...new Set(state.jogadores.map(p => p.posicao))].filter(p => p);
+
     populateFilter('sti-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('sti-filter-jogador', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
-    populateFilter('sti-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+    populateFilter('sti-filter-posicao', availablePosicoes);
+    populateFilter('sti-filter-campeonato', availableCampeonatos);
+
+    // Setup Autocomplete for Player
+    state.jogadoresStatsIndividuais = availableJogadores;
+    setupAutocomplete('sti-filter-jogador', 'jogadoresStatsIndividuais', 'nome_guerra', () => {
+        renderStatsIndividuais(container);
+    });
 
     container.innerHTML = `
         <table class="data-table">

@@ -29,6 +29,18 @@
         <p style="margin-top: 1rem; font-weight: bold; color: var(--text-main);">Conectando ao Banco de Dados...</p>
     </div>
 
+    <div class="mobile-header">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <i class="fas fa-chart-line" style="color:var(--primary-color);"></i>
+            <h1 style="font-size:1.2rem; color:white;">Estatlético</h1>
+        </div>
+        <button id="hamburger-btn" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <aside class="sidebar">
         <div class="logo-container">
             <h1>Estatlético</h1>
@@ -635,7 +647,13 @@
             <div id="stats-filters-individuais" class="filters-card hidden">
                 <div class="form-grid">
                     <div class="form-group"><label>Temporada</label><select id="sti-filter-temporada"><option value="">Todas</option></select></div>
-                    <div class="form-group"><label>Jogador</label><select id="sti-filter-jogador"><option value="">Todos</option></select></div>
+                    <div class="form-group">
+                        <label>Jogador</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="sti-filter-jogador" placeholder="Nome do jogador...">
+                            <div id="sti-autocomplete-results" class="autocomplete-results hidden"></div>
+                        </div>
+                    </div>
                     <div class="form-group"><label>Posição</label><select id="sti-filter-posicao"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Campeonato</label><select id="sti-filter-campeonato"><option value="">Todos</option></select></div>
                 </div>
