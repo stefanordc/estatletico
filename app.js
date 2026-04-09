@@ -1633,7 +1633,22 @@ const renderStatsIndividuais = (container) => {
 };
 
 const editJogo = (id) => renderNovoJogoPage(state.jogos.find(j => j.id === id));
-const deleteJogo = (id) => { if (confirm('Excluir jogo?')) { state.jogos = state.jogos.filter(j => j.id !== id); saveData('jogos', state.jogos); renderJogos(); }};
+const deleteJogo = async (id) => {
+    if (confirm('Excluir jogo?')) {
+        try {
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('jogos').delete().eq('id', id);
+                if (error) throw error;
+            }
+            state.jogos = state.jogos.filter(j => j.id !== id);
+            renderJogos();
+            showToast('Jogo excluído com sucesso!', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Erro ao excluir do banco de dados.');
+        }
+    }
+};
 
 const validateBlock = (n) => {
     const block = document.getElementById(`block-${n}`);
@@ -1672,7 +1687,22 @@ const nextBlock = (n) => {
 };
 
 // CADASTROS COMMON
-const deleteItem = (tab, id) => { if (confirm('Excluir?')) { state[tab] = state[tab].filter(i => i.id !== id); saveData(tab, state[tab]); renderTab(tab); }};
+const deleteItem = async (tab, id) => {
+    if (confirm('Excluir registro?')) {
+        try {
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from(tab).delete().eq('id', id);
+                if (error) throw error;
+            }
+            state[tab] = state[tab].filter(i => i.id !== id);
+            renderTab(tab);
+            showToast('Registro excluído com sucesso!', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Erro ao excluir do banco de dados.');
+        }
+    }
+};
 const prepareEdit = (tab, id) => { state.editingId = id; renderTab(tab); const item = state[tab].find(i => i.id === id); const form = document.querySelector(`#form-${tab}`); if(!form) return; Object.keys(item).forEach(k => { const inp = form.querySelector(`[name="${k}"]`); if (inp && k !== 'foto') inp.value = item[k]; }); window.scrollTo(0,0); };
 const handleSearch = (tab) => { const search = document.getElementById('search-input'); if(search) search.addEventListener('input', (e) => { const tbody = document.getElementById(`table-body-${tab}`); if(tbody) tbody.innerHTML = renderTableRows(tab, e.target.value); }); };
 const setupPasteHandler = (areaId, inputId) => {
@@ -1717,10 +1747,15 @@ const setupAutofillHandler = () => {
 tabButtons.forEach(btn => btn.addEventListener('click', () => { tabButtons.forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderTab(btn.dataset.tab); }));
 document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     const page = item.dataset.page;
-    if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores'].includes(page)) {
+    if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'cadastros'].includes(page)) {
         showSection('cadastros');
-        const tabBtn = document.querySelector(`.tab-btn[data-tab="${page}"]`);
-        if (tabBtn) tabBtn.click();
+        const targetTab = page === 'cadastros' ? 'adversarios' : page;
+        renderTab(targetTab);
+        const tabBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+        if (tabBtn) {
+            tabButtons.forEach(b => b.classList.remove('active'));
+            tabBtn.classList.add('active');
+        }
     } else if (page === 'elenco') {
         showSection('elenco');
         renderElenco();
@@ -1896,4 +1931,4 @@ const exportData = () => {
     a.click();
 };
 
-showSection('dashboard');
+// showSection('dashboard');
