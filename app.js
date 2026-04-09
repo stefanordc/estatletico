@@ -1786,9 +1786,11 @@ const renderStatsColetivas = (container) => {
         return true;
     });
 
+    // Populate Filters
     populateFilter('stc-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
     populateFilter('stc-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
     populateFilter('stc-filter-tecnico', [...new Set(state.jogos.map(j => j.tecnicoGalo))]);
+    populateFilter('stc-filter-tipo', [...new Set(state.competicoes.map(c => c.tipo))].filter(Boolean));
 
     const stats = {};
     filteredJogos.forEach(j => {
@@ -1826,8 +1828,6 @@ const renderStatsColetivas = (container) => {
         return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
-    populateFilter('stc-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('stc-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
 
     container.innerHTML = `
         <table class="data-table" style="text-align:center;">
@@ -2151,7 +2151,7 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArtilheiros));
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
 ['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
-['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
+    ['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
 ['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
 
 document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Árbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
