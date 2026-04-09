@@ -448,7 +448,13 @@ const renderElenco = () => {
 
     grid.innerHTML = filtered.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum jogador encontrado para os filtros selecionados.</div>' : 
         filtered.map(j => {
-            const photoUrl = j.foto && j.foto.trim() !== '' ? j.foto : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+            let photoUrl = j.foto && j.foto.trim() !== '' ? j.foto : null;
+            if (!photoUrl) {
+                const otherRecords = state.jogadores.filter(p => p.nome_completo === j.nome_completo && p.foto && p.foto.trim() !== '');
+                if (otherRecords.length > 0) photoUrl = otherRecords[0].foto;
+            }
+            if (!photoUrl) photoUrl = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+
             return `
                 <div class="player-card ${j.foraDoElenco ? 'grayscale' : ''}" onclick="showPlayerDetail(${j.id}, event)">
                     <img src="${photoUrl}" alt="${j.nome_guerra}" onerror="this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'">
