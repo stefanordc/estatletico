@@ -1,7 +1,7 @@
 // Supabase Initialization
 const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
-let supabase = null;
+let supabaseClient = null;
 
 // State Management
 const state = {
@@ -29,9 +29,9 @@ const state = {
 
 const saveData = async (key, data) => {
     try {
-        if (!supabase) return;
+        if (!supabaseClient) return;
         if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'].includes(key)) {
-            const { error } = await supabase.from(key).upsert(data);
+            const { error } = await supabaseClient.from(key).upsert(data);
             if (error) {
                 console.error('Supabase Error:', error);
                 alert(`Erro de banco de dados na tabela (${key}): ` + (error.message || JSON.stringify(error)));
@@ -53,11 +53,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             throw new Error("O script do Supabase foi bloqueado pelo seu navegador (Comum ao rodar arquivos locais offline).");
         }
         
-        supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
         for (const t of tables) {
-            const { data, error } = await supabase.from(t).select('*');
+            const { data, error } = await supabaseClient.from(t).select('*');
             if (error) throw error;
             state[t] = data || [];
         }
