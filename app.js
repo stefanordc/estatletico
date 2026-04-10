@@ -3,6 +3,11 @@ const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
 let supabaseClient = null;
 
+const normalizeString = (str) => {
+    if (!str) return '';
+    return str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+};
+
 // State Management
 const state = {
     adversarios: [],
@@ -79,6 +84,20 @@ window.addEventListener('DOMContentLoaded', async () => {
             const { data, error } = await supabaseClient.from(t).select('*');
             if (error) throw error;
             state[t] = data || [];
+        }
+
+        // Migration: Referees 2-letter federations -> Brasil
+        let migratedAny = false;
+        state.arbitros = state.arbitros.map(a => {
+            if (a.federacao && a.federacao.trim().length === 2) {
+                migratedAny = true;
+                return { ...a, federacao: 'Brasil' };
+            }
+            return a;
+        });
+        if (migratedAny) {
+            console.log('Migração: Árbitros com siglas de estado convertidos para "Brasil".');
+            saveData('arbitros', state.arbitros);
         }
         
     } catch (e) {
@@ -346,7 +365,7 @@ const renderArbitros = () => {
                 <div class="form-grid">
                     <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
                     <div class="form-group"><label>Nascimento</label><input type="date" name="nascimento"></div>
-                    <div class="form-group"><label>Federação *</label><input type="text" name="federacao" required></div>
+                    <div class="form-group"><label>País *</label><input type="text" name="federacao" value="Brasil" required></div>
                 </div>
                 <div class="form-group" style="margin-bottom:1.5rem;"><label>Foto (Cole)</label><div class="paste-area" id="paste-area-arbitro">Ctrl+V</div><input type="hidden" name="foto" id="foto-input-arbitro"></div>
                 <button type="submit" class="btn-primary">${state.editingId ? 'Atualizar' : 'Cadastrar'}</button>
@@ -354,7 +373,7 @@ const renderArbitros = () => {
         </div>
         <div class="list-container">
             <div class="list-header"><h3>Árbitros (${state.arbitros.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Federação</th><th>Ações</th></tr></thead><tbody id="table-body-arbitros">${renderTableRows('arbitros')}</tbody></table>
+            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>País</th><th>Ações</th></tr></thead><tbody id="table-body-arbitros">${renderTableRows('arbitros')}</tbody></table>
         </div>
     `;
     setupPasteHandler('paste-area-arbitro', 'foto-input-arbitro');
@@ -1282,9 +1301,10 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         selectedIndex = -1;
         
         if (val.length < 1) return;
+        const normVal = normalizeString(val);
         let ds = state[sourceKey]; 
         if (typeof filterFn === 'function') ds = ds.filter(filterFn);
-        const results = ds.filter(item => item[field].toLowerCase().includes(val))
+        const results = ds.filter(item => normalizeString(item[field]).includes(normVal))
                           .sort((a,b) => a[field].localeCompare(b[field]));
         
         const drop = document.createElement('div'); 
@@ -1376,7 +1396,7 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     } else if(type === 'adversarios') {
         formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado</label><input type="text" id="qa-estado"></div><div class="form-group"><label>País</label><input type="text" id="qa-pais" value="Brasil"></div></div><div class="form-group"><label>Escudo (URL)</label><input type="text" id="qa-escudo"></div>`;
     } else if(type === 'arbitros') {
-        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div><div class="form-group"><label>Federação</label><input type="text" id="qa-federacao"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
+        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div><div class="form-group"><label>País</label><input type="text" id="qa-federacao" value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if (type === 'jogadores') {
         formHtml = `
             <div class="form-group"><label>Nome Completo</label><input type="text" id="qa-nome-completo"></div>
@@ -1421,7 +1441,7 @@ window.saveQuickAdd = (type, targetInputId) => {
     if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'adversarios') { item.clube = document.getElementById('qa-clube').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32'; }
-    else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
+    else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value || 'Brasil'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'jogadores') { 
         item.nome_guerra = document.getElementById('qa-nome-guerra').value; 
         item.nome_completo = document.getElementById('qa-nome-completo').value; 
@@ -1751,18 +1771,62 @@ const saveNewJogo = () => {
     }
 
 
+    const golsGalo = parseInt(jogo.casa === 'Atlético' ? jogo.golsCasa : jogo.golsFora) || 0;
+    const golsLineup = jogo.lineupGalo.reduce((acc, obj) => acc + obj.golsCount, 0);
     const gsTotal = jogo.lineupGalo.reduce((acc, obj) => acc + obj.gsCount, 0);
     const advGols = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa) || 0;
+
     if (gsTotal !== advGols) {
         alert(`Erro de Validação: A quantidade de Gols Sofridos informada na escalação (${gsTotal}) não confere com os gols marcados pelo adversário (${advGols}). Ajuste os valores para salvar o jogo.`);
         return;
     }
 
-    state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
-    saveData('jogos', [jogo]);
-    renderJogos();
-    showSection('jogos');
+    const doSaveJogo = () => {
+        state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
+        saveData('jogos', [jogo]);
+        renderJogos();
+        showSection('jogos');
+    };
+
+    if (golsLineup < golsGalo) {
+        const diff = golsGalo - golsLineup;
+        const ogModal = document.createElement('div');
+        ogModal.id = 'og-confirm-modal';
+        ogModal.style.cssText = `
+            position:fixed; inset:0; z-index:99999;
+            background:rgba(0,0,0,0.6);
+            display:flex; align-items:center; justify-content:center; padding:1rem;
+        `;
+        ogModal.innerHTML = `
+            <div style="background:white; border-radius:12px; max-width:460px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden;">
+                <div class="block-header" style="flex-shrink:0;">
+                    <span><i class="fas fa-futbol" style="margin-right:0.5rem;"></i>Gol(s) Contra?</span>
+                </div>
+                <div class="p-4" style="text-align:center;">
+                    <p style="font-size:1rem; margin-bottom:1rem; color:#333;">
+                        A soma de gols marcados na escalação (<strong>${golsLineup}</strong>) é menor que os gols do Atlético na partida (<strong>${golsGalo}</strong>).<br><br>
+                        Houve <strong>${diff} gol(s) contra</strong> na partida?
+                    </p>
+                    <div style="display:flex; gap:1rem; justify-content:center; margin-top:1.5rem;">
+                        <button class="btn-primary" onclick="document.getElementById('og-confirm-modal').remove(); window._doSaveJogo();">
+                            <i class="fas fa-check"></i> Sim, salvar assim
+                        </button>
+                        <button class="btn-secondary" onclick="document.getElementById('og-confirm-modal').remove();">
+                            <i class="fas fa-arrow-left"></i> Não, corrigir escalação
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        window._doSaveJogo = doSaveJogo;
+        document.body.appendChild(ogModal);
+        return;
+    }
+
+    doSaveJogo();
 };
+
+
 
 // COMPARATIVO FUNCTIONS
 const renderComparativo = () => {
