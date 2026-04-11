@@ -1365,6 +1365,10 @@ const renderJogos = () => {
         clearBtn.dataset.bound = 'true';
     }
 
+    tableBody.innerHTML = paginated.map(j => {
+        const pub = j.publico === 'N/I' ? 'N/I' : parseInt(j.publico || 0).toLocaleString();
+        const ren = j.renda === 'N/I' ? 'N/I' : formatCurrency(j.renda);
+        const tic = (j.publico > 0 && j.renda !== 'N/I') ? formatCurrency(j.renda / j.publico) : 'N/I';
         return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn view-btn" onclick="showJogoDetail(${j.id}, event)" title="Visualizar Detalhes"><i class="fas fa-search"></i></button><button class="action-btn" onclick="editJogo(${j.id})" title="Editar"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})" title="Excluir"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
     }).join('');
 };
