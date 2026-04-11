@@ -2893,7 +2893,7 @@ tabButtons.forEach(btn => btn.addEventListener('click', () => {
 }));
 document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     const page = item.dataset.page;
-    if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'cadastros'].includes(page)) {
+    if (['estadios', 'competicoes', 'arbitros', 'jogadores', 'cadastros'].includes(page)) {
         showSection('cadastros');
         const targetTab = page === 'cadastros' ? 'adversarios' : page;
         renderTab(targetTab);
