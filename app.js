@@ -2518,20 +2518,21 @@ const renderDashboard = () => {
         else d++;
         
         // Público e Renda
-        if (j.publico) {
-            let p = parseInt(j.publico.replace(/\D/g, ''));
+        if (j.publico && j.publico !== 'N/I') {
+            let p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : parseInt(j.publico);
             if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
         }
-        if (j.renda) {
-            let r = parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.'));
+        if (j.renda && j.renda !== 'N/I') {
+            let r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : parseFloat(j.renda);
             if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
         }
         
         // Artilheiros
         if(Array.isArray(j.lineupGalo)) {
             j.lineupGalo.forEach(x => {
-                if(x.gols > 0) {
-                    artilheirosMap[x.id] = (artilheirosMap[x.id] || 0) + x.gols;
+                const gCount = parseInt(x.golsCount) || 0;
+                if(gCount > 0) {
+                    artilheirosMap[x.jogador] = (artilheirosMap[x.jogador] || 0) + gCount;
                 }
             });
         }
@@ -2539,9 +2540,14 @@ const renderDashboard = () => {
         // Cartões
         if(Array.isArray(j.cartoesGalo)) {
             j.cartoesGalo.forEach(c => {
-                const pId = c.jogadorId;
-                if(c.tipo === 'Amarelo') amarelosMap[pId] = (amarelosMap[pId] || 0) + 1;
-                else if(c.tipo === 'Vermelho' || c.tipo === '2º Amarelo') vermelhosMap[pId] = (vermelhosMap[pId] || 0) + 1;
+                const pNome = c.jogador;
+                if(!pNome || pNome === 'Adversário') return;
+                
+                const yellow = parseInt(c.amarelo) || 0;
+                const red = parseInt(c.red) || 0;
+                
+                if(yellow > 0) amarelosMap[pNome] = (amarelosMap[pNome] || 0) + yellow;
+                if(red > 0) vermelhosMap[pNome] = (vermelhosMap[pNome] || 0) + red;
             });
         }
     });
@@ -2582,15 +2588,14 @@ const renderDashboard = () => {
             return;
         }
         sorted.forEach((item, index) => {
-            const player = state.jogadores.find(p => p.id === parseInt(item[0]));
-            if(!player) return;
-            const photo = player.foto ? `<img src="${player.foto}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:0.7rem;"><i class="fas fa-user"></i></div>`;
+            const player = state.jogadores.find(p => p.nome_guerra === item[0]);
+            const photo = player?.foto ? `<img src="${player.foto}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:0.7rem;"><i class="fas fa-user"></i></div>`;
             container.innerHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <div style="display: flex; align-items: center; gap: 0.8rem;">
                         <span style="color: #bdc3c7; font-weight: bold; width: 20px;">#${index+1}</span>
                         ${photo}
-                        <span style="font-weight: 500; color: var(--text-main);">${player.nomeVulgar || player.nome}</span>
+                        <span style="font-weight: 500; color: var(--text-main);">${item[0]}</span>
                     </div>
                     <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item[1]}</span>
                 </div>
@@ -2611,14 +2616,6 @@ const clearAllData = () => {
     }
 };
 
-const exportData = () => {
-    const data = JSON.stringify(state, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `estatletico_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-};
+
 
 // showSection('dashboard');
