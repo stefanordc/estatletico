@@ -136,13 +136,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.log('Estatlético: Dados recebidos. Processando estado...');
         const freshData = {};
         results.forEach((res, i) => {
+            const tableName = tables[i];
+            if (res.error) {
+                console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
+                // Se for a tabela de jogos, avisar o usuário discretamente
+                if (tableName === 'jogos') {
+                    showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
+                }
+            }
             if (res.data) {
-                state[tables[i]] = res.data;
-                freshData[tables[i]] = res.data;
+                state[tableName] = res.data;
+                freshData[tableName] = res.data;
+                console.log(`Estatlético: Tabela "${tableName}" carregada com ${res.data.length} registros.`);
+            } else {
+                state[tableName] = state[tableName] || []; // Garante array vazio se falhar
             }
         });
         
-        localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+        // Só salva no cache o que veio com sucesso
+        if (Object.keys(freshData).length > 0) {
+            localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+        }
 
         // Migração Básica de Árbitros
         state.arbitros = (state.arbitros || []).map(a => {
