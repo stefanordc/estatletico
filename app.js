@@ -791,6 +791,25 @@ const renderArtilheiros = () => {
             </tr>
         `).join('');
 };
+const showArtilheiroDetail = (playerName, event) => {
+    const campStats = {};
+    const advStats = {};
+    state.jogos.forEach(j => {
+        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
+        const hasPlayed = j.lineupGalo?.some(p => p.jogador === playerName);
+        if (hasPlayed) {
+            if (!campStats[j.campeonato]) campStats[j.campeonato] = { nome: j.campeonato, games: 0, goals: 0 };
+            campStats[j.campeonato].games++;
+        }
+        if (lp && (parseInt(lp.golsCount) || 0) > 0) {
+            const g = parseInt(lp.golsCount);
+            if (!campStats[j.campeonato]) campStats[j.campeonato] = { nome: j.campeonato, games: 0, goals: 0 };
+            campStats[j.campeonato].goals += g;
+            const adv = (j.casa.includes('Atlético') || j.casa.includes('Atletico')) ? j.fora : j.casa;
+            if (!advStats[adv]) advStats[adv] = { nome: adv, goals: 0 };
+            advStats[adv].goals += g;
+        }
+    });
 
     const container = document.getElementById('artilheiro-detail-container');
     if (!container) return;
