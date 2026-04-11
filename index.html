@@ -750,26 +750,37 @@
                 <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem;">
                     <div class="form-group">
                         <label>Temporada</label>
-                        <select id="pr-filter-temporada" onchange="renderPublicoRenda()"></select>
+                        <div class="autocomplete-container">
+                            <input type="text" id="pr-filter-temporada" placeholder="Ex: 2026">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Campeonato</label>
-                        <select id="pr-filter-campeonato" onchange="renderPublicoRenda()"></select>
+                        <div class="autocomplete-container">
+                            <input type="text" id="pr-filter-campeonato" placeholder="Ex: Mineiro">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Adversário</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="pr-filter-adversario" placeholder="Digite o adversário...">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Estádio</label>
-                        <select id="pr-filter-estadio" onchange="renderPublicoRenda()"></select>
+                        <div class="autocomplete-container">
+                            <input type="text" id="pr-filter-estadio" placeholder="Ex: Arena MRV">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="tabs-container">
-                <div class="tabs-header" id="pr-tabs-header">
-                    <button class="tab-btn active" data-tab="hist-temporada">Histórico Temporada</button>
-                    <button class="tab-btn" data-tab="maiores-publicos">Maiores Públicos</button>
-                    <button class="tab-btn" data-tab="menores-publicos">Menores Públicos</button>
-                    <button class="tab-btn" data-tab="estat-estadios">Estádios</button>
-                </div>
+            <div class="tabs-container" id="pr-tabs-header">
+                <button class="tab-btn active" data-tab="hist-temporada"><i class="fas fa-calendar-alt"></i> Histórico Temporada</button>
+                <button class="tab-btn" data-tab="maiores-publicos"><i class="fas fa-users"></i> Maiores Públicos</button>
+                <button class="tab-btn" data-tab="menores-publicos"><i class="fas fa-user-minus"></i> Menores Públicos</button>
+                <button class="tab-btn" data-tab="estat-estadios"><i class="fas fa-stadium"></i> Estádios</button>
+            </div>
 
                 <div class="tab-content active" id="tab-hist-temporada">
                     <div class="card">
@@ -790,6 +801,8 @@
                                         <th style="cursor:pointer;" onclick="sortTable(event, 'ticket', 'number')">Ticket Médio <i class="fas fa-sort"></i></th>
                                         <th style="cursor:pointer;" onclick="sortTable(event, 'menorP', 'number')">Menor Público <i class="fas fa-sort"></i></th>
                                         <th style="cursor:pointer;" onclick="sortTable(event, 'maiorP', 'number')">Maior Público <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'menorR', 'number')">Menor Renda <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'maiorR', 'number')">Maior Renda <i class="fas fa-sort"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

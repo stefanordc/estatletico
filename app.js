@@ -362,7 +362,14 @@ const renderAdversarios = () => {
     `;
     document.getElementById('form-adversarios').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
-        const item = { id: state.editingId || Date.now(), clube: fd.get('clube'), estado: fd.get('estado'), pais: fd.get('pais'), escudo: fd.get('escudo') || 'https://via.placeholder.com/32' };
+        const clubeNome = fd.get('clube');
+        const isDuplicate = state.adversarios.some(a => a.clube.toLowerCase() === clubeNome.toLowerCase() && a.id !== state.editingId);
+        if (isDuplicate) {
+            showToast('Já existe um clube cadastrado com este nome.', 'error');
+            return;
+        }
+
+        const item = { id: state.editingId || Date.now(), clube: clubeNome, estado: fd.get('estado'), pais: fd.get('pais'), escudo: fd.get('escudo') || 'https://via.placeholder.com/32' };
         if (state.editingId) { state.adversarios[state.adversarios.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.adversarios.push(item);
         saveData('adversarios', state.adversarios); renderTab('adversarios');
@@ -610,7 +617,7 @@ const renderElenco = () => {
             if (!photoUrl) photoUrl = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
             return `
-                <div class="player-card ${j.foraDoElenco ? 'grayscale' : ''}" onclick="showPlayerDetail(${j.id}, event)">
+                <div class="player-card ${j.foraDoElenco && (!fTemp || fTemp === '2026') ? 'grayscale' : ''}" onclick="showPlayerDetail(${j.id}, event)">
                     <img src="${photoUrl}" alt="${j.nome_guerra}" onerror="this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'">
                     <h3>${j.nome_guerra}</h3>
                     <div class="pos">${j.posicao}</div>
@@ -1728,7 +1735,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? state.fixedSeason + '-01-01' : '2026-01-01')}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-2">
@@ -2954,25 +2961,18 @@ const renderDashboard = () => {
 
 // PUBLICO E RENDA LOGIC
 const populatePRFilters = () => {
-    const jogosMandante = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+    setupAutocomplete('pr-filter-temporada', 'jogos', 'temporada', null, null, false);
+    setupAutocomplete('pr-filter-campeonato', 'jogos', 'campeonato', null, null, false);
+    setupAutocomplete('pr-filter-adversario', 'adversarios', 'clube', null, null, false);
+    setupAutocomplete('pr-filter-estadio', 'estadios', 'nome', null, null, false);
     
-    const temps = [...new Set(jogosMandante.map(j => j.temporada))].sort((a,b) => b-a);
-    const comps = [...new Set(jogosMandante.map(j => j.campeonato))].sort();
-    const advs = [...new Set(jogosMandante.map(j => j.fora))].sort();
-    const ests = [...new Set(jogosMandante.map(j => j.estadio))].filter(Boolean).sort();
-
-    const fillSelect = (id, list, placeholder) => {
-        const select = document.getElementById(id);
-        if(!select) return;
-        const currentVal = select.value;
-        select.innerHTML = `<option value="">${placeholder}</option>` + list.map(item => `<option value="${item}">${item}</option>`).join('');
-        if(list.includes(currentVal)) select.value = currentVal;
-    };
-
-    fillSelect('pr-filter-temporada', temps, 'Todas');
-    fillSelect('pr-filter-campeonato', comps, 'Todos');
-    fillSelect('pr-filter-adversario', advs, 'Todos');
-    fillSelect('pr-filter-estadio', ests, 'Todos');
+    ['pr-filter-temporada', 'pr-filter-campeonato', 'pr-filter-adversario', 'pr-filter-estadio'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.filterBound) {
+            el.addEventListener('input', () => { state.currentPage = 1; renderPublicoRenda(); });
+            el.dataset.filterBound = 'true';
+        }
+    });
 };
 
 const renderPublicoRenda = (tabId = 'hist-temporada') => {
@@ -2991,6 +2991,11 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 if (target) {
                     target.style.display = 'block';
                     target.classList.add('active');
+                    // Reset manual sort when switching to these specific tabs to trigger auto-sort
+                    if (btn.dataset.tab === 'maiores-publicos' || btn.dataset.tab === 'menores-publicos') {
+                        state.sortConfig.tableId = null;
+                        state.sortConfig.column = null;
+                    }
                     renderPublicoRenda(btn.dataset.tab);
                 }
             };
@@ -3005,10 +3010,10 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
     let jogosMandante = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
 
     // Aplicar Filtros
-    if(fTemp) jogosMandante = jogosMandante.filter(j => j.temporada === fTemp);
-    if(fComp) jogosMandante = jogosMandante.filter(j => j.campeonato === fComp);
-    if(fAdv) jogosMandante = jogosMandante.filter(j => j.fora === fAdv);
-    if(fEst) jogosMandante = jogosMandante.filter(j => j.estadio === fEst);
+    if(fTemp) jogosMandante = jogosMandante.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
+    if(fComp) jogosMandante = jogosMandante.filter(j => j.campeonato.toLowerCase().includes(fComp.toLowerCase()));
+    if(fAdv) jogosMandante = jogosMandante.filter(j => j.fora.toLowerCase().includes(fAdv.toLowerCase()));
+    if(fEst) jogosMandante = jogosMandante.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
 
     if (tabId === 'hist-temporada') {
         const agrp = {};
@@ -3090,10 +3095,10 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
         const tableId = `table-${tabId}`;
         const sortedList = sortInternal(list, tableId);
 
-        // Fallback simple sort if no column selected
-        if (!state.sortConfig.column && state.sortConfig.tableId !== tableId) {
-            if (tabId === 'maiores-publicos') sortedList.sort((a, b) => b.publico - a.publico);
-            else sortedList.sort((a, b) => a.publico - b.publico);
+        // Always force automatic sort when entering these tabs if no manual sort is active for this specific table
+        if (state.sortConfig.tableId !== tableId) {
+            if (tabId === 'maiores-publicos') list.sort((a, b) => b.publico - a.publico);
+            else list.sort((a, b) => a.publico - b.publico);
         }
 
         const top50 = sortedList.slice(0, 50);
@@ -3138,6 +3143,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
         });
 
         const container = document.getElementById('cards-estat-estadios');
+        container.className = 'estadios-grid-5';
         container.innerHTML = Object.values(estStats).map(s => {
             const estObj = state.estadios.find(e => e.nome === s.nome);
             const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
@@ -3157,10 +3163,10 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                             <span><strong>Ticket Médio:</strong> ${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span>
                         </div>
                         <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.8rem; color:var(--text-muted);">
-                            <span>Min P: ${(s.menorP === Infinity ? 0 : s.menorP).toLocaleString('pt-BR')}</span>
-                            <span>Max P: ${(s.maiorP === -Infinity ? 0 : s.maiorP).toLocaleString('pt-BR')}</span>
-                            <span>Min R: ${formatCurrency(s.menorR === Infinity ? 0 : s.menorR)}</span>
-                            <span>Max R: ${formatCurrency(s.maiorR === -Infinity ? 0 : s.maiorR)}</span>
+                            <span><strong>Menor público:</strong> ${(s.menorP === Infinity ? 0 : s.menorP).toLocaleString('pt-BR')}</span>
+                            <span><strong>Maior público:</strong> ${(s.maiorP === -Infinity ? 0 : s.maiorP).toLocaleString('pt-BR')}</span>
+                            <span><strong>Menor renda:</strong> ${formatCurrency(s.menorR === Infinity ? 0 : s.menorR)}</span>
+                            <span><strong>Maior renda:</strong> ${formatCurrency(s.maiorR === -Infinity ? 0 : s.maiorR)}</span>
                         </div>
                     </div>
                 </div>
