@@ -1516,7 +1516,7 @@ window.showJogoDetail = (jogoId, event) => {
                                             <td>${(p.golsMin || []).map((m, idx) => `${m}' (${p.golsTempo?.[idx] || 1}T)`).join(', ') || '-'}</td>
                                             <td style="color:#e74c3c; font-weight:bold;">${p.gsCount || 0}</td>
                                             <td>${(p.gsMin || []).map((m, idx) => `${m}' (${p.gsTempo?.[idx] || 1}T)`).join(', ') || '-'}</td>
-                                            <td>${p.titular ? '<span class="badge" style="background:#e3f2fd; color:#1976d2;">Titular</span>' : '<span class="badge" style="background:#f5f5f5; color:#666;">Reserva</span>'}</td>
+                                            <td>${p.titular ? '<span class="badge" style="background:#fff9e6; color:#b8962d; border: 1px solid #d4af37;">Titular</span>' : '<span class="badge" style="background:#f5f5f5; color:#666;">Reserva</span>'}</td>
                                         </tr>
                                     `).join('')}
                                     ${(j.gcFavorList || []).length > 0 ? `
@@ -3454,7 +3454,7 @@ const renderAdversariosPage = () => {
                     <div class="adv-stat-item"><strong>Aproveitamento</strong><span>${aprov}%</span></div>
                     <div class="adv-stat-item"><strong>V/E/D</strong><span>${s.v}/${s.e}/${s.d}</span></div>
                     <div class="adv-stat-item"><strong>Gols M/S</strong><span>${s.gm}/${s.gs}</span></div>
-                    <div class="adv-stat-item" title="Clean Sheets"><strong>Clean Sheets</strong><span style="color:#3498db;">${s.cs}</span></div>
+                    <div class="adv-stat-item" title="Clean Sheets"><strong>Clean Sheets</strong><span style="color:#27ae60;">${s.cs}</span></div>
                     <div class="adv-stat-item" title="Clean Goals"><strong>Clean Goals</strong><span style="color:#e67e22;">${s.cg}</span></div>
                     <div class="adv-stat-item"><strong>Méd. Público</strong><span>${(s.jP > 0 ? Math.round(s.pTotal/s.jP).toLocaleString('pt-BR') : 0)}</span></div>
                     <div class="adv-stat-item"><strong>Méd. Renda</strong><span>${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span></div>
@@ -3654,48 +3654,134 @@ const renderEstadioModal = (estadioNome) => {
     const jogosEstadio = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG' || j.fora === 'Atlético' || j.fora === 'Atlético-MG'))
                                    .sort((a, b) => new Date(b.data) - new Date(a.data));
 
+    window.estModalData = { jogos: jogosEstadio, page: 1, perPage: 20 };
+
+    const processMap = (keyFn) => {
+        const mapObj = {};
+        jogosEstadio.forEach(j => {
+            const k = keyFn(j) || 'N/I';
+            if (!mapObj[k]) mapObj[k] = { nome: k, j:0, v:0, e:0, d:0, gm:0, gs:0, pts:0, p:0, jP:0, r:0, jR:0 };
+            const s = mapObj[k];
+            s.j++;
+            const gGalo = parseInt(j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.golsCasa : j.golsFora) || 0;
+            const gAdv = parseInt(j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.golsFora : j.golsCasa) || 0;
+            s.gm += gGalo; s.gs += gAdv;
+            if(gGalo > gAdv) { s.v++; s.pts += 3; }
+            else if(gGalo === gAdv) { s.e++; s.pts += 1; }
+            else s.d++;
+            if(j.publico && j.publico !== 'N/I' && !j.portoesFechados) {
+                const pVal = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, ''))||0;
+                if(pVal>0) { s.p += pVal; s.jP++; }
+            }
+            if(j.renda && j.renda !== 'N/I' && !j.portoesFechados) {
+                const rVal = parseCurrency(j.renda);
+                if(rVal>0) { s.r += rVal; s.jR++; }
+            }
+        });
+        return mapObj;
+    };
+
+    const tempMap = processMap(j => j.temporada);
+    const campMap = processMap(j => j.campeonato);
+
+    const renderTable = (mapObj) => Object.values(mapObj).sort((a,b)=>b.j - a.j).map(s => {
+        const aprov = s.j > 0 ? ((s.pts / (s.j*3))*100).toFixed(1) : 0;
+        const mgm = s.j > 0 ? (s.gm / s.j).toFixed(2) : '0.00';
+        const mp = s.jP > 0 ? Math.round(s.p/s.jP).toLocaleString('pt-BR') : 0;
+        const mr = s.jR > 0 ? formatCurrency(s.r/s.jR) : formatCurrency(0);
+        return `<tr>
+            <td style="color:var(--primary-color); font-weight:bold;">${s.nome}</td>
+            <td>${s.j}</td><td style="color:var(--success-color);">${s.v}</td><td>${s.e}</td><td style="color:#e74c3c;">${s.d}</td>
+            <td>${s.gm}</td><td>${s.gs}</td>
+            <td>${aprov}%</td><td>${mgm}</td>
+            <td>${mp}</td><td>${mr}</td>
+        </tr>`;
+    }).join('');
+
     overlay.innerHTML = `
-        <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 1000px;">
+        <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 1200px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <h2 style="margin:0;">Jogos no estádio: ${estadioNome}</h2>
+                <h2 style="margin:0;">Estádio: ${estadioNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
             </div>
 
-            <div style="max-height: 70vh; overflow-y: auto;">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Competição</th>
-                            <th style="text-align:right;">Casa</th>
-                            <th style="text-align:center;">Placar</th>
-                            <th>Fora</th>
-                            <th>Público</th>
-                            <th>Renda</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${jogosEstadio.map(j => `
-                            <tr style="cursor: pointer;" onclick="showJogoDetail(${j.id}, event)">
-                                <td>${j.data.split('-').reverse().join('/')}</td>
-                                <td>${j.campeonato}</td>
-                                <td style="text-align:right;">${j.casa}</td>
-                                <td style="font-weight:bold; text-align:center;">${j.golsCasa} x ${j.golsFora}</td>
-                                <td>${j.fora}</td>
-                                <td class="val-highlight">${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? 'P.F.' : 'N/I')}</td>
-                                <td>${(j.renda && j.renda !== 'N/I' && !j.portoesFechados) ? formatCurrency(j.renda) : (j.portoesFechados ? '0' : 'N/I')}</td>
-                            </tr>
-                        `).join('')}
-                        ${jogosEstadio.length === 0 ? '<tr><td colspan="7" style="text-align:center; padding:2rem;">Nenhum jogo encontrado.</td></tr>' : ''}
-                    </tbody>
+            <div class="tabs-container" id="est-modal-tabs" style="margin-bottom: 1rem;">
+                <button class="tab-btn active" id="btn-est-temp" onclick="window.switchEstadioModalTab('est-temp')"><i class="fas fa-calendar-alt"></i> Temporada</button>
+                <button class="tab-btn" id="btn-est-camp" onclick="window.switchEstadioModalTab('est-camp')"><i class="fas fa-trophy"></i> Campeonato</button>
+                <button class="tab-btn" id="btn-est-hist" onclick="window.switchEstadioModalTab('est-hist')"><i class="fas fa-list"></i> Histórico de Jogos</button>
+            </div>
+
+            <!-- TAB TEMPORADA -->
+            <div id="est-temp" class="est-modal-pane">
+                <table class="data-table premium-table">
+                    <thead><tr><th>Temporada</th><th>Jogos</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GS</th><th>Aprov</th><th>Média GM</th><th>Média Público</th><th>Média Renda</th></tr></thead>
+                    <tbody>${renderTable(tempMap)}</tbody>
                 </table>
+            </div>
+
+            <!-- TAB CAMPEONATO -->
+            <div id="est-camp" class="est-modal-pane hidden">
+                <table class="data-table premium-table">
+                    <thead><tr><th>Campeonato</th><th>Jogos</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GS</th><th>Aprov</th><th>Média GM</th><th>Média Público</th><th>Média Renda</th></tr></thead>
+                    <tbody>${renderTable(campMap)}</tbody>
+                </table>
+            </div>
+
+            <!-- TAB HISTÓRICO -->
+            <div id="est-hist" class="est-modal-pane hidden">
+                <table class="premium-table" style="margin-bottom:1rem;">
+                    <thead><tr><th>Data</th><th>Competição</th><th style="text-align:right;">Casa</th><th style="text-align:center;">Placar</th><th>Fora</th><th>Público</th><th>Renda</th></tr></thead>
+                    <tbody id="est-hist-tbody"></tbody>
+                </table>
+                <div class="pagination-controls" style="margin-top: 1rem;">
+                    <button id="est-hist-prev" class="page-btn" onclick="window.changeEstadioHistPage(-1)"><i class="fas fa-chevron-left"></i> Anterior</button>
+                    <span id="est-hist-page-info" style="font-weight:600;">Página 1</span>
+                    <button id="est-hist-next" class="page-btn" onclick="window.changeEstadioHistPage(1)">Próxima <i class="fas fa-chevron-right"></i></button>
+                </div>
             </div>
         </div>
     `;
 
     document.body.appendChild(overlay);
+    window.switchEstadioModalTab('est-temp');
+    window.renderEstadioHistPage();
 };
 
 window.renderEstadioModal = renderEstadioModal;
+window.switchEstadioModalTab = (tabId) => {
+    document.querySelectorAll('#est-modal-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = document.getElementById(`btn-${tabId}`);
+    if(btn) btn.classList.add('active');
+    document.querySelectorAll('.est-modal-pane').forEach(pane => pane.classList.add('hidden'));
+    const pane = document.getElementById(tabId);
+    if(pane) pane.classList.remove('hidden');
+};
+window.renderEstadioHistPage = () => {
+    const start = (window.estModalData.page - 1) * window.estModalData.perPage;
+    const end = start + window.estModalData.perPage;
+    const items = window.estModalData.jogos.slice(start, end);
+    const tbody = document.getElementById('est-hist-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = items.map(j => `
+        <tr style="cursor: pointer;" onclick="showJogoDetail(${j.id}, event)">
+            <td>${j.data.split('-').reverse().join('/')}</td>
+            <td>${j.campeonato}</td>
+            <td style="text-align:right;">${j.casa}</td>
+            <td style="font-weight:bold; text-align:center;">${j.golsCasa} x ${j.golsFora}</td>
+            <td>${j.fora}</td>
+            <td class="val-highlight">${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? 'P.F.' : 'N/I')}</td>
+            <td>${(j.renda && j.renda !== 'N/I' && !j.portoesFechados) ? formatCurrency(j.renda) : (j.portoesFechados ? '0' : 'N/I')}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="7" style="text-align:center; padding:2rem;">Nenhum jogo encontrado.</td></tr>';
+
+    const maxPage = Math.ceil(window.estModalData.jogos.length / window.estModalData.perPage) || 1;
+    document.getElementById('est-hist-page-info').textContent = `Página ${window.estModalData.page} de ${maxPage}`;
+    document.getElementById('est-hist-prev').disabled = window.estModalData.page === 1;
+    document.getElementById('est-hist-next').disabled = window.estModalData.page >= maxPage;
+};
+window.changeEstadioHistPage = (dir) => {
+    window.estModalData.page += dir;
+    window.renderEstadioHistPage();
+};
 
 // showSection('dashboard');
