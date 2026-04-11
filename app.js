@@ -3358,7 +3358,6 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 </div>
             `;
         }).join('');
-        }).join('');
     }
 };
 
