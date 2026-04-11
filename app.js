@@ -8,6 +8,29 @@ const normalizeString = (str) => {
     return str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 };
 
+const parseCurrency = (val) => {
+    if (val === undefined || val === null || val === 'N/I' || val === '') return 0;
+    if (typeof val === 'number') return val;
+    
+    // Remove R$, espaços e pontos de milhar, mantendo apenas a vírgula para decimal
+    let clean = String(val).replace('R$', '').replace(/\s/g, '');
+    
+    // Se tem vírgula e ponto, o ponto é milhar e a vírgula é decimal (Padrão BR: 1.234,56)
+    if (clean.includes(',') && clean.includes('.')) {
+        clean = clean.replace(/\./g, '').replace(',', '.');
+    } 
+    // Se só tem vírgula, é decimal (1234,56)
+    else if (clean.includes(',')) {
+        clean = clean.replace(',', '.');
+    }
+    // Se só tem ponto e parece formato americano ou apenas milhar mal formatado
+    // Como o sistema é brasileiro, tratamos pontos isolados como decimais se houver apenas 2 casas após, 
+    // ou milhar se for algo como 1.000. Mas o mais seguro é parseFloat direto se não houver vírgula.
+    
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+};
+
 // State Management
 const state = {
     adversarios: [],
@@ -916,7 +939,7 @@ const renderCartoes = () => {
 
     tbody.innerHTML = sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum registro de cartão encontrado.</td></tr>' : 
         sortedData.map((c, idx) => `
-            <tr onclick="showCartoesDetail('${c.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
+            <tr onclick="toggleCartoesDetail('${c.nome}', this)" style="cursor:pointer;" title="Clique para ver detalhes" data-player="${c.nome}">
                 <td><img src="${c.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                 <td style="font-weight:bold;">${c.nome}</td>
                 <td style="color:#f39c12; font-weight:bold;">${c.yellow}</td>
@@ -926,9 +949,14 @@ const renderCartoes = () => {
         `).join('');
 };
 
-const showCartoesDetail = (playerName, event) => {
-    const container = document.getElementById('cartoes-detail-container');
-    if (!container) return;
+const toggleCartoesDetail = (playerName, row) => {
+    const nextRow = row.nextElementSibling;
+    const isDetailOpen = nextRow && nextRow.classList.contains('detail-row');
+    
+    // Fecha outros detalhes abertos na tabela
+    row.parentElement.querySelectorAll('.detail-row').forEach(r => r.remove());
+    
+    if (isDetailOpen) return; // Se já estava aberto para este jogador, apenas fecha
 
     const byCamp = {}, byAdv = {}, byArb = {};
     state.jogos.forEach(j => {
@@ -941,7 +969,7 @@ const showCartoesDetail = (playerName, event) => {
         if (!byCamp[j.campeonato]) byCamp[j.campeonato] = { nome: j.campeonato, y:0, r:0, t:0 };
         byCamp[j.campeonato].y += y; byCamp[j.campeonato].r += r; byCamp[j.campeonato].t += t;
         
-        const opp = j.casa === 'Atlético' ? j.fora : j.casa;
+        const opp = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa;
         if (!byAdv[opp]) byAdv[opp] = { nome: opp, y:0, r:0, t:0 };
         byAdv[opp].y += y; byAdv[opp].r += r; byAdv[opp].t += t;
 
@@ -951,39 +979,43 @@ const showCartoesDetail = (playerName, event) => {
         }
     });
 
-    container.innerHTML = `
-        <div class="detail-inline-container" style="display:block; margin-top:0;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                <h3>Detalhamento de Cartões: ${playerName}</h3>
-                <button class="btn-icon" onclick="document.getElementById('cartoes-detail-container').classList.add('hidden')"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                    <div class="stats-section-title">Por Campeonato</div>
-                    <table class="stats-table">
-                        <thead><tr><th>Campeonato</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                        <tbody>${Object.values(byCamp).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                    </table>
+    const detailHtml = `
+        <tr class="detail-row">
+            <td colspan="5" style="padding: 1.5rem; background: #fcfcfc;">
+                <div class="detail-inline-container" style="display:block; margin:0; border:none; box-shadow:none; background:transparent;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
+                        <h3 style="margin:0; font-size:1.1rem; color:var(--primary-color);">Detalhamento de Cartões: ${playerName}</h3>
+                        <button class="btn-icon" onclick="this.closest('.detail-row').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Campeonato</div>
+                            <table class="stats-table" style="font-size:0.85rem;">
+                                <thead><tr><th>Campeonato</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
+                                <tbody>${Object.values(byCamp).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Adversário</div>
+                            <table class="stats-table" style="font-size:0.85rem;">
+                                <thead><tr><th>Adversário</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
+                                <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Árbitro</div>
+                            <table class="stats-table" style="font-size:0.85rem;">
+                                <thead><tr><th>Árbitro</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
+                                <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                    <div class="stats-section-title">Por Adversário</div>
-                    <table class="stats-table">
-                        <thead><tr><th>Adversário</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                        <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                    </table>
-                </div>
-                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                    <div class="stats-section-title">Por Árbitro</div>
-                    <table class="stats-table">
-                        <thead><tr><th>Árbitro</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                        <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            </td>
+        </tr>
     `;
-    container.classList.remove('hidden');
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    row.insertAdjacentHTML('afterend', detailHtml);
+    row.nextElementSibling.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // ARBITRAGEM FUNCTIONS
@@ -1650,22 +1682,45 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     const setupGCFields = (inputId, containerId, dataList = null) => {
         const inp = document.getElementById(inputId);
         const cont = document.getElementById(containerId);
+        if (!inp || !cont) return;
         
         const updateGCHtml = () => {
-            cont.innerHTML = '';
             const count = parseInt(inp.value || 0);
-            for(let i=0; i<count; i++) {
-                const wrapper = document.createElement('div');
-                wrapper.style.display = 'flex'; wrapper.style.alignItems = 'center'; wrapper.style.gap = '0.3rem';
-                wrapper.innerHTML = `
-                    <input type="number" class="gc-min" placeholder="Min" style="width:50px;" value="${dataList?.[i]?.min || ''}">
-                    <select class="gc-tempo"><option value="1" ${dataList?.[i]?.tempo === '1' ? 'selected' : ''}>1T</option><option value="2" ${dataList?.[i]?.tempo === '2' ? 'selected' : ''}>2T</option></select>
-                `;
-                cont.appendChild(wrapper);
+            const currentInputs = cont.querySelectorAll('.gc-wrapper').length;
+            
+            // Se o contador diminuir, removemos os últimos
+            if (count < currentInputs) {
+                for (let i = currentInputs; i > count; i--) {
+                    cont.lastElementChild?.remove();
+                }
+            } 
+            // Se o contador aumentar, adicionamos novos sem apagar os já preenchidos
+            else if (count > currentInputs) {
+                for (let i = currentInputs; i < count; i++) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'gc-wrapper';
+                    wrapper.style.display = 'flex'; wrapper.style.alignItems = 'center'; wrapper.style.gap = '0.3rem';
+                    wrapper.style.marginTop = '0.3rem';
+                    wrapper.innerHTML = `
+                        <input type="number" class="gc-min" placeholder="Min" style="width:60px; padding:0.2rem;" value="${dataList?.[i]?.min || ''}">
+                        <select class="gc-tempo" style="padding:0.2rem;"><option value="1" ${dataList?.[i]?.tempo === '1' ? 'selected' : ''}>1T</option><option value="2" ${dataList?.[i]?.tempo === '2' ? 'selected' : ''}>2T</option></select>
+                        <span style="font-size:0.7rem; color:#666;">${inputId.includes('favor') ? 'Pro' : 'Contra'}</span>
+                    `;
+                    
+                    const mi = wrapper.querySelector('.gc-min');
+                    const ts = wrapper.querySelector('.gc-tempo');
+                    mi.addEventListener('input', (e) => {
+                        const t = convertMatchTime(e.target.value);
+                        if (t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }
+                    });
+                    
+                    cont.appendChild(wrapper);
+                }
             }
         };
         
         inp.addEventListener('input', updateGCHtml);
+        inp.addEventListener('change', updateGCHtml); // Backup para mudanças via botões
         if(dataList && dataList.length > 0) updateGCHtml();
     };
 
@@ -1900,10 +1955,11 @@ const saveNewJogo = () => {
     const doSaveJogo = () => {
         state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
         
-        // Remove fotos do lineup antes de salvar no Supabase
-        // (fotos ficam na tabela jogadores, não precisam ser salvas em cada jogo)
+        // Remove fotos e campos auxiliares de contagem antes de salvar no Supabase
+        // gcFavorCount e gcContraCount não existem no schema original, a contagem é derivada das listas
+        const { gcFavorCount, gcContraCount, ...cleanJogo } = jogo;
         const jogoParaSalvar = {
-            ...jogo,
+            ...cleanJogo,
             lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
         };
         saveData('jogos', [jogoParaSalvar]);
@@ -2838,7 +2894,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             agrp[temp].gm += gM; agrp[temp].gs += gS;
             
             if (j.publico && j.publico !== 'N/I') {
-                const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
+                const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
                 if (p > 0) {
                     agrp[temp].pTotal += p; agrp[temp].jP++;
                     if (p < agrp[temp].menorP) agrp[temp].menorP = p;
@@ -2846,7 +2902,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 }
             }
             if (j.renda && j.renda !== 'N/I') {
-                const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+                const r = parseCurrency(j.renda);
                 if (r > 0) {
                     agrp[temp].rTotal += r; agrp[temp].jR++;
                     if (r < agrp[temp].menorR) agrp[temp].menorR = r;
@@ -2889,8 +2945,8 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
         }
     } else if (tabId === 'maiores-publicos' || tabId === 'menores-publicos') {
         const list = jogosMandante.filter(j => j.publico && j.publico !== 'N/I').map(j => {
-            const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
-            const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+            const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
+            const r = parseCurrency(j.renda);
             return { 
                 temporada: j.temporada, 
                 adversario: j.fora, 
@@ -2939,13 +2995,13 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             estStats[est].gm += gC; estStats[est].gs += gF;
             
             if (j.publico && j.publico !== 'N/I') {
-                const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
+                const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
                 estStats[est].pTotal += p; estStats[est].jP++;
                 if (p < estStats[est].menorP) estStats[est].menorP = p;
                 if (p > estStats[est].maiorP) estStats[est].maiorP = p;
             }
             if (j.renda && j.renda !== 'N/I') {
-                const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+                const r = parseCurrency(j.renda);
                 estStats[est].rTotal += r; estStats[est].jR++;
                 if (r < estStats[est].menorR) estStats[est].menorR = r;
                 if (r > estStats[est].maiorR) estStats[est].maiorR = r;
@@ -2987,13 +3043,51 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
 const sortInternal = (data, tableId) => {
     if (state.sortConfig.tableId === tableId && state.sortConfig.column) {
         const { column, direction } = state.sortConfig;
+        
         data.sort((a, b) => {
             let valA = a[column];
             let valB = b[column];
-            if (typeof valA === 'string' && valB !== undefined) {
-                return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+
+            // Helper to extract numeric value from formatted strings
+            const getSortValue = (v) => {
+                if (v === undefined || v === null) return -Infinity;
+                if (typeof v === 'number') return v;
+                
+                let s = String(v).toLowerCase();
+                
+                // Moeda/Preço
+                if (s.includes('r$') || s.includes('%')) {
+                    return parseCurrency(s);
+                }
+                
+                // Placar (ex: "2x1") -> retorna o saldo do placar para ordenação aproximada ou o primeiro valor
+                if (s.includes('x') && /^\d+x\d+$/.test(s.replace(/\s/g, ''))) {
+                    const parts = s.split('x');
+                    return parseInt(parts[0]) * 100 + parseInt(parts[1]); // Ordena pelo primeiro gol, depois pelo segundo
+                }
+
+                // Data (YYYY-MM-DD ou DD/MM/YYYY)
+                if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s).getTime();
+                if (/^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+                    const p = s.split('/');
+                    return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+                }
+
+                // Tenta converter qualquer string numérica
+                const cleanNum = s.replace(/[^\d.-]/g, '');
+                if (cleanNum !== '' && !isNaN(cleanNum)) return parseFloat(cleanNum);
+
+                return s;
+            };
+
+            const sortA = getSortValue(valA);
+            const sortB = getSortValue(valB);
+
+            if (typeof sortA === 'string' && typeof sortB === 'string') {
+                return direction === 'asc' ? sortA.localeCompare(sortB) : sortB.localeCompare(sortA);
             }
-            return direction === 'asc' ? valA - valB : valB - valA;
+
+            return direction === 'asc' ? (sortA > sortB ? 1 : -1) : (sortA < sortB ? 1 : -1);
         });
     }
     return data;
