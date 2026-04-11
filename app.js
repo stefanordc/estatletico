@@ -1318,6 +1318,7 @@ const renderJogos = () => {
     const fFora = document.getElementById('filter-fora').value;
     const fEst = document.getElementById('filter-estadio').value;
     const fArb = document.getElementById('filter-arbitro').value;
+    const fAsst = document.getElementById('filter-assistente').value;
     const fVar = document.getElementById('filter-var').value;
     const fMax = document.getElementById('filter-publico-max').value;
 
@@ -1328,6 +1329,10 @@ const renderJogos = () => {
     if (fFora) filtered = filtered.filter(j => j.fora.toLowerCase().includes(fFora.toLowerCase()));
     if (fEst) filtered = filtered.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
     if (fArb) filtered = filtered.filter(j => j.arbitro.toLowerCase().includes(fArb.toLowerCase()));
+    if (fAsst) filtered = filtered.filter(j => 
+        (j.assistente1 || '').toLowerCase().includes(fAsst.toLowerCase()) || 
+        (j.assistente2 || '').toLowerCase().includes(fAsst.toLowerCase())
+    );
     if (fVar) filtered = filtered.filter(j => (j.varArbitro || '').toLowerCase().includes(fVar.toLowerCase()));
     if (fMax) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) <= parseInt(fMax || 9999999));
 
@@ -1341,10 +1346,11 @@ const renderJogos = () => {
     setupAutocomplete('filter-fora', 'adversarios', 'clube', null, null, false);
     setupAutocomplete('filter-estadio', 'estadios', 'nome', null, null, false);
     setupAutocomplete('filter-arbitro', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('filter-assistente', 'arbitros', 'nome', null, null, false);
     setupAutocomplete('filter-var', 'arbitros', 'nome', null, null, false);
 
     // Bind inputs to re-filter
-    ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-var', 'filter-publico-max'].forEach(id => {
+    ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-assistente', 'filter-var', 'filter-publico-max'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.filterBound) {
             el.addEventListener('input', () => { state.currentPage = 1; renderJogos(); });
@@ -1356,8 +1362,9 @@ const renderJogos = () => {
     const clearBtn = document.getElementById('btn-clear-filters');
     if (clearBtn && !clearBtn.dataset.bound) {
         clearBtn.onclick = () => {
-            ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-var', 'filter-publico-max'].forEach(id => {
-                document.getElementById(id).value = '';
+            ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-assistente', 'filter-var', 'filter-publico-max'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
             });
             state.currentPage = 1;
             renderJogos();
@@ -1504,8 +1511,18 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         const normVal = normalizeString(val);
         let ds = state[sourceKey]; 
         if (typeof filterFn === 'function') ds = ds.filter(filterFn);
-        const results = ds.filter(item => normalizeString(item[field]).includes(normVal))
+        const resultsFull = ds.filter(item => normalizeString(item[field]).includes(normVal))
                           .sort((a,b) => a[field].localeCompare(b[field]));
+        
+        // Garantir valores únicos no dropdown para campos como 'temporada'
+        const results = [];
+        const seen = new Set();
+        resultsFull.forEach(item => {
+            if (!seen.has(item[field])) {
+                seen.add(item[field]);
+                results.push(item);
+            }
+        });
         
         const drop = document.createElement('div'); 
         drop.className = 'autocomplete-results';
@@ -1638,9 +1655,20 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
 
 window.saveQuickAdd = (type, targetInputId) => {
     let item = { id: Date.now() };
-    if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
+    if (type === 'adversarios') {
+        const clubeNome = document.getElementById('qa-clube').value.trim();
+        const existe = state.adversarios.some(adv => adv.clube.trim().toLowerCase() === clubeNome.toLowerCase());
+        if (existe) {
+            showToast(`O clube "${clubeNome}" já está cadastrado.`, 'error');
+            return;
+        }
+        item.clube = clubeNome;
+        item.estado = document.getElementById('qa-estado').value;
+        item.pais = document.getElementById('qa-pais').value;
+        item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32';
+    }
+    else if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
-    else if(type === 'adversarios') { item.clube = document.getElementById('qa-clube').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32'; }
     else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value || 'Brasil'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'jogadores') { 
         item.nome_guerra = document.getElementById('qa-nome-guerra').value; 
@@ -1742,18 +1770,13 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                     </div>
 
                     <div class="stats-section" style="margin-top:2rem;">
-                        <div class="stats-section-title">Gols Contra</div>
+                        <div class="stats-section-title">Gols Contra a favor do Atlético</div>
                         <div class="p-4">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label>Gols Contra (A favor do Atlético)</label>
+                                    <label>Quantidade de Gols Contra</label>
                                     <input type="number" id="game-gc-favor" value="${jogoToEdit?.gcFavorCount || 0}" min="0" style="max-width:200px;">
                                     <div id="gc-favor-details" style="margin-top:1rem;"></div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Gols Contra (Sofridos pelo Atlético)</label>
-                                    <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0" style="max-width:200px;">
-                                    <div id="gc-contra-details" style="margin-top:1rem;"></div>
                                 </div>
                             </div>
                         </div>
@@ -1868,7 +1891,6 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     };
 
     setupGCFields('game-gc-favor', 'gc-favor-details', jogoToEdit?.gcFavorList);
-    setupGCFields('game-gc-contra', 'gc-contra-details', jogoToEdit?.gcContraList);
 
     const setupNIToggle = (checkId, inputId) => {
         const ck = document.getElementById(checkId); const inp = document.getElementById(inputId);
@@ -2039,12 +2061,6 @@ const saveNewJogo = () => {
         min: div.querySelector('.gc-min').value,
         tempo: div.querySelector('.gc-tempo').value
     }));
-    
-    jogo.gcContraCount = parseInt(document.getElementById('game-gc-contra').value || 0);
-    jogo.gcContraList = Array.from(document.getElementById('gc-contra-details').children).map(div => ({
-        min: div.querySelector('.gc-min').value,
-        tempo: div.querySelector('.gc-tempo').value
-    }));
 
     jogo.lineupGalo = [];
     Array.from(document.querySelectorAll('#lineup-galo-body tr')).forEach(r => {
@@ -2095,55 +2111,13 @@ const saveNewJogo = () => {
         return;
     }
 
-    const doSaveJogo = () => {
-        state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
-        
-        // Remove fotos e campos auxiliares de contagem/lista antes de salvar no Supabase
-        // gcFavorList e gcContraList não existem no schema original do banco
-        const { gcFavorCount, gcContraCount, gcFavorList, gcContraList, ...cleanJogo } = jogo;
-        const jogoParaSalvar = {
-            ...cleanJogo,
-            lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
-        };
-        saveData('jogos', [jogoParaSalvar]);
-        renderJogos();
-        showSection('jogos');
-    };
-
-    if (golsLineup < golsGalo) {
-        const diff = golsGalo - golsLineup;
-        const ogModal = document.createElement('div');
-        ogModal.id = 'og-confirm-modal';
-        ogModal.style.cssText = `
-            position:fixed; inset:0; z-index:99999;
-            background:rgba(0,0,0,0.6);
-            display:flex; align-items:center; justify-content:center; padding:1rem;
-        `;
-        ogModal.innerHTML = `
-            <div style="background:white; border-radius:12px; max-width:460px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden;">
-                <div class="block-header" style="flex-shrink:0;">
-                    <span><i class="fas fa-futbol" style="margin-right:0.5rem;"></i>Gol(s) Contra?</span>
-                </div>
-                <div class="p-4" style="text-align:center;">
-                    <p style="font-size:1rem; margin-bottom:1rem; color:#333;">
-                        A soma de gols marcados na escalação (<strong>${golsLineup}</strong>) é menor que os gols do Atlético na partida (<strong>${golsGalo}</strong>).<br><br>
-                        Houve <strong>${diff} gol(s) contra</strong> na partida?
-                    </p>
-                    <div style="display:flex; gap:1rem; justify-content:center; margin-top:1.5rem;">
-                        <button class="btn-primary" onclick="document.getElementById('og-confirm-modal').remove(); window._doSaveJogo();">
-                            <i class="fas fa-check"></i> Sim, salvar assim
-                        </button>
-                        <button class="btn-secondary" onclick="document.getElementById('og-confirm-modal').remove();">
-                            <i class="fas fa-arrow-left"></i> Não, corrigir escalação
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        window._doSaveJogo = doSaveJogo;
-        document.body.appendChild(ogModal);
+    const totalGolsCalculado = golsLineup + jogo.gcFavorCount;
+    if (totalGolsCalculado !== golsGalo) {
+        showToast(`Erro de Validação: A soma de gols dos jogadores (${golsLineup}) + gols contra a favor (${jogo.gcFavorCount}) totaliza ${totalGolsCalculado}, mas o placar do Atlético informado é ${golsGalo}. Ajuste a escalação ou o placar para salvar.`, 'error');
         return;
     }
+
+    const doSaveJogo = () => {
 
     doSaveJogo();
 };
@@ -2208,7 +2182,7 @@ const renderComparativo = () => {
 
         const datasetsGM = [];
         const datasetsGS = [];
-        const colors = ['#d4af37', '#27ae60', '#2980b9', '#8e44ad', '#e67e22'];
+        const colors = ['#d4af37', '#27ae60', '#444444', '#8e44ad', '#e67e22'];
 
         const stats = scenarios.map((scen, idx) => {
             if (!scen.temporada && !scen.tecnico && !scen.jogador) return null;

@@ -333,6 +333,10 @@
                         <input type="text" id="filter-arbitro" placeholder="Nome do Árbitro">
                     </div>
                     <div class="form-group">
+                        <label>Assistente</label>
+                        <input type="text" id="filter-assistente" placeholder="Nome do Assistente">
+                    </div>
+                    <div class="form-group">
                         <label>VAR</label>
                         <input type="text" id="filter-var" placeholder="Árbitro do VAR">
                     </div>
@@ -347,7 +351,7 @@
             </div>
 
             <div class="list-container">
-                <table class="data-table">
+                <table class="data-table" id="jogos-table">
                         <thead>
                             <tr>
                                 <th style="cursor:pointer;" onclick="sortTable(event, 'data', 'string')">Data <i class="fas fa-sort"></i></th>
