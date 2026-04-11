@@ -110,7 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const parts = hash.split('/');
         const page = parts[0];
         const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
+        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
         const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
         
         if (page && validPages.includes(page)) {
@@ -353,6 +353,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
+    if (sectionId === 'adversarios') renderAdversariosPage();
     if (sectionId === 'estatisticas') {
         const firstTab = document.querySelector('#estatisticas-section .tabs-container .tab-btn');
         if (firstTab && !firstTab.classList.contains('active')) firstTab.click();
@@ -1680,7 +1681,7 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     } else if(type === 'adversarios') {
         formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado</label><input type="text" id="qa-estado"></div><div class="form-group"><label>País</label><input type="text" id="qa-pais" value="Brasil"></div></div><div class="form-group"><label>Escudo (URL)</label><input type="text" id="qa-escudo"></div>`;
     } else if(type === 'arbitros') {
-        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div><div class="form-group"><label>País</label><input type="text" id="qa-federacao" value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
+        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>País</label><input type="text" id="qa-federacao" value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if (type === 'jogadores') {
         formHtml = `
             <div class="form-group"><label>Nome Completo</label><input type="text" id="qa-nome-completo"></div>
@@ -1736,7 +1737,7 @@ window.saveQuickAdd = (type, targetInputId) => {
     }
     else if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
-    else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.nascimento = document.getElementById('qa-nascimento').value; item.federacao = document.getElementById('qa-federacao').value || 'Brasil'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
+    else if(type === 'arbitros') { item.nome = document.getElementById('qa-nome').value; item.federacao = document.getElementById('qa-federacao').value || 'Brasil'; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
     else if(type === 'jogadores') { 
         item.nome_guerra = document.getElementById('qa-nome-guerra').value; 
         item.nome_completo = document.getElementById('qa-nome-completo').value; 
@@ -2112,8 +2113,8 @@ const addLineupRow = (team, data = null) => {
             inputs.forEach(inp => {
                 inp.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab') {
-                        // Se for campo de Gols (GM), deixa o Tab padrão (ir para próxima coluna)
-                        if (inp.classList.contains('goals-inp')) return;
+                        // Se for campo de Gols (GM) ou GS, deixa o Tab padrão (ir para próxima coluna)
+                        if (inp.classList.contains('goals-inp') || inp.classList.contains('gs-inp')) return;
 
                         e.preventDefault();
                         const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
@@ -3357,19 +3358,29 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 </div>
             `;
         }).join('');
-    } else if (tabId === 'estat-adversarios') {
-        renderAdversariosPR();
+        }).join('');
     }
 };
 
-const renderAdversariosPR = () => {
+window.clearAdvFilters = () => {
+    const ids = ['adv-filter-temporada', 'adv-filter-campeonato', 'adv-filter-adversario', 'adv-filter-estadio'];
+    ids.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ''; });
+    renderAdversariosPage();
+};
+
+const renderAdversariosPage = () => {
+    setupAutocomplete('adv-filter-temporada', 'jogos', 'temporada', null, renderAdversariosPage);
+    setupAutocomplete('adv-filter-campeonato', 'jogos', 'campeonato', null, renderAdversariosPage);
+    setupAutocomplete('adv-filter-adversario', 'adversarios', 'clube', null, renderAdversariosPage);
+    setupAutocomplete('adv-filter-estadio', 'estadios', 'nome', null, renderAdversariosPage);
+
     const container = document.getElementById('cards-estat-adversarios');
     if (!container) return;
 
-    const fTemp = document.getElementById('pr-filter-temporada')?.value;
-    const fComp = document.getElementById('pr-filter-campeonato')?.value;
-    const fAdv = document.getElementById('pr-filter-adversario')?.value;
-    const fEst = document.getElementById('pr-filter-estadio')?.value;
+    const fTemp = document.getElementById('adv-filter-temporada')?.value;
+    const fComp = document.getElementById('adv-filter-campeonato')?.value;
+    const fAdv = document.getElementById('adv-filter-adversario')?.value;
+    const fEst = document.getElementById('adv-filter-estadio')?.value;
 
     let filteredJogos = state.jogos.filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
 

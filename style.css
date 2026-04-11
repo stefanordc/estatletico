@@ -454,6 +454,20 @@ body {
 }
 
 /* Modal and Blocks */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.6);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
 .modal-overlay.secondary {
     z-index: 3000;
     background: rgba(0,0,0,0.6);

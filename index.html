@@ -71,6 +71,10 @@
                 <i class="fas fa-clone"></i>
                 <span>Cartões</span>
             </li>
+            <li class="nav-item" data-page="adversarios">
+                <i class="fas fa-shield-alt"></i>
+                <span>Adversários</span>
+            </li>
             <li class="nav-item" data-page="publico-renda">
                 <i class="fas fa-hand-holding-usd"></i>
                 <span>Público e Renda</span>
@@ -738,8 +742,53 @@
 
         </section>
 
+        <!-- Adversários Section -->
+        <section id="adversarios-section" class="page-section hidden">
+            <div class="page-header">
+                <h2>Adversários</h2>
+                <p>Análise de confrontos, retrospecto geral e público contra cada adversário</p>
+            </div>
+
+            <!-- Filtros Seção Adversários -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="adv-filter-temporada" placeholder="Ex: 2026">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="adv-filter-campeonato" placeholder="Ex: Mineiro">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Adversário</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="adv-filter-adversario" placeholder="Digite o adversário...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Estádio</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="adv-filter-estadio" placeholder="Ex: Arena MRV">
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button class="btn-secondary" onclick="clearAdvFilters()" style="padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                        <i class="fas fa-filter-circle-xmark"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
+
+            <div id="cards-estat-adversarios" class="adversarios-grid"></div>
+        </section>
+
         <!-- Público e Renda Section -->
-        <section id="publico-renda-section" class="page-section">
+        <section id="publico-renda-section" class="page-section hidden">
             <div class="page-header">
                 <h2>Público e Renda</h2>
                 <p>Análise detalhada de arrecadação e presença de público como mandante</p>
@@ -784,7 +833,6 @@
                 <button class="tab-btn active" data-tab="hist-temporada"><i class="fas fa-calendar-alt"></i> Histórico da Temporada</button>
                 <button class="tab-btn" data-tab="maiores-publicos"><i class="fas fa-users"></i> Maiores Públicos</button>
                 <button class="tab-btn" data-tab="menores-publicos"><i class="fas fa-user-minus"></i> Menores Públicos</button>
-                <button class="tab-btn" data-tab="estat-adversarios"><i class="fas fa-shield-halved"></i> Adversários</button>
                 <button class="tab-btn" data-tab="estat-estadios"><i class="fas fa-stadium"></i> Estádios</button>
             </div>
 
@@ -859,8 +907,6 @@
                     </div>
                 </div>
 
-                <div class="tab-content" id="tab-estat-adversarios" style="display:none;">
-                    <div id="cards-estat-adversarios" class="adversarios-grid"></div>
                 </div>
 
                 <div class="tab-content" id="tab-estat-estadios" style="display:none;">
