@@ -92,143 +92,7 @@ const saveData = async (key, data) => {
     }
 };
 
-window.addEventListener('DOMContentLoaded', async () => {
-    console.log('Estatlético: Inicializando aplicativo...');
-    const loader = document.getElementById('global-loader');
-    
-    // Safety Timeout: Forçar a remoção do loader após 7 segundos caso algo trave
-    const safetyTimer = setTimeout(() => {
-        if (loader && loader.style.display !== 'none') {
-            console.warn('Estatlético: Timeout de segurança atingido. Forçando entrada.');
-            loader.style.display = 'none';
-        }
-    }, 20000);
 
-    // Definição de handleRouting ANTES de ser usada pelo cache
-    const handleRouting = () => {
-        const hash = window.location.hash.replace('#', '');
-        const parts = hash.split('/');
-        const page = parts[0];
-        const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
-        const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
-        
-        if (page && validPages.includes(page)) {
-            showSection(page, true);
-            if (page === 'cadastros' && tab && validTabs.includes(tab)) {
-                renderTab(tab);
-            } else if (page === 'cadastros') {
-                renderTab('adversarios');
-            } else if (page === 'estatisticas' && tab) {
-                switchStatsTab(tab);
-            }
-        } else {
-            showSection('dashboard');
-        }
-    };
-
-    // Cache Layer: Tenta carregar dados salvos imediatamente
-    const cachedData = localStorage.getItem('estatletico_cache');
-    if (cachedData) {
-        try {
-            console.log('Estatlético: Carregando cache local...');
-            const parsed = JSON.parse(cachedData);
-            Object.keys(parsed).forEach(k => { if(state[k]) state[k] = parsed[k]; });
-            handleRouting(); // Renderiza com dados em cache
-            if (loader) loader.style.display = 'none';
-        } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
-    }
-
-    try {
-        if(loader && !cachedData) loader.style.display = 'flex';
-        
-        console.log('Estatlético: Verificando Supabase Client...');
-        if (!window.supabase) {
-            throw new Error("O script do Supabase não foi carregado corretamente.");
-        }
-        
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        
-        const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        console.log('Estatlético: Buscando tabelas em paralelo...');
-
-        const results = await Promise.all(
-            tables.map(t => supabaseClient.from(t).select('*'))
-        );
-
-        console.log('Estatlético: Dados recebidos. Processando estado...');
-        const freshData = {};
-        results.forEach((res, i) => {
-            const tableName = tables[i];
-            if (res.error) {
-                console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
-                // Se for a tabela de jogos, avisar o usuário discretamente
-                if (tableName === 'jogos') {
-                    showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
-                }
-            }
-            if (res.data) {
-                state[tableName] = res.data;
-                freshData[tableName] = res.data;
-                console.log(`Estatlético: Tabela "${tableName}" carregada com ${res.data.length} registros.`);
-            } else {
-                state[tableName] = state[tableName] || []; // Garante array vazio se falhar
-            }
-        });
-        
-        // Só salva no cache o que veio com sucesso
-        if (Object.keys(freshData).length > 0) {
-            try {
-                localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
-            } catch(e) {
-                console.warn('Cache ignorado: localStorage cheio', e);
-            }
-        }
-
-        // Migração Básica de Árbitros
-        state.arbitros = (state.arbitros || []).map(a => {
-            if (a.federacao && a.federacao.trim().length === 2) {
-                return { ...a, federacao: 'Brasil' };
-            }
-            return a;
-        });
-        
-    } catch (e) {
-        console.error('Estatlético: Falha na inicialização:', e);
-    } finally {
-        clearTimeout(safetyTimer);
-        console.log('Estatlético: Finalizando carregamento.');
-        if(loader) loader.style.display = 'none';
-
-        // Sidebar
-        const hamburgerBtn = document.getElementById('hamburger-btn');
-        const sidebar = document.querySelector('.sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        
-        hamburgerBtn?.addEventListener('click', () => {
-            sidebar?.classList.toggle('active');
-            sidebarOverlay?.classList.toggle('active');
-        });
-        
-        sidebarOverlay?.addEventListener('click', () => {
-            sidebar?.classList.remove('active');
-            sidebarOverlay?.classList.remove('active');
-        });
-
-        // Enriquece o lineup com fotos dos jogadores
-        state.jogos = state.jogos.map(jogo => ({
-            ...jogo,
-            lineupGalo: (jogo.lineupGalo || []).map(l => {
-                const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === jogo.temporada)
-                            || state.jogadores.find(p => p.nome_guerra === l.jogador);
-                return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
-            })
-        }));
-        
-        handleRouting();
-        window.addEventListener('hashchange', handleRouting);
-    }
-});
 
 // SVG Icons
 const WHISTLE_SVG = `<svg class="whistle-icon" viewBox="0 0 512 512"><path d="M432 128H288v48h144a16 16 0 0 1 16 16v32a16 16 0 0 1-16 16h-48v48h48a64 64 0 0 0 64-64v-32a64 64 0 0 0-64-64zM240 128H64a64 64 0 0 0-64 64v128a64 64 0 0 0 64 64h176v-48h-16v-48h16v-48h-16v-48h16V128zM96 240a16 16 0 1 1 16-16 16 16 0 0 1-16 16z"/></svg>`;
@@ -3791,4 +3655,142 @@ window.changeEstadioHistPage = (dir) => {
     window.renderEstadioHistPage();
 };
 
-// showSection('dashboard');
+
+// --- ENTRY POINT ---
+window.addEventListener('DOMContentLoaded', async () => {
+    console.log('Estatlético: Inicializando aplicativo...');
+    const loader = document.getElementById('global-loader');
+    
+    // Safety Timeout: Forçar a remoção do loader após 7 segundos caso algo trave
+    const safetyTimer = setTimeout(() => {
+        if (loader && loader.style.display !== 'none') {
+            console.warn('Estatlético: Timeout de segurança atingido. Forçando entrada.');
+            loader.style.display = 'none';
+        }
+    }, 20000);
+
+    // Definição de handleRouting ANTES de ser usada pelo cache
+    const handleRouting = () => {
+        const hash = window.location.hash.replace('#', '');
+        const parts = hash.split('/');
+        const page = parts[0];
+        const tab  = parts[1];
+        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
+        const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
+        
+        if (page && validPages.includes(page)) {
+            showSection(page, true);
+            if (page === 'cadastros' && tab && validTabs.includes(tab)) {
+                renderTab(tab);
+            } else if (page === 'cadastros') {
+                renderTab('adversarios');
+            } else if (page === 'estatisticas' && tab) {
+                switchStatsTab(tab);
+            }
+        } else {
+            showSection('dashboard');
+        }
+    };
+
+    // Cache Layer: Tenta carregar dados salvos imediatamente
+    const cachedData = localStorage.getItem('estatletico_cache');
+    if (cachedData) {
+        try {
+            console.log('Estatlético: Carregando cache local...');
+            const parsed = JSON.parse(cachedData);
+            Object.keys(parsed).forEach(k => { if(state[k]) state[k] = parsed[k]; });
+            handleRouting(); // Renderiza com dados em cache
+            if (loader) loader.style.display = 'none';
+        } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
+    }
+
+    try {
+        if(loader && !cachedData) loader.style.display = 'flex';
+        
+        console.log('Estatlético: Verificando Supabase Client...');
+        if (!window.supabase) {
+            throw new Error("O script do Supabase não foi carregado corretamente.");
+        }
+        
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
+        console.log('Estatlético: Buscando tabelas em paralelo...');
+
+        const results = await Promise.all(
+            tables.map(t => supabaseClient.from(t).select('*'))
+        );
+
+        console.log('Estatlético: Dados recebidos. Processando estado...');
+        const freshData = {};
+        results.forEach((res, i) => {
+            const tableName = tables[i];
+            if (res.error) {
+                console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
+                // Se for a tabela de jogos, avisar o usuário discretamente
+                if (tableName === 'jogos') {
+                    showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
+                }
+            }
+            if (res.data) {
+                state[tableName] = res.data;
+                freshData[tableName] = res.data;
+                console.log(`Estatlético: Tabela "${tableName}" carregada com ${res.data.length} registros.`);
+            } else {
+                state[tableName] = state[tableName] || []; // Garante array vazio se falhar
+            }
+        });
+        
+        // Só salva no cache o que veio com sucesso
+        if (Object.keys(freshData).length > 0) {
+            try {
+                localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+            } catch(e) {
+                console.warn('Cache ignorado: localStorage cheio', e);
+            }
+        }
+
+        // Migração Básica de Árbitros
+        state.arbitros = (state.arbitros || []).map(a => {
+            if (a.federacao && a.federacao.trim().length === 2) {
+                return { ...a, federacao: 'Brasil' };
+            }
+            return a;
+        });
+        
+    } catch (e) {
+        console.error('Estatlético: Falha na inicialização:', e);
+    } finally {
+        clearTimeout(safetyTimer);
+        console.log('Estatlético: Finalizando carregamento.');
+        if(loader) loader.style.display = 'none';
+
+        // Sidebar
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        
+        hamburgerBtn?.addEventListener('click', () => {
+            sidebar?.classList.toggle('active');
+            sidebarOverlay?.classList.toggle('active');
+        });
+        
+        sidebarOverlay?.addEventListener('click', () => {
+            sidebar?.classList.remove('active');
+            sidebarOverlay?.classList.remove('active');
+        });
+
+        // Enriquece o lineup com fotos dos jogadores
+        state.jogos = state.jogos.map(jogo => ({
+            ...jogo,
+            lineupGalo: (jogo.lineupGalo || []).map(l => {
+                const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === jogo.temporada)
+                            || state.jogadores.find(p => p.nome_guerra === l.jogador);
+                return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
+            })
+        }));
+        
+        handleRouting();
+        window.addEventListener('hashchange', handleRouting);
+    }
+});
