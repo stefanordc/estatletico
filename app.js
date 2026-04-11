@@ -3385,17 +3385,20 @@ const renderAdversariosPage = () => {
     const fAdv = document.getElementById('adv-filter-adversario')?.value;
     const fEst = document.getElementById('adv-filter-estadio')?.value;
 
-    let filteredJogos = state.jogos.filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+    let filteredJogos = state.jogos;
 
     if(fTemp) filteredJogos = filteredJogos.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
     if(fComp) filteredJogos = filteredJogos.filter(j => j.campeonato.toLowerCase().includes(fComp.toLowerCase()));
-    if(fAdv) filteredJogos = filteredJogos.filter(j => j.fora.toLowerCase().includes(fAdv.toLowerCase()));
+    if(fAdv) filteredJogos = filteredJogos.filter(j => (j.fora.toLowerCase().includes(fAdv.toLowerCase()) || j.casa.toLowerCase().includes(fAdv.toLowerCase())));
     if(fEst) filteredJogos = filteredJogos.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
 
     const advStats = {};
 
     filteredJogos.forEach(j => {
-        const advName = j.fora;
+        const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+        if (!isGaloMandante && j.fora !== 'Atlético' && j.fora !== 'Atlético-MG') return;
+        
+        const advName = isGaloMandante ? j.fora : j.casa;
         if (!advStats[advName]) {
             const advObj = state.adversarios.find(a => a.clube === advName);
             advStats[advName] = {
@@ -3410,8 +3413,8 @@ const renderAdversariosPage = () => {
         
         const s = advStats[advName];
         s.jogos++;
-        const galoGols = parseInt(j.golsCasa) || 0;
-        const advGols = parseInt(j.golsFora) || 0;
+        const galoGols = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
+        const advGols = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
         s.gm += galoGols;
         s.gs += advGols;
 
@@ -3475,15 +3478,8 @@ const renderAdversarioPRModal = (clubeNome) => {
     overlay.innerHTML = `
         <div class="modal-content" style="padding: 2rem; max-width: 1000px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <h2 style="margin:0;">Jogos como Mandante contra: ${clubeNome}</h2>
+                <h2 style="margin:0;">Jogos contra: ${clubeNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
-            </div>
-
-            <div class="filters-bar" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 2rem;">
-                <div class="filter-group"><label>Temporada</label><div class="autocomplete-container"><input type="text" id="advm-filter-temporada" placeholder="Todos..."></div></div>
-                <div class="filter-group"><label>Estado</label><div class="autocomplete-container"><input type="text" id="advm-filter-estado" placeholder="Todos..."></div></div>
-                <div class="filter-group"><label>País</label><div class="autocomplete-container"><input type="text" id="advm-filter-pais" placeholder="Todos..."></div></div>
-                <div class="filter-group" style="align-self: flex-end;"><button class="btn-primary" onclick="updateAdversarioModalGames('${clubeNome.replace(/'/g, "\\'")}')" style="width:100%;">Filtrar</button></div>
             </div>
 
             <div id="adv-modal-games-container" class="table-container">
@@ -3497,35 +3493,15 @@ const renderAdversarioPRModal = (clubeNome) => {
     `;
 
     document.body.appendChild(overlay);
-    
-    // Autocompletes
-    setupAutocomplete('advm-filter-temporada', 'jogos', 'temporada');
-    setupAutocomplete('advm-filter-estado', 'adversarios', 'estado');
-    setupAutocomplete('advm-filter-pais', 'adversarios', 'pais');
 
     updateAdversarioModalGames(clubeNome);
 };
 
 window.updateAdversarioModalGames = (clubeNome) => {
-    const fTemp = document.getElementById('advm-filter-temporada')?.value;
-    const fEst = document.getElementById('advm-filter-estado')?.value;
-    const fPais = document.getElementById('advm-filter-pais')?.value;
-
-    let filtered = state.jogos.filter(j => j.fora === clubeNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'));
-
-    if (fTemp) filtered = filtered.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
-    
-    // Filtro por Estado/País do Adversário (precisa buscar no objeto adversario)
-    if (fEst || fPais) {
-        filtered = filtered.filter(j => {
-            const adv = state.adversarios.find(a => a.clube === j.fora);
-            if (!adv) return false;
-            let matchEst = true, matchPais = true;
-            if (fEst) matchEst = adv.estado.toLowerCase().includes(fEst.toLowerCase());
-            if (fPais) matchPais = adv.pais.toLowerCase().includes(fPais.toLowerCase());
-            return matchEst && matchPais;
-        });
-    }
+    let filtered = state.jogos.filter(j => 
+        (j.fora === clubeNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG')) || 
+        (j.casa === clubeNome && (j.fora === 'Atlético' || j.fora === 'Atlético-MG'))
+    );
 
     filtered.sort((a,b) => new Date(b.data) - new Date(a.data));
 
@@ -3540,7 +3516,9 @@ window.updateAdversarioModalGames = (clubeNome) => {
                 <tr>
                     <th>Data</th>
                     <th>Competição</th>
-                    <th>Placar</th>
+                    <th style="text-align:right;">Casa</th>
+                    <th style="text-align:center;">Placar</th>
+                    <th>Fora</th>
                     <th>Público</th>
                     <th>Renda</th>
                     <th>Estádio</th>
@@ -3551,7 +3529,9 @@ window.updateAdversarioModalGames = (clubeNome) => {
                     <tr>
                         <td>${j.data.split('-').reverse().join('/')}</td>
                         <td>${j.campeonato}</td>
-                        <td style="font-weight:bold;">${j.golsCasa} x ${j.golsFora}</td>
+                        <td style="text-align:right;">${j.casa}</td>
+                        <td style="font-weight:bold; text-align:center;">${j.golsCasa} x ${j.golsFora}</td>
+                        <td>${j.fora}</td>
                         <td class="val-highlight">${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? 'P.F.' : 'N/I')}</td>
                         <td>${(j.renda && j.renda !== 'N/I' && !j.portoesFechados) ? formatCurrency(j.renda) : (j.portoesFechados ? '0' : 'N/I')}</td>
                         <td>${j.estadio || '-'}</td>
