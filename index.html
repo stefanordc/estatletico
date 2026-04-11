@@ -310,53 +310,38 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Temporada</label>
-                        <select id="filter-temporada">
-                            <option value="">Selecione...</option>
-                        </select>
+                        <input type="text" id="filter-temporada" placeholder="Ex: 2026">
                     </div>
                     <div class="form-group">
                         <label>Campeonato</label>
-                        <select id="filter-campeonato">
-                            <option value="">Selecione...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>País *</label>
-                        <input type="text" name="pais" value="Brasil">
+                        <input type="text" id="filter-campeonato" placeholder="Ex: Mineiro">
                     </div>
                     <div class="form-group">
                         <label>Casa</label>
-                        <select id="filter-casa">
-                            <option value="">Selecione...</option>
-                        </select>
+                        <input type="text" id="filter-casa" placeholder="Time Mandante">
                     </div>
                     <div class="form-group">
                         <label>Fora</label>
-                        <select id="filter-fora">
-                            <option value="">Selecione...</option>
-                        </select>
+                        <input type="text" id="filter-fora" placeholder="Time Visitante">
                     </div>
-                </div>
-                <div class="form-grid" style="margin-top: 1rem;">
                     <div class="form-group">
                         <label>Estádio</label>
-                        <select id="filter-estadio">
-                            <option value="">Selecione...</option>
-                        </select>
+                        <input type="text" id="filter-estadio" placeholder="Nome do Estádio">
                     </div>
                     <div class="form-group">
                         <label>Árbitro</label>
-                        <select id="filter-arbitro">
-                            <option value="">Selecione...</option>
-                        </select>
+                        <input type="text" id="filter-arbitro" placeholder="Nome do Árbitro">
                     </div>
                     <div class="form-group">
-                        <label>Público Mínimo</label>
-                        <input type="number" id="filter-publico-min" placeholder="Mínimo...">
+                        <label>VAR</label>
+                        <input type="text" id="filter-var" placeholder="Árbitro do VAR">
                     </div>
                     <div class="form-group">
                         <label>Público Máximo</label>
                         <input type="number" id="filter-publico-max" placeholder="Máximo...">
+                    </div>
+                    <div class="form-group" style="align-self: flex-end;">
+                        <button class="btn-secondary" id="btn-clear-filters" style="width: 100%;"><i class="fas fa-eraser"></i> Limpar Filtros</button>
                     </div>
                 </div>
             </div>

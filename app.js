@@ -1318,36 +1318,150 @@ const renderJogos = () => {
     const fFora = document.getElementById('filter-fora').value;
     const fEst = document.getElementById('filter-estadio').value;
     const fArb = document.getElementById('filter-arbitro').value;
-    const fMin = document.getElementById('filter-publico-min').value;
+    const fVar = document.getElementById('filter-var').value;
     const fMax = document.getElementById('filter-publico-max').value;
 
     let filtered = [...state.jogos];
-    if (fTemp) filtered = filtered.filter(j => j.temporada === fTemp);
-    if (fCamp) filtered = filtered.filter(j => j.campeonato === fCamp);
-    if (fCasa) filtered = filtered.filter(j => j.casa === fCasa);
-    if (fFora) filtered = filtered.filter(j => j.fora === fFora);
-    if (fEst) filtered = filtered.filter(j => j.estadio === fEst);
-    if (fArb) filtered = filtered.filter(j => j.arbitro === fArb);
-    if (fMin) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) >= parseInt(fMin || 0));
+    if (fTemp) filtered = filtered.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
+    if (fCamp) filtered = filtered.filter(j => j.campeonato.toLowerCase().includes(fCamp.toLowerCase()));
+    if (fCasa) filtered = filtered.filter(j => j.casa.toLowerCase().includes(fCasa.toLowerCase()));
+    if (fFora) filtered = filtered.filter(j => j.fora.toLowerCase().includes(fFora.toLowerCase()));
+    if (fEst) filtered = filtered.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
+    if (fArb) filtered = filtered.filter(j => j.arbitro.toLowerCase().includes(fArb.toLowerCase()));
+    if (fVar) filtered = filtered.filter(j => (j.varArbitro || '').toLowerCase().includes(fVar.toLowerCase()));
     if (fMax) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) <= parseInt(fMax || 9999999));
 
     // Ordenação Dinâmica
     const sorted = sortInternal(filtered, 'jogos-table');
     const paginated = sorted.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
-    populateFilter('filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
-    populateFilter('filter-casa', [...new Set(state.jogos.map(j => j.casa))]);
-    populateFilter('filter-fora', [...new Set(state.jogos.map(j => j.fora))]);
-    populateFilter('filter-estadio', [...new Set(state.jogos.map(j => j.estadio))]);
-    populateFilter('filter-arbitro', [...new Set(state.jogos.map(j => j.arbitro))]);
+    setupAutocomplete('filter-temporada', 'jogos', 'temporada', null, null, false);
+    setupAutocomplete('filter-campeonato', 'jogos', 'campeonato', null, null, false);
+    setupAutocomplete('filter-casa', 'adversarios', 'clube', null, null, false);
+    setupAutocomplete('filter-fora', 'adversarios', 'clube', null, null, false);
+    setupAutocomplete('filter-estadio', 'estadios', 'nome', null, null, false);
+    setupAutocomplete('filter-arbitro', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('filter-var', 'arbitros', 'nome', null, null, false);
 
-    tableBody.innerHTML = paginated.length === 0 ? '<tr><td colspan="11" style="text-align:center;">Nenhum jogo encontrado</td></tr>' : paginated.map(j => {
-        const pub = j.publico === 'N/I' ? 'N/I' : parseInt(j.publico || 0).toLocaleString();
-        const ren = j.renda === 'N/I' ? 'N/I' : formatCurrency(j.renda);
-        const tic = (j.publico === 'N/I' || j.renda === 'N/I' || j.publico === 0) ? 'N/I' : formatCurrency(j.renda/j.publico);
-        return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn" onclick="editJogo(${j.id})"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
+    // Bind inputs to re-filter
+    ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-var', 'filter-publico-max'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.filterBound) {
+            el.addEventListener('input', () => { state.currentPage = 1; renderJogos(); });
+            el.dataset.filterBound = 'true';
+        }
+    });
+
+    // Clear filters button
+    const clearBtn = document.getElementById('btn-clear-filters');
+    if (clearBtn && !clearBtn.dataset.bound) {
+        clearBtn.onclick = () => {
+            ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-var', 'filter-publico-max'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            state.currentPage = 1;
+            renderJogos();
+        };
+        clearBtn.dataset.bound = 'true';
+    }
+
+        return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn view-btn" onclick="showJogoDetail(${j.id}, event)" title="Visualizar Detalhes"><i class="fas fa-search"></i></button><button class="action-btn" onclick="editJogo(${j.id})" title="Editar"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})" title="Excluir"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
     }).join('');
+};
+
+window.showJogoDetail = (jogoId, event) => {
+    const row = event.currentTarget.closest('tr');
+    const existing = document.getElementById(`detail-jogo-${jogoId}`);
+    document.querySelectorAll('.tr-detail-row').forEach(r => r.remove());
+    if (existing) return;
+
+    const j = state.jogos.find(x => x.id === jogoId);
+    if (!j) return;
+
+    const detailHtml = `
+        <tr id="detail-jogo-${jogoId}" class="tr-detail-row">
+            <td colspan="11">
+                <div class="tr-detail-container" style="background:#f9f9f9; border: 1px solid #eee; border-radius: 8px; margin: 10px 0; animation: slideDown 0.3s ease-out;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid #ddd;">
+                        <h3 style="margin:0; color:var(--primary-color);">Ficha Técnica do Jogo</h3>
+                        <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    
+                    <div class="form-grid" style="gap:1.5rem;">
+                        <div class="stats-section" style="margin:0; background:white;">
+                            <div class="stats-section-title">Informações Gerais</div>
+                            <div style="padding:1rem;">
+                                <p><strong>Data:</strong> ${j.data.split('-').reverse().join('/')}</p>
+                                <p><strong>Campeonato:</strong> ${j.campeonato} (${j.rodada})</p>
+                                <p><strong>Estádio:</strong> ${j.estadio} - ${j.estadioEstado || ''} / ${j.estadioPais || ''}</p>
+                                <p><strong>Técnico Galo:</strong> ${j.tecnicoGalo}</p>
+                                <p><strong>Técnico Adv:</strong> ${j.tecnicoAdv}</p>
+                                <p><strong>Observações:</strong> ${j.observacao || '-'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stats-section" style="margin:0; background:white;">
+                            <div class="stats-section-title">Financeiro e Arbitragem</div>
+                            <div style="padding:1rem;">
+                                <p><strong>Público:</strong> ${j.publico === 'N/I' ? 'Não Identificado' : parseInt(j.publico).toLocaleString()}</p>
+                                <p><strong>Renda:</strong> ${j.renda === 'N/I' ? 'Não Identificada' : formatCurrency(j.renda)}</p>
+                                <p><strong>Ticket Médio:</strong> ${(j.publico > 0 && j.renda !== 'N/I') ? formatCurrency(j.renda / j.publico) : 'N/I'}</p>
+                                <hr>
+                                <p><strong>Árbitro:</strong> ${j.arbitro}</p>
+                                <p><strong>Assistente 1:</strong> ${j.assistente1 || '-'}</p>
+                                <p><strong>Assistente 2:</strong> ${j.assistente2 || '-'}</p>
+                                <p><strong>VAR:</strong> ${j.varArbitro || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-section" style="margin-top:1.5rem; background:white;">
+                        <div class="stats-section-title">Escalação do Atlético</div>
+                        <div style="overflow-x:auto;">
+                            <table class="stats-table" style="font-size:0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Jogador</th>
+                                        <th>Posição</th>
+                                        <th>GM</th>
+                                        <th>Min (Tempo)</th>
+                                        <th>GS</th>
+                                        <th>Min (Tempo)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${j.lineupGalo?.map(p => `
+                                        <tr>
+                                            <td><strong>${p.jogador}</strong></td>
+                                            <td>${p.posicao}</td>
+                                            <td style="color:#27ae60; font-weight:bold;">${p.golsCount || 0}</td>
+                                            <td>${(p.golsMin || []).map((m, idx) => `${m}' (${p.golsTempo?.[idx] || 1}T)`).join(', ') || '-'}</td>
+                                            <td style="color:#e74c3c; font-weight:bold;">${p.gsCount || 0}</td>
+                                            <td>${(p.gsMin || []).map((m, idx) => `${m}' (${p.gsTempo?.[idx] || 1}T)`).join(', ') || '-'}</td>
+                                            <td>${p.titular ? '<span class="badge" style="background:#e3f2fd; color:#1976d2;">Titular</span>' : '<span class="badge" style="background:#f5f5f5; color:#666;">Reserva</span>'}</td>
+                                        </tr>
+                                    `).join('')}
+                                    ${(j.gcFavorList || []).length > 0 ? `
+                                        <tr style="background:#f1f8e9;">
+                                            <td><strong>Gol Contra (Favor)</strong></td>
+                                            <td>-</td>
+                                            <td style="color:#27ae60; font-weight:bold;">${j.gcFavorList.length}</td>
+                                            <td>${j.gcFavorList.map(gc => `${gc.min}' (${gc.tempo}T)`).join(', ')}</td>
+                                            <td>0</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                        </tr>
+                                    ` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
+    row.insertAdjacentHTML('afterend', detailHtml);
 };
 
 const populateFilter = (id, values) => {
@@ -1568,7 +1682,14 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     showSection('novo-jogo');
     novoJogoContainer.innerHTML = `
         <div class="p-4" style="background: white; border-radius: var(--border-radius); box-shadow: var(--shadow);">
-            <div class="block-header" style="background: none; color: var(--text-main); padding: 0 0 1rem 0; border-bottom: 2px solid #eee; margin-bottom: 2rem;"><div style="display:flex; align-items:center; gap:1rem;"><button class="btn-secondary" style="padding:0.4rem 1rem; font-size:0.8rem;" onclick="showSection('jogos')"><i class="fas fa-arrow-left"></i> Voltar</button><h2 style="margin:0;">${jogoToEdit ? 'Editar Jogo' : 'Novo Jogo'}</h2></div></div>
+            <div class="block-header" style="background: none; color: var(--text-main); padding: 0 0 1rem 0; border-bottom: 2px solid #eee; margin-bottom: 2rem;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <button class="btn-secondary" style="padding:0.4rem 1rem; font-size:0.8rem;" id="btn-back-form">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                    <h2 style="margin:0;">${jogoToEdit ? 'Editar Jogo' : 'Novo Jogo'}</h2>
+                </div>
+            </div>
             <form id="multi-step-form">
                 <div class="form-block active" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
@@ -1576,18 +1697,6 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Gols Contra (A favor do Atlético)</label>
-                                <input type="number" id="game-gc-favor" value="${jogoToEdit?.gcFavorCount || 0}" min="0">
-                                <div id="gc-favor-details" style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>Gols Contra (Sofridos pelo Atlético)</label>
-                                <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0">
-                                <div id="gc-contra-details" style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
-                            </div>
-                        </div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-2">
@@ -1627,6 +1736,25 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         </div>
                         <button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addLineupRow('galo')">+ Adicionar Jogador</button>
                     </div>
+
+                    <div class="stats-section" style="margin-top:2rem;">
+                        <div class="stats-section-title">Gols Contra</div>
+                        <div class="p-4">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Gols Contra (A favor do Atlético)</label>
+                                    <input type="number" id="game-gc-favor" value="${jogoToEdit?.gcFavorCount || 0}" min="0" style="max-width:200px;">
+                                    <div id="gc-favor-details" style="margin-top:1rem;"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Gols Contra (Sofridos pelo Atlético)</label>
+                                    <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0" style="max-width:200px;">
+                                    <div id="gc-contra-details" style="margin-top:1rem;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex-end">
                         <button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button>
                         <button type="button" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
@@ -1677,6 +1805,17 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     const updTicket = () => { const renCk = document.getElementById('game-ren-ni').checked; const pubCk = document.getElementById('game-pub-ni').checked; const label = document.getElementById('game-ticket-label'); if (renCk || pubCk) { label.value = 'N/I'; return; } const r = parseFloat(document.getElementById('game-renda').value) || 0; const p = parseInt(document.getElementById('game-publico').value) || 0; label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; };
     ['game-renda', 'game-publico', 'game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('input', updTicket));
     ['game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('change', updTicket));
+    
+    // Header Back navigation logic
+    document.getElementById('btn-back-form').onclick = () => {
+        const activeBlock = document.querySelector('.form-block.active');
+        const blockNum = parseInt(activeBlock?.id.split('-')[1] || 1);
+        if (blockNum > 1) {
+            nextBlock(blockNum - 1);
+        } else {
+            showSection('jogos');
+        }
+    };
     
     // Gols Contra logic
     const setupGCFields = (inputId, containerId, dataList = null) => {
@@ -1955,9 +2094,9 @@ const saveNewJogo = () => {
     const doSaveJogo = () => {
         state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
         
-        // Remove fotos e campos auxiliares de contagem antes de salvar no Supabase
-        // gcFavorCount e gcContraCount não existem no schema original, a contagem é derivada das listas
-        const { gcFavorCount, gcContraCount, ...cleanJogo } = jogo;
+        // Remove fotos e campos auxiliares de contagem/lista antes de salvar no Supabase
+        // gcFavorList e gcContraList não existem no schema original do banco
+        const { gcFavorCount, gcContraCount, gcFavorList, gcContraList, ...cleanJogo } = jogo;
         const jogoParaSalvar = {
             ...cleanJogo,
             lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
