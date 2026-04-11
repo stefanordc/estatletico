@@ -81,9 +81,30 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }, 20000);
 
-    try {
-        if(loader) loader.style.display = 'flex';
-    // Cache Layer: Tenta carregar dados salvos imediatamente para performance
+    // Definição de handleRouting ANTES de ser usada pelo cache
+    const handleRouting = () => {
+        const hash = window.location.hash.replace('#', '');
+        const parts = hash.split('/');
+        const page = parts[0];
+        const tab  = parts[1];
+        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
+        const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
+        
+        if (page && validPages.includes(page)) {
+            showSection(page, true);
+            if (page === 'cadastros' && tab && validTabs.includes(tab)) {
+                renderTab(tab);
+            } else if (page === 'cadastros') {
+                renderTab('adversarios');
+            } else if (page === 'estatisticas' && tab) {
+                switchStatsTab(tab);
+            }
+        } else {
+            showSection('dashboard');
+        }
+    };
+
+    // Cache Layer: Tenta carregar dados salvos imediatamente
     const cachedData = localStorage.getItem('estatletico_cache');
     if (cachedData) {
         try {
@@ -113,7 +134,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         );
 
         console.log('Estatlético: Dados recebidos. Processando estado...');
-        
         const freshData = {};
         results.forEach((res, i) => {
             if (res.data) {
@@ -122,7 +142,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         });
         
-        // Salva cópia atualizada no cache
         localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
 
         // Migração Básica de Árbitros
@@ -135,13 +154,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         
     } catch (e) {
         console.error('Estatlético: Falha na inicialização:', e);
-        showToast('Erro ao conectar ao banco de dados. Verifique sua conexão.', 'error');
     } finally {
         clearTimeout(safetyTimer);
-        console.log('Estatlético: Escondendo loader.');
+        console.log('Estatlético: Finalizando carregamento.');
         if(loader) loader.style.display = 'none';
 
-        // Sidebar functionality for mobile
+        // Sidebar
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const sidebar = document.querySelector('.sidebar');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -155,29 +173,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             sidebar?.classList.remove('active');
             sidebarOverlay?.classList.remove('active');
         });
-
-        // Set up hash routing
-        const handleRouting = () => {
-            const hash = window.location.hash.replace('#', '');
-            const parts = hash.split('/');
-            const page = parts[0];
-            const tab  = parts[1];
-            const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
-            const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
-            
-            if (page && validPages.includes(page)) {
-                showSection(page, true);
-                if (page === 'cadastros' && tab && validTabs.includes(tab)) {
-                    renderTab(tab);
-                } else if (page === 'cadastros') {
-                    renderTab('adversarios');
-                } else if (page === 'estatisticas' && tab) {
-                    switchStatsTab(tab);
-                }
-            } else {
-                showSection('dashboard');
-            }
-        };
 
         handleRouting();
         window.addEventListener('hashchange', handleRouting);
