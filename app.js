@@ -2118,6 +2118,18 @@ const saveNewJogo = () => {
     }
 
     const doSaveJogo = () => {
+        state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
+        
+        // Remove fotos e campos auxiliares de contagem/lista antes de salvar no Supabase
+        const { gcFavorCount, gcContraCount, gcFavorList, gcContraList, ...cleanJogo } = jogo;
+        const jogoParaSalvar = {
+            ...cleanJogo,
+            lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
+        };
+        saveData('jogos', [jogoParaSalvar]);
+        renderJogos();
+        showSection('jogos');
+    };
 
     doSaveJogo();
 };
