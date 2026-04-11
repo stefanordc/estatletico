@@ -3476,13 +3476,13 @@ const renderAdversarioPRModal = (clubeNome) => {
     overlay.style.zIndex = '4000';
     
     overlay.innerHTML = `
-        <div class="modal-content" style="padding: 2rem; max-width: 1000px;">
+        <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 1200px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
                 <h2 style="margin:0;">Jogos contra: ${clubeNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
             </div>
 
-            <div id="adv-modal-games-container" class="table-container">
+            <div id="adv-modal-games-container" style="width: 100%; border: none;">
                 <!-- Jogos serão renderizados aqui -->
             </div>
             
@@ -3526,7 +3526,7 @@ window.updateAdversarioModalGames = (clubeNome) => {
             </thead>
             <tbody>
                 ${paginated.map(j => `
-                    <tr>
+                    <tr style="cursor: pointer;" onclick="showJogoDetail(${j.id}, event)">
                         <td>${j.data.split('-').reverse().join('/')}</td>
                         <td>${j.campeonato}</td>
                         <td style="text-align:right;">${j.casa}</td>
@@ -3651,123 +3651,44 @@ const renderEstadioModal = (estadioNome) => {
     overlay.style.display = 'flex';
     overlay.style.zIndex = '4000';
     
-    const jogosEstadio = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'))
+    const jogosEstadio = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG' || j.fora === 'Atlético' || j.fora === 'Atlético-MG'))
                                    .sort((a, b) => new Date(b.data) - new Date(a.data));
 
-    const last10 = jogosEstadio.slice(0, 10);
-
-    const calcStatsBySeason = (jogos) => {
-        const seasons = {};
-        jogos.forEach(j => {
-            const season = j.temporada;
-            if (!seasons[season]) seasons[season] = { season, j: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pts: 0, cs: 0, cg: 0 };
-            const s = seasons[season];
-            s.j++;
-            const gM = parseInt(j.golsCasa) || 0;
-            const gS = parseInt(j.golsFora) || 0;
-            s.gm += gM; s.gs += gS;
-            if (gM > gS) { s.v++; s.pts += 3; }
-            else if (gM === gS) { s.e++; s.pts += 1; }
-            else { s.d++; }
-            if (gS === 0) s.cs++;
-            if (gM === 0) s.cg++;
-        });
-        return Object.values(seasons).sort((a,b) => b.season.localeCompare(a.season));
-    };
-
-    const renderSeasonStatsTable = (jogos) => {
-        const stats = calcStatsBySeason(jogos);
-        return `
-            <table class="premium-table" style="font-size:0.75rem; margin-bottom:1.5rem;">
-                <thead>
-                    <tr>
-                        <th>Temporada</th>
-                        <th>J</th>
-                        <th>V/E/D</th>
-                        <th>GM/GS</th>
-                        <th>Aprov.</th>
-                        <th>Méd. GM/GS</th>
-                        <th>CS / %</th>
-                        <th>CG / %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${stats.map(s => {
-                        const aprov = (s.pts / (s.j * 3)) * 100;
-                        const pCS = (s.cs / s.j) * 100;
-                        const pCG = (s.cg / s.j) * 100;
-                        return `
-                            <tr>
-                                <td>${s.season}</td>
-                                <td>${s.j}</td>
-                                <td>${s.v}/${s.e}/${s.d}</td>
-                                <td>${s.gm}/${s.gs}</td>
-                                <td style="font-weight:600;">${aprov.toFixed(1)}%</td>
-                                <td>${(s.gm/s.j).toFixed(2)} / ${(s.gs/s.j).toFixed(2)}</td>
-                                <td><span style="color:#3498db; font-weight:600;">${s.cs}</span> <span style="font-size:0.7rem;">(${pCS.toFixed(1)}%)</span></td>
-                                <td><span style="color:#e67e22; font-weight:600;">${s.cg}</span> <span style="font-size:0.7rem;">(${pCG.toFixed(1)}%)</span></td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        `;
-    };
-
-    const renderTableGamesSimple = (list) => {
-        return `
-            <table class="premium-table" style="font-size:0.8rem;">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Adversário</th>
-                        <th>Competição</th>
-                        <th>Placar</th>
-                        <th>Público</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${list.map(j => `
-                        <tr>
-                            <td>${j.data.split('-').reverse().join('/')}</td>
-                            <td style="font-weight:600;">${j.fora}</td>
-                            <td>${j.campeonato}</td>
-                            <td style="font-weight:bold;">${j.golsCasa}x${j.golsFora}</td>
-                            <td>${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? '<span class="status-badge" style="background:#eee; color:#666;">P.F.</span>' : '-')}</td>
-                        </tr>
-                    `).join('')}
-                    ${list.length === 0 ? '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum jogo encontrado.</td></tr>' : ''}
-                </tbody>
-            </table>
-        `;
-    };
-
     overlay.innerHTML = `
-        <div class="modal-content" style="padding: 2rem; max-width: 1000px;">
+        <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 1000px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <h2 style="margin:0;">Estádio: ${estadioNome}</h2>
+                <h2 style="margin:0;">Jogos no estádio: ${estadioNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
             </div>
 
-            <div class="tabs-container" style="margin-bottom: 1.5rem;">
-                <button class="tab-btn active" onclick="switchEstadioTab(this, 'est-last10')"><i class="fas fa-history"></i> Últimos 10 Jogos</button>
-                <button class="tab-btn" onclick="switchEstadioTab(this, 'est-all')"><i class="fas fa-list"></i> Todos os Jogos</button>
-            </div>
-
-            <div id="est-last10" class="est-tab-content">
-                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Resumo Analítico (Últimos 10)</h4>
-                ${renderSeasonStatsTable(last10)}
-                ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'Aprov', 'CS', 'CG'])}
-                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Lista de Partidas</h4>
-                <div class="table-container">${renderTableGamesSimple(last10)}</div>
-            </div>
-            
-            <div id="est-all" class="est-tab-content" style="display:none;">
-                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Resumo Analítico por Temporada</h4>
-                ${renderSeasonStatsTable(jogosEstadio)}
-                ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'Aprov', 'CS', 'CG'])}
-                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Histórico de Partidas</h4>
-                <div class="table-container">${renderTableGamesSimple(jogosEstadio)}</div>
+            <div style="max-height: 70vh; overflow-y: auto;">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Competição</th>
+                            <th style="text-align:right;">Casa</th>
+                            <th style="text-align:center;">Placar</th>
+                            <th>Fora</th>
+                            <th>Público</th>
+                            <th>Renda</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${jogosEstadio.map(j => `
+                            <tr style="cursor: pointer;" onclick="showJogoDetail(${j.id}, event)">
+                                <td>${j.data.split('-').reverse().join('/')}</td>
+                                <td>${j.campeonato}</td>
+                                <td style="text-align:right;">${j.casa}</td>
+                                <td style="font-weight:bold; text-align:center;">${j.golsCasa} x ${j.golsFora}</td>
+                                <td>${j.fora}</td>
+                                <td class="val-highlight">${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? 'P.F.' : 'N/I')}</td>
+                                <td>${(j.renda && j.renda !== 'N/I' && !j.portoesFechados) ? formatCurrency(j.renda) : (j.portoesFechados ? '0' : 'N/I')}</td>
+                            </tr>
+                        `).join('')}
+                        ${jogosEstadio.length === 0 ? '<tr><td colspan="7" style="text-align:center; padding:2rem;">Nenhum jogo encontrado.</td></tr>' : ''}
+                    </tbody>
+                </table>
             </div>
         </div>
     `;
@@ -3775,15 +3696,6 @@ const renderEstadioModal = (estadioNome) => {
     document.body.appendChild(overlay);
 };
 
-const switchEstadioTab = (btn, tabId) => {
-    const modal = btn.closest('.modal-content');
-    modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    modal.querySelectorAll('.est-tab-content').forEach(c => c.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-};
-
 window.renderEstadioModal = renderEstadioModal;
-window.switchEstadioTab = switchEstadioTab;
 
 // showSection('dashboard');
