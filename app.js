@@ -3339,7 +3339,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
             const aprov = (s.jogos > 0 ? ((s.v * 3 + s.e) / (s.jogos * 3)) * 100 : 0);
             return `
-                <div class="card" style="padding:0; overflow:hidden; cursor:pointer;" onclick="renderEstadioModal('${s.nome.replace(/'/g, "\\'")}')">
+                <div class="card" style="padding:0; overflow:hidden; cursor:pointer;" onclick="window.renderEstadioModal('${s.nome.replace(/'/g, "\\'")}')">
                     <img src="${foto}" style="width:100%; height:180px; object-fit:cover;">
                     <div style="padding:1.5rem;">
                         <h3 style="margin-bottom:1rem; border-bottom:2px solid var(--primary-color); display:inline-block;">${s.nome}</h3>
