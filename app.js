@@ -76,10 +76,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Safety Timeout: Forçar a remoção do loader após 7 segundos caso algo trave
     const safetyTimer = setTimeout(() => {
         if (loader && loader.style.display !== 'none') {
-            console.warn('Estatlético: Timeout de segurança atingido. Removendo loader manualmente.');
+            console.warn('Estatlético: Timeout de segurança atingido. Forçando entrada.');
             loader.style.display = 'none';
         }
-    }, 7000);
+    }, 20000);
 
     try {
         if(loader) loader.style.display = 'flex';
@@ -94,20 +94,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
         console.log('Estatlético: Buscando tabelas em paralelo...');
 
-        // Timeout wrapper for database calls
-        const withTimeout = (promise, ms) => {
-            let timeoutPromise = new Promise((_, reject) => {
-                let id = setTimeout(() => {
-                    clearTimeout(id);
-                    reject(new Error('Timeout de conexão com o banco de dados.'));
-                }, ms);
-            });
-            return Promise.race([promise, timeoutPromise]);
-        };
-
-        const results = await withTimeout(
-            Promise.all(tables.map(t => supabaseClient.from(t).select('*'))),
-            5000 // 5 segundos de limite para o banco
+        const results = await Promise.all(
+            tables.map(t => supabaseClient.from(t).select('*'))
         );
 
         console.log('Estatlético: Dados recebidos. Processando estado...');
@@ -125,7 +113,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
         
     } catch (e) {
-        console.error('Estatlético: Falha ou timeout na inicialização:', e);
+        console.error('Estatlético: Falha na inicialização:', e);
+        showToast('Erro ao conectar ao banco de dados. Verifique sua conexão.', 'error');
     } finally {
         clearTimeout(safetyTimer);
         console.log('Estatlético: Escondendo loader.');
