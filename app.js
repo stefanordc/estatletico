@@ -702,15 +702,28 @@ const showPlayerDetail = (playerId, event) => {
 
         if (gamesCount > 0) {
             const aprov = ((wins * 3 + draws) / (gamesCount * 3) * 100).toFixed(1) + '%';
-            statsBySeason.push({ season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularCount, subOutCount, enteredCount });
+            
+            let csCount = 0;
+            if (isGoalie) {
+                seasonJogos.forEach(jogo => {
+                    const inL = jogo.lineupGalo?.some(l => l.jogador === player.nome_guerra);
+                    if (inL) {
+                        const advG = (jogo.casa === 'Atlético' || jogo.casa === 'Atlético-MG') ? parseInt(jogo.golsFora) : parseInt(jogo.golsCasa);
+                        if (advG === 0) csCount++;
+                    }
+                });
+            }
+
+            statsBySeason.push({ season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularCount, subOutCount, enteredCount, cs: csCount });
         }
     });
 
     const total = statsBySeason.reduce((acc, s) => {
         acc.gamesCount += s.gamesCount; acc.goals += s.goals; acc.gs += s.gs; acc.wins += s.wins; acc.draws += s.draws; acc.losses += s.losses; acc.yellow += s.yellow; acc.red += s.red;
         acc.titularCount += s.titularCount; acc.subOutCount += s.subOutCount; acc.enteredCount += s.enteredCount;
+        acc.cs += (s.cs || 0);
         return acc;
-    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0, titularCount: 0, subOutCount: 0, enteredCount: 0 });
+    }, { gamesCount:0, goals:0, gs:0, wins:0, draws:0, losses:0, yellow:0, red:0, titularCount: 0, subOutCount: 0, enteredCount: 0, cs: 0 });
     total.aprov = total.gamesCount > 0 ? ((total.wins * 3 + total.draws) / (total.gamesCount * 3) * 100).toFixed(1) + '%' : "0%";
 
     const detail = document.createElement('div');
@@ -720,19 +733,19 @@ const showPlayerDetail = (playerId, event) => {
     
     let seasonTableHeaders = isTecnico 
         ? '<th>Temporada</th><th>Jogos</th><th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>GM</th><th>GS</th><th>Aprov.</th>'
-        : `<th>Temporada</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th>`;
+        : `<th>Temporada</th><th>Jogos</th><th>Titular</th><th>Subst.</th><th>Entrou</th><th>Gols</th>${isGoalie ? '<th>GS</th><th>CS</th>' : ''}<th>Vitórias</th><th>Empates</th><th>Derrotas</th><th>Aprov.</th><th>CA</th><th>CV</th>`;
 
     let seasonTableBody = statsBySeason.map(s => {
         if (isTecnico) {
             return `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.goals}</td><td>${s.gs}</td><td><strong>${s.aprov}</strong></td></tr>`;
         } else {
-            return `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td style="color:#2980b9; font-weight:600;">${s.titularCount}</td><td style="color:#7f8c8d;">${s.subOutCount}</td><td style="color:#27ae60;">${s.enteredCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}</td><td>${s.yellow}</td><td>${s.red}</td></tr>`;
+            return `<tr><td>${s.season}</td><td>${s.gamesCount}</td><td style="color:#2980b9; font-weight:600;">${s.titularCount}</td><td style="color:#7f8c8d;">${s.subOutCount}</td><td style="color:#27ae60;">${s.enteredCount}</td><td>${s.goals}</td>${isGoalie ? `<td><strong>${s.gs}</strong></td><td style="color:#3498db; font-weight:bold;">${s.cs}</td>` : ''}<td><span class="win-text">${s.wins}</span></td><td><span class="draw-text">${s.draws}</span></td><td><span class="loss-text">${s.losses}</span></td><td>${s.aprov}</td><td>${s.yellow}</td><td>${s.red}</td></tr>`;
         }
     }).join('');
 
     let seasonTableFooter = isTecnico
         ? `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.wins}</td><td>${total.draws}</td><td>${total.losses}</td><td>${total.goals}</td><td>${total.gs}</td><td>${total.aprov}</td></tr>`
-        : `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularCount}</td><td>${total.subOutCount}</td><td>${total.enteredCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}</td><td>${total.yellow}</td><td>${total.red}</td></tr>`;
+        : `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularCount}</td><td>${total.subOutCount}</td><td>${total.enteredCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td><td style="color:#3498db; font-weight:bold;">${total.cs}</td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}</td><td>${total.yellow}</td><td>${total.red}</td></tr>`;
 
     // Analytics by Coach for players
     let tecTableHtml = '';
@@ -1496,11 +1509,15 @@ const populateFilter = (id, values) => {
 const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
     const inp = document.getElementById(id); if (!inp) return;
     
-    // Check if bounds have already been attached
+    // Se já estiver vinculado, apenas atualiza a fonte de dados e retorna
     if (inp.dataset.autocompleteBound) {
+        inp.dataset.sourceKey = sourceKey;
+        inp.dataset.field = field;
         return;
     }
     inp.dataset.autocompleteBound = 'true';
+    inp.dataset.sourceKey = sourceKey;
+    inp.dataset.field = field;
 
     let cont = inp.parentElement;
     // Ensure the wrapper exists for relative positioning
@@ -1522,17 +1539,19 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         
         if (val.length < 1) return;
         const normVal = normalizeString(val);
-        let ds = state[sourceKey]; 
+        const currentSourceKey = inp.dataset.sourceKey || sourceKey;
+        const currentField = inp.dataset.field || field;
+        let ds = state[currentSourceKey]; 
         if (typeof filterFn === 'function') ds = ds.filter(filterFn);
-        const resultsFull = ds.filter(item => normalizeString(item[field]).includes(normVal))
-                          .sort((a,b) => a[field].localeCompare(b[field]));
+        const resultsFull = ds.filter(item => normalizeString(item[currentField]).includes(normVal))
+                          .sort((a,b) => a[currentField].localeCompare(b[currentField]));
         
         // Garantir valores únicos no dropdown para campos como 'temporada'
         const results = [];
         const seen = new Set();
         resultsFull.forEach(item => {
-            if (!seen.has(item[field])) {
-                seen.add(item[field]);
+            if (!seen.has(item[currentField])) {
+                seen.add(item[currentField]);
                 results.push(item);
             }
         });
@@ -1543,9 +1562,9 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         results.forEach((res, idx) => {
             const item = document.createElement('div'); 
             item.className = 'autocomplete-item'; 
-            item.textContent = res[field];
+            item.textContent = res[currentField];
             item.onclick = () => { 
-                inp.value = res[field]; 
+                inp.value = res[currentField]; 
                 drop.remove(); 
                 if (typeof onSelect === 'function') onSelect(res);
                 inp.dispatchEvent(new Event('change')); 
@@ -1969,40 +1988,32 @@ const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
     const yellowVal = data ? data.amarelo : 1;
     row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    
+    // TAB behavior for cards
+    const inputsOnRow = row.querySelectorAll('input, select');
+    inputsOnRow.forEach(inpRow => {
+        inpRow.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                // Se for a coluna jogador (classe card-player-inp), pula para linha de baixo
+                if (inpRow.classList.contains('card-player-inp')) {
+                    e.preventDefault();
+                    const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
+                    if (targetTr) {
+                        const targetInp = targetTr.querySelector('.card-player-inp');
+                        if (targetInp) targetInp.focus();
+                    }
+                }
+                // Outros campos (selects) mantêm comportamento padrão do Tab (muda de coluna)
+            }
+        });
+    });
+
     if(!isAdv) { 
         const inp = row.querySelector('.card-player-inp'); 
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
             setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
-            
-            // Vertical Tab Navigation Logic for all inputs in the row
-            const inputs = row.querySelectorAll('input, select');
-            inputs.forEach(inp => {
-                inp.addEventListener('keydown', (e) => {
-                    if (e.key === 'Tab') {
-                        e.preventDefault();
-                        const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
-                        if (targetTr) {
-                            // Find the input in the same column (same index)
-                            const colIndex = Array.from(row.children).indexOf(inp.closest('td'));
-                            const targetTd = targetTr.children[colIndex];
-                            if (targetTd) {
-                                const targetInp = targetTd.querySelector('input, select');
-                                if (targetInp) {
-                                    targetInp.focus();
-                                    if (targetInp.select) targetInp.select();
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-
-            inp.addEventListener('blur', () => { 
-                const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); 
-                if(p) row.querySelector('.pos-inp').value = p.posicao; 
-            }); 
         }, 10); 
     }
     tbody.appendChild(row);
@@ -2066,10 +2077,12 @@ const addLineupRow = (team, data = null) => {
             inputs.forEach(inp => {
                 inp.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab') {
+                        // Se for campo de Gols (GM), deixa o Tab padrão (ir para próxima coluna)
+                        if (inp.classList.contains('goals-inp')) return;
+
                         e.preventDefault();
                         const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
                         if (targetTr) {
-                            // Find the input in the same column (same index)
                             const colIndex = Array.from(row.children).indexOf(inp.closest('td'));
                             const targetTd = targetTr.children[colIndex];
                             if (targetTd) {
@@ -2175,18 +2188,29 @@ const saveNewJogo = () => {
         return;
     }
 
-    const doSaveJogo = () => {
+    const doSaveJogo = async () => {
         state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
         
-        // Remove fotos e campos auxiliares de contagem/lista antes de salvar no Supabase
+        // Remove campos auxiliares e fotos para economizar espaço e evitar erros de schema imediato
         const { gcFavorCount, gcContraCount, gcFavorList, gcContraList, ...cleanJogo } = jogo;
         const jogoParaSalvar = {
             ...cleanJogo,
             lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
         };
-        saveData('jogos', [jogoParaSalvar]);
-        renderJogos();
-        showSection('jogos');
+        
+        try {
+            await saveData('jogos', [jogoParaSalvar]);
+            renderJogos();
+            showSection('jogos');
+            showToast('Jogo salvo com sucesso!', 'success');
+        } catch (error) {
+            console.error('Erro detalhado ao salvar:', error);
+            if (error.message?.includes('portoesFechados')) {
+                showToast('Erro de Schema: Coluna "portoesFechados" não encontrada no Supabase. Por favor, execute o comando SQL enviado no chat.', 'error');
+            } else {
+                showToast(`Erro ao salvar (jogos): ${error.message || 'Erro desconhecido'}`, 'error');
+            }
+        }
     };
 
     doSaveJogo();
@@ -2474,19 +2498,24 @@ const renderStatsColetivas = (container) => {
     const stats = {};
     filteredJogos.forEach(j => {
 
-        if (!stats[j.campeonato]) stats[j.campeonato] = { nome: j.campeonato, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0 };
+        if (!stats[j.campeonato]) stats[j.campeonato] = { nome: j.campeonato, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0, cs: 0, cg: 0 };
         
         const s = stats[j.campeonato];
         s.jogos++;
-        s.gp += parseInt(j.golsCasa === 'Atlético' || j.casa === 'Atlético' ? j.golsCasa : j.golsFora);
-        s.gc += parseInt(j.casa === 'Atlético' ? j.golsFora : j.golsCasa);
         
-        const galoGols = j.casa === 'Atlético' ? parseInt(j.golsCasa) : parseInt(j.golsFora);
-        const advGols = j.casa === 'Atlético' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+        const galoGols = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? parseInt(j.golsCasa) : parseInt(j.golsFora);
+        const advGols = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+        
+        s.gp += galoGols;
+        s.gc += advGols;
         
         if (galoGols > advGols) { s.v++; s.pontos += 3; }
         else if (galoGols === advGols) { s.e++; s.pontos += 1; }
         else s.d++;
+
+        // Clean Sheets & Clean Goals
+        if (advGols === 0) s.cs++;
+        if (galoGols === 0) s.cg++;
 
         (j.cartoesGalo || []).forEach(c => { s.yellowAtl += parseInt(c.amarelo || 0); s.redAtl += parseInt(c.red || 0); });
         (j.cartoesAdv || []).forEach(c => { s.yellowAdv += parseInt(c.amarelo || 0); s.redAdv += parseInt(c.red || 0); });
@@ -2496,22 +2525,23 @@ const renderStatsColetivas = (container) => {
     const total = list.reduce((acc, c) => {
         acc.pontos += c.pontos; acc.jogos += c.jogos; acc.v += c.v; acc.e += c.e; acc.d += c.d; acc.gp += c.gp; acc.gc += c.gc;
         acc.yellowAtl += c.yellowAtl; acc.redAtl += c.redAtl; acc.yellowAdv += c.yellowAdv; acc.redAdv += c.redAdv;
+        acc.cs += c.cs; acc.cg += c.cg;
         return acc;
-    }, { nome: 'TOTAL', pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0 });
+    }, { nome: 'TOTAL', pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0, cs: 0, cg: 0 });
 
     const calcRow = (s) => {
         const sg = s.gp - s.gc;
         const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
+        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#3498db; font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
 
     container.innerHTML = `
         <table class="data-table" style="text-align:center;">
             <thead>
-                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
+                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th title="Clean Sheets">CS</th><th title="Clean Goals">CG</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
             </thead>
             <tbody>
                 ${list.map(calcRow).join('')}
@@ -2605,12 +2635,15 @@ const renderStatsIndividuais = (container) => {
 
         j.lineupGalo?.forEach(l => {
             const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === j.temporada);
-            if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, foto: l.foto, posicao: l.posicao, jogos: 0, v: 0, d: 0, gols: 0, gs: 0, yellow: 0, red: 0, pontos: 0 };
+            if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, foto: l.foto, posicao: l.posicao, jogos: 0, v: 0, d: 0, gols: 0, gs: 0, yellow: 0, red: 0, pontos: 0, cs: 0 };
             
             const s = stats[l.jogador];
             s.jogos++;
             s.gols += parseInt(l.golsCount || 0);
             s.gs += parseInt(l.gsCount || 0);
+
+            const advGols = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+            if (advGols === 0) s.cs++;
 
             const galoGols = j.casa === 'Atlético' ? parseInt(j.golsCasa) : parseInt(j.golsFora);
             const advGols = j.casa === 'Atlético' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
@@ -2663,6 +2696,7 @@ const renderStatsIndividuais = (container) => {
                     <th>Vitórias <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
                     <th>Derrotas <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
                     <th>Aprov. <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
+                    <th title="Clean Sheets">CS</th>
                 </tr>
             </thead>
             <tbody>
@@ -2678,6 +2712,7 @@ const renderStatsIndividuais = (container) => {
                             <td><span class="win-text">${s.v}</span></td>
                             <td><span class="loss-text">${s.d}</span></td>
                             <td>${aprove}%</td>
+                            <td style="color:#3498db; font-weight:bold;">${s.cs > 0 ? s.cs : '-'}</td>
                         </tr>
                     `;
                 }).join('')}
@@ -3024,10 +3059,48 @@ const populatePRFilters = () => {
                 state.currentPage = 1;
                 const activeTab = document.querySelector('#pr-tabs-header .tab-btn.active')?.dataset.tab || 'hist-temporada';
                 renderPublicoRenda(activeTab); 
+                updatePRFiltersOptions(id); // Atualiza os outros filtros
             });
             el.dataset.filterBound = 'true';
         }
     });
+
+    // Inicializa as opções se ainda não foram carregadas
+    updatePRFiltersOptions();
+};
+
+const updatePRFiltersOptions = (excludeId = null) => {
+    const fTemp = document.getElementById('pr-filter-temporada')?.value.toLowerCase();
+    const fComp = document.getElementById('pr-filter-campeonato')?.value.toLowerCase();
+    const fAdv = document.getElementById('pr-filter-adversario')?.value.toLowerCase();
+    const fEst = document.getElementById('pr-filter-estadio')?.value.toLowerCase();
+
+    // Filtra os jogos baseando-se no que já está selecionado PARA populat os filtros
+    let filtered = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+
+    // Funções auxiliares para popular cada campo
+    const populatePRAutocomplete = (id, field, sourceData) => {
+        if (id === excludeId) return; // Não filtra o campo que o usuário está digitando no momento
+        
+        // Aplica os filtros dos OUTROS campos para ver o que sobra neste
+        let currentFiltered = filtered;
+        if (id !== 'pr-filter-temporada' && fTemp) currentFiltered = currentFiltered.filter(j => j.temporada.toLowerCase().includes(fTemp));
+        if (id !== 'pr-filter-campeonato' && fComp) currentFiltered = currentFiltered.filter(j => j.campeonato.toLowerCase().includes(fComp));
+        if (id !== 'pr-filter-adversario' && fAdv) currentFiltered = currentFiltered.filter(j => j.fora.toLowerCase().includes(fAdv));
+        if (id !== 'pr-filter-estadio' && fEst) currentFiltered = currentFiltered.filter(j => (j.estadio || '').toLowerCase().includes(fEst));
+
+        const uniqueValues = [...new Set(currentFiltered.map(j => j[field]))].filter(Boolean).sort();
+        
+        // Reconfigura o autocomplete com os novos valores
+        const sourceName = `dynamic_${id}`;
+        state[sourceName] = uniqueValues.map(v => ({ [field]: v }));
+        setupAutocomplete(id, sourceName, field, null, null, false); // false para não mostrar "Novo" nestes filtros
+    };
+
+    populatePRAutocomplete('pr-filter-temporada', 'temporada');
+    populatePRAutocomplete('pr-filter-campeonato', 'campeonato');
+    populatePRAutocomplete('pr-filter-adversario', 'fora');
+    populatePRAutocomplete('pr-filter-estadio', 'estadio');
 };
 
 const clearPRFilters = () => {
@@ -3124,15 +3197,15 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
         if (tbody) {
             tbody.innerHTML = sortedRows.map(v => `
                 <tr>
-                    <td>${v.temporada}</td>
-                    <td>${v.jogos}</td>
+                    <td style="font-weight: 600; color: var(--primary-color);">${v.temporada}</td>
+                    <td class="val-highlight">${v.jogos}</td>
                     <td style="color:#2ecc71; font-weight:bold;">${v.v}</td>
                     <td style="color:#f1c40f; font-weight:bold;">${v.e}</td>
                     <td style="color:#e74c3c; font-weight:bold;">${v.d}</td>
                     <td>${v.gm}</td>
                     <td>${v.gs}</td>
-                    <td><strong>${v.aprov.toFixed(1)}%</strong></td>
-                    <td>${Math.round(v.mediaP).toLocaleString('pt-BR')}</td>
+                    <td style="font-weight: 700;">${v.aprov.toFixed(1)}%</td>
+                    <td class="val-highlight">${Math.round(v.mediaP).toLocaleString('pt-BR')}</td>
                     <td>${formatCurrency(v.mediaR)}</td>
                     <td>${formatCurrency(v.ticket)}</td>
                     <td>${v.menorP === Infinity ? '0' : v.menorP.toLocaleString('pt-BR')}</td>
@@ -3248,8 +3321,212 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 </div>
             `;
         }).join('');
+    } else if (tabId === 'estat-adversarios') {
+        renderAdversariosPR();
     }
 };
+
+const renderAdversariosPR = () => {
+    const container = document.getElementById('cards-estat-adversarios');
+    if (!container) return;
+
+    const fTemp = document.getElementById('pr-filter-temporada')?.value;
+    const fComp = document.getElementById('pr-filter-campeonato')?.value;
+    const fAdv = document.getElementById('pr-filter-adversario')?.value;
+    const fEst = document.getElementById('pr-filter-estadio')?.value;
+
+    let filteredJogos = state.jogos.filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+
+    if(fTemp) filteredJogos = filteredJogos.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
+    if(fComp) filteredJogos = filteredJogos.filter(j => j.campeonato.toLowerCase().includes(fComp.toLowerCase()));
+    if(fAdv) filteredJogos = filteredJogos.filter(j => j.fora.toLowerCase().includes(fAdv.toLowerCase()));
+    if(fEst) filteredJogos = filteredJogos.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
+
+    const advStats = {};
+
+    filteredJogos.forEach(j => {
+        const advName = j.fora;
+        if (!advStats[advName]) {
+            const advObj = state.adversarios.find(a => a.clube === advName);
+            advStats[advName] = {
+                nome: advName,
+                estado: advObj?.estado || '-',
+                pais: advObj?.pais || '-',
+                escudo: advObj?.escudo || 'https://via.placeholder.com/45',
+                jogos: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pts: 0,
+                pTotal: 0, jP: 0, rTotal: 0, jR: 0, cs: 0, cg: 0
+            };
+        }
+        
+        const s = advStats[advName];
+        s.jogos++;
+        const galoGols = parseInt(j.golsCasa) || 0;
+        const advGols = parseInt(j.golsFora) || 0;
+        s.gm += galoGols;
+        s.gs += advGols;
+
+        if (galoGols > advGols) { s.v++; s.pts += 3; }
+        else if (galoGols === advGols) { s.e++; s.pts += 1; }
+        else s.d++;
+
+        if (advGols === 0) s.cs++;
+        if (galoGols === 0) s.cg++;
+
+        if (j.publico && j.publico !== 'N/I' && !j.portoesFechados) {
+            const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
+            if (p > 0) { s.pTotal += p; s.jP++; }
+        }
+        if (j.renda && j.renda !== 'N/I' && !j.portoesFechados) {
+            const r = parseCurrency(j.renda);
+            if (r > 0) { s.rTotal += r; s.jR++; }
+        }
+    });
+
+    const list = Object.values(advStats).sort((a, b) => b.jogos - a.jogos);
+
+    container.className = 'adversarios-grid';
+    container.innerHTML = list.map(s => {
+        const aprov = s.jogos > 0 ? ((s.pts / (s.jogos * 3)) * 100).toFixed(1) : 0;
+        return `
+            <div class="adversario-stat-card" onclick="renderAdversarioPRModal('${s.nome.replace(/'/g, "\\'")}')">
+                <div class="adversario-header">
+                    <img src="${s.escudo}" alt="${s.nome}">
+                    <div>
+                        <h3>${s.nome}</h3>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">${s.estado} | ${s.pais}</div>
+                    </div>
+                </div>
+                <div class="adv-stats-body">
+                    <div class="adv-stat-item"><strong>Jogos</strong><span>${s.jogos}</span></div>
+                    <div class="adv-stat-item"><strong>Aproveitamento</strong><span>${aprov}%</span></div>
+                    <div class="adv-stat-item"><strong>V/E/D</strong><span>${s.v}/${s.e}/${s.d}</span></div>
+                    <div class="adv-stat-item"><strong>Gols M/S</strong><span>${s.gm}/${s.gs}</span></div>
+                    <div class="adv-stat-item" title="Clean Sheets"><strong>Clean Sheets</strong><span style="color:#3498db;">${s.cs}</span></div>
+                    <div class="adv-stat-item" title="Clean Goals"><strong>Clean Goals</strong><span style="color:#e67e22;">${s.cg}</span></div>
+                    <div class="adv-stat-item"><strong>Méd. Público</strong><span>${(s.jP > 0 ? Math.round(s.pTotal/s.jP).toLocaleString('pt-BR') : 0)}</span></div>
+                    <div class="adv-stat-item"><strong>Méd. Renda</strong><span>${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+let advModalPage = 1;
+const advRowsPerPage = 20;
+
+const renderAdversarioPRModal = (clubeNome) => {
+    advModalPage = 1;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'adv-pr-modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '4000';
+    
+    overlay.innerHTML = `
+        <div class="modal-content" style="padding: 2rem; max-width: 1000px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                <h2 style="margin:0;">Jogos como Mandante contra: ${clubeNome}</h2>
+                <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
+            </div>
+
+            <div class="filters-bar" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 2rem;">
+                <div class="filter-group"><label>Temporada</label><div class="autocomplete-container"><input type="text" id="advm-filter-temporada" placeholder="Todos..."></div></div>
+                <div class="filter-group"><label>Estado</label><div class="autocomplete-container"><input type="text" id="advm-filter-estado" placeholder="Todos..."></div></div>
+                <div class="filter-group"><label>País</label><div class="autocomplete-container"><input type="text" id="advm-filter-pais" placeholder="Todos..."></div></div>
+                <div class="filter-group" style="align-self: flex-end;"><button class="btn-primary" onclick="updateAdversarioModalGames('${clubeNome.replace(/'/g, "\\'")}')" style="width:100%;">Filtrar</button></div>
+            </div>
+
+            <div id="adv-modal-games-container" class="table-container">
+                <!-- Jogos serão renderizados aqui -->
+            </div>
+            
+            <div id="adv-modal-pagination" class="pagination-controls">
+                <!-- Paginação será renderizada aqui -->
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    
+    // Autocompletes
+    setupAutocomplete('advm-filter-temporada', 'jogos', 'temporada');
+    setupAutocomplete('advm-filter-estado', 'adversarios', 'estado');
+    setupAutocomplete('advm-filter-pais', 'adversarios', 'pais');
+
+    updateAdversarioModalGames(clubeNome);
+};
+
+window.updateAdversarioModalGames = (clubeNome) => {
+    const fTemp = document.getElementById('advm-filter-temporada')?.value;
+    const fEst = document.getElementById('advm-filter-estado')?.value;
+    const fPais = document.getElementById('advm-filter-pais')?.value;
+
+    let filtered = state.jogos.filter(j => j.fora === clubeNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'));
+
+    if (fTemp) filtered = filtered.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
+    
+    // Filtro por Estado/País do Adversário (precisa buscar no objeto adversario)
+    if (fEst || fPais) {
+        filtered = filtered.filter(j => {
+            const adv = state.adversarios.find(a => a.clube === j.fora);
+            if (!adv) return false;
+            let matchEst = true, matchPais = true;
+            if (fEst) matchEst = adv.estado.toLowerCase().includes(fEst.toLowerCase());
+            if (fPais) matchPais = adv.pais.toLowerCase().includes(fPais.toLowerCase());
+            return matchEst && matchPais;
+        });
+    }
+
+    filtered.sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    const totalPages = Math.ceil(filtered.length / advRowsPerPage);
+    const start = (advModalPage - 1) * advRowsPerPage;
+    const paginated = filtered.slice(start, start + advRowsPerPage);
+
+    const container = document.getElementById('adv-modal-games-container');
+    container.innerHTML = `
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Competição</th>
+                    <th>Placar</th>
+                    <th>Público</th>
+                    <th>Renda</th>
+                    <th>Estádio</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${paginated.map(j => `
+                    <tr>
+                        <td>${j.data.split('-').reverse().join('/')}</td>
+                        <td>${j.campeonato}</td>
+                        <td style="font-weight:bold;">${j.golsCasa} x ${j.golsFora}</td>
+                        <td class="val-highlight">${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? 'P.F.' : 'N/I')}</td>
+                        <td>${(j.renda && j.renda !== 'N/I' && !j.portoesFechados) ? formatCurrency(j.renda) : (j.portoesFechados ? '0' : 'N/I')}</td>
+                        <td>${j.estadio || '-'}</td>
+                    </tr>
+                `).join('')}
+                ${filtered.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding:2rem;">Nenhum jogo encontrado com os filtros aplicados.</td></tr>' : ''}
+            </tbody>
+        </table>
+    `;
+
+    const paginContainer = document.getElementById('adv-modal-pagination');
+    paginContainer.innerHTML = `
+        <button class="page-btn" ${advModalPage === 1 ? 'disabled' : ''} onclick="changeAdvModalPage('${clubeNome.replace(/'/g, "\\'")}', ${advModalPage - 1})">Anterior</button>
+        <span style="font-weight:600;">Página ${advModalPage} de ${totalPages || 1}</span>
+        <button class="page-btn" ${advModalPage === totalPages || totalPages === 0 ? 'disabled' : ''} onclick="changeAdvModalPage('${clubeNome.replace(/'/g, "\\'")}', ${advModalPage + 1})">Próxima</button>
+    `;
+};
+
+window.changeAdvModalPage = (clubeNome, page) => {
+    advModalPage = page;
+    updateAdversarioModalGames(clubeNome);
+};
+
+window.renderAdversarioPRModal = renderAdversarioPRModal;
+window.renderAdversariosPR = renderAdversariosPR;
 
 const sortInternal = (data, tableId) => {
     if (state.sortConfig.tableId === tableId && state.sortConfig.column) {
@@ -3445,12 +3722,7 @@ const renderEstadioModal = (estadioNome) => {
     document.body.appendChild(overlay);
 };
 
-const switchEstadioTab = (btn, tabId) => {
-    const modal = btn.closest('.modal-content');
-    modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    modal.querySelectorAll('.est-tab-content').forEach(c => c.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-};
+window.renderEstadioModal = renderEstadioModal;
+window.switchEstadioTab = switchEstadioTab;
 
 // showSection('dashboard');

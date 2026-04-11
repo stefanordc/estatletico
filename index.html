@@ -71,6 +71,10 @@
                 <i class="fas fa-clone"></i>
                 <span>Cartões</span>
             </li>
+            <li class="nav-item" data-page="publico-renda">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Público e Renda</span>
+            </li>
             <li class="nav-item" data-page="arbitragem">
                 <svg class="whistle-icon-sidebar" viewBox="0 0 512 512" style="width: 18px; height: 18px; fill: currentColor; margin-right: 12px;"><path d="M432 128H288v48h144a16 16 0 0 1 16 16v32a16 16 0 0 1-16 16h-48v48h48a64 64 0 0 0 64-64v-32a64 64 0 0 0-64-64zM240 128H64a64 64 0 0 0-64 64v128a64 64 0 0 0 64 64h176v-48h-16v-48h16v-48h-16v-48h16V128zM96 240a16 16 0 1 1 16-16 16 16 0 0 1-16 16z"/></svg>
                 <span>Arbitragem</span>
@@ -86,10 +90,6 @@
             <li class="nav-item" data-page="comparativo">
                 <i class="fas fa-balance-scale"></i>
                 <span>Comparativo</span>
-            </li>
-            <li class="nav-item" data-page="publico-renda">
-                <i class="fas fa-hand-holding-usd"></i>
-                <span>Público e Renda</span>
             </li>
         </ul>
         <div class="user-profile">
@@ -779,19 +779,19 @@
                     </button>
                 </div>
             </div>
-            </div>
 
             <div class="tabs-container" id="pr-tabs-header">
-                <button class="tab-btn active" data-tab="hist-temporada"><i class="fas fa-calendar-alt"></i> Histórico Temporada</button>
+                <button class="tab-btn active" data-tab="hist-temporada"><i class="fas fa-calendar-alt"></i> Histórico da Temporada</button>
                 <button class="tab-btn" data-tab="maiores-publicos"><i class="fas fa-users"></i> Maiores Públicos</button>
                 <button class="tab-btn" data-tab="menores-publicos"><i class="fas fa-user-minus"></i> Menores Públicos</button>
+                <button class="tab-btn" data-tab="estat-adversarios"><i class="fas fa-shield-halved"></i> Adversários</button>
                 <button class="tab-btn" data-tab="estat-estadios"><i class="fas fa-stadium"></i> Estádios</button>
             </div>
 
                 <div class="tab-content active" id="tab-hist-temporada">
                     <div class="card">
                         <div class="table-container">
-                            <table id="table-hist-temporada">
+                            <table id="table-hist-temporada" class="premium-table">
                                 <thead>
                                     <tr>
                                         <th style="cursor:pointer;" onclick="sortTable(event, 'temporada', 'string')">Temporada <i class="fas fa-sort"></i></th>
@@ -857,6 +857,10 @@
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <div class="tab-content" id="tab-estat-adversarios" style="display:none;">
+                    <div id="cards-estat-adversarios" class="adversarios-grid"></div>
                 </div>
 
                 <div class="tab-content" id="tab-estat-estadios" style="display:none;">
