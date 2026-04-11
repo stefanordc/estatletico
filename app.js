@@ -3334,34 +3334,41 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
 
         const container = document.getElementById('cards-estat-estadios');
         container.className = 'estadios-grid-5';
-        container.innerHTML = Object.values(estStats).map(s => {
+        container.innerHTML = '';
+
+        Object.values(estStats).forEach(s => {
             const estObj = state.estadios.find(e => e.nome === s.nome);
             const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
             const aprov = (s.jogos > 0 ? ((s.v * 3 + s.e) / (s.jogos * 3)) * 100 : 0);
-            return `
-                <div class="card" style="padding:0; overflow:hidden; cursor:pointer;" onclick="window.renderEstadioModal('${s.nome.replace(/'/g, "\\'")}')">
-                    <img src="${foto}" style="width:100%; height:180px; object-fit:cover;">
-                    <div style="padding:1.5rem;">
-                        <h3 style="margin-bottom:1rem; border-bottom:2px solid var(--primary-color); display:inline-block;">${s.nome}</h3>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.85rem;">
-                            <span><strong>Jogos:</strong> ${s.jogos}</span>
-                            <span><strong>Aprov:</strong> ${aprov.toFixed(1)}%</span>
-                            <span><strong>V/E/D:</strong> ${s.v}/${s.e}/${s.d}</span>
-                            <span><strong>Gols:</strong> ${s.gm}-${s.gs}</span>
-                            <span><strong>Média Público:</strong> ${(s.jP > 0 ? Math.round(s.pTotal/s.jP) : 0).toLocaleString('pt-BR')}</span>
-                            <span><strong>Média Renda:</strong> ${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span>
-                            <span><strong>Ticket Médio:</strong> ${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span>
-                        </div>
-                        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.8rem; color:var(--text-muted);">
-                            <span><strong>Menor público:</strong> ${(s.menorP === Infinity ? 0 : s.menorP).toLocaleString('pt-BR')}</span>
-                            <span><strong>Maior público:</strong> ${(s.maiorP === -Infinity ? 0 : s.maiorP).toLocaleString('pt-BR')}</span>
-                            <span><strong>Menor renda:</strong> ${formatCurrency(s.menorR === Infinity ? 0 : s.menorR)}</span>
-                            <span><strong>Maior renda:</strong> ${formatCurrency(s.maiorR === -Infinity ? 0 : s.maiorR)}</span>
-                        </div>
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.cssText = 'padding:0; overflow:hidden; cursor:pointer;';
+            card.innerHTML = `
+                <img src="${foto}" style="width:100%; height:180px; object-fit:cover;">
+                <div style="padding:1.5rem;">
+                    <h3 style="margin-bottom:1rem; border-bottom:2px solid var(--primary-color); display:inline-block;">${s.nome}</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.85rem;">
+                        <span><strong>Jogos:</strong> ${s.jogos}</span>
+                        <span><strong>Aprov:</strong> ${aprov.toFixed(1)}%</span>
+                        <span><strong>V/E/D:</strong> ${s.v}/${s.e}/${s.d}</span>
+                        <span><strong>Gols:</strong> ${s.gm}-${s.gs}</span>
+                        <span><strong>Média Público:</strong> ${(s.jP > 0 ? Math.round(s.pTotal/s.jP) : 0).toLocaleString('pt-BR')}</span>
+                        <span><strong>Média Renda:</strong> ${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span>
+                        <span><strong>Ticket Médio:</strong> ${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span>
+                    </div>
+                    <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.8rem; color:var(--text-muted);">
+                        <span><strong>Menor público:</strong> ${(s.menorP === Infinity ? 0 : s.menorP).toLocaleString('pt-BR')}</span>
+                        <span><strong>Maior público:</strong> ${(s.maiorP === -Infinity ? 0 : s.maiorP).toLocaleString('pt-BR')}</span>
+                        <span><strong>Menor renda:</strong> ${formatCurrency(s.menorR === Infinity ? 0 : s.menorR)}</span>
+                        <span><strong>Maior renda:</strong> ${formatCurrency(s.maiorR === -Infinity ? 0 : s.maiorR)}</span>
                     </div>
                 </div>
             `;
-        }).join('');
+            // Vincula clique diretamente à função (sem onclick inline, sem depender de window.*)
+            card.addEventListener('click', () => renderEstadioModal(s.nome));
+            container.appendChild(card);
+        });
     }
 };
 
