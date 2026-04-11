@@ -188,6 +188,16 @@ window.addEventListener('DOMContentLoaded', async () => {
             sidebarOverlay?.classList.remove('active');
         });
 
+        // Enriquece o lineup com fotos dos jogadores
+        state.jogos = state.jogos.map(jogo => ({
+            ...jogo,
+            lineupGalo: (jogo.lineupGalo || []).map(l => {
+                const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === jogo.temporada)
+                            || state.jogadores.find(p => p.nome_guerra === l.jogador);
+                return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
+            })
+        }));
+        
         handleRouting();
         window.addEventListener('hashchange', handleRouting);
     }
@@ -737,9 +747,8 @@ const showPlayerDetail = (playerId, event) => {
 
 // ARTILHEIROS FUNCTIONS
 const renderArtilheiros = () => {
-    const grid = document.getElementById('artilheiros-grid-container');
     const detail = document.getElementById('artilheiro-detail-container');
-    detail.classList.add('hidden'); grid.classList.remove('hidden');
+    if (detail) detail.classList.add('hidden');
 
     const fTemp = document.getElementById('art-filter-temporada').value;
     const fJog = document.getElementById('art-filter-jogador').value;
@@ -792,9 +801,9 @@ const renderArtilheiros = () => {
     const tbody = document.querySelector('#artilheiros-table tbody');
     if (!tbody) return;
 
-    const data = artilheirosList.map(a => ({
+    const data = artList.map(a => ({
         ...a,
-        media: a.games > 0 ? (a.goals / a.games).toFixed(2) : 0
+        media: a.games > 0 ? (a.goals / a.games).toFixed(2) : '0.00'
     }));
 
     const sortedData = sortInternal(data, 'artilheiros-table');
@@ -863,9 +872,8 @@ const showArtilheiroDetail = (playerName, event) => {
 
 // CARTÕES FUNCTIONS
 const renderCartoes = () => {
-    const grid = document.getElementById('cartoes-grid-container');
     const detail = document.getElementById('cartoes-detail-container');
-    detail.classList.add('hidden'); grid.classList.remove('hidden');
+    if (detail) detail.classList.add('hidden');
 
     const fTemp = document.getElementById('cart-filter-temporada').value;
     const fTime = document.getElementById('cart-filter-time').value; // 'Atlético' ou 'Adversário'
@@ -1891,7 +1899,14 @@ const saveNewJogo = () => {
 
     const doSaveJogo = () => {
         state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
-        saveData('jogos', [jogo]);
+        
+        // Remove fotos do lineup antes de salvar no Supabase
+        // (fotos ficam na tabela jogadores, não precisam ser salvas em cada jogo)
+        const jogoParaSalvar = {
+            ...jogo,
+            lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
+        };
+        saveData('jogos', [jogoParaSalvar]);
         renderJogos();
         showSection('jogos');
     };
@@ -2584,8 +2599,8 @@ document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('cl
         showSection('estatisticas');
         renderEstatisticas();
     } else if (page === 'publico-renda') {
-        showSection('publico-renda-section');
-        populatePRFilters(); // Popula os filtros antes de renderizar
+        showSection('publico-renda');
+        populatePRFilters();
         renderPublicoRenda();
     } else {
         showSection(page);
