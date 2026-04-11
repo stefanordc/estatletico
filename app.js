@@ -2642,11 +2642,10 @@ const renderStatsIndividuais = (container) => {
             s.gols += parseInt(l.golsCount || 0);
             s.gs += parseInt(l.gsCount || 0);
 
-            const advGols = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+            const galoGols = (j.casa === 'Atlético' || j.casa === 'Atlético-MG') ? parseInt(j.golsCasa) : parseInt(j.golsFora);
+            const advGols = (j.casa === 'Atlético' || j.casa === 'Atlético-MG') ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+            
             if (advGols === 0) s.cs++;
-
-            const galoGols = j.casa === 'Atlético' ? parseInt(j.golsCasa) : parseInt(j.golsFora);
-            const advGols = j.casa === 'Atlético' ? parseInt(j.golsFora) : parseInt(j.golsCasa);
             
             if (galoGols > advGols) { s.v++; s.pontos += 3; }
             else if (galoGols < advGols) s.d++;
