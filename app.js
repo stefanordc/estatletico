@@ -83,6 +83,20 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     try {
         if(loader) loader.style.display = 'flex';
+    // Cache Layer: Tenta carregar dados salvos imediatamente para performance
+    const cachedData = localStorage.getItem('estatletico_cache');
+    if (cachedData) {
+        try {
+            console.log('Estatlético: Carregando cache local...');
+            const parsed = JSON.parse(cachedData);
+            Object.keys(parsed).forEach(k => { if(state[k]) state[k] = parsed[k]; });
+            handleRouting(); // Renderiza com dados em cache
+            if (loader) loader.style.display = 'none';
+        } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
+    }
+
+    try {
+        if(loader && !cachedData) loader.style.display = 'flex';
         
         console.log('Estatlético: Verificando Supabase Client...');
         if (!window.supabase) {
@@ -99,10 +113,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         );
 
         console.log('Estatlético: Dados recebidos. Processando estado...');
-        results.forEach((res, index) => {
-            if (res.error) console.error(`Erro na tabela ${tables[index]}:`, res.error);
-            state[tables[index]] = res.data || [];
+        
+        const freshData = {};
+        results.forEach((res, i) => {
+            if (res.data) {
+                state[tables[i]] = res.data;
+                freshData[tables[i]] = res.data;
+            }
         });
+        
+        // Salva cópia atualizada no cache
+        localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
 
         // Migração Básica de Árbitros
         state.arbitros = (state.arbitros || []).map(a => {
@@ -2615,18 +2636,29 @@ const renderDashboard = () => {
         
         // Público e Renda (Apenas Mandante)
         const casaLower = (j.casa || '').toLowerCase();
-        const isMandanteReal = casaLower.includes('atlético') || casaLower.includes('atletico');
+        // Critério estrito para evitar pegar "Athletico-PR" ou similares
+        const isMandanteReal = casaLower === 'atlético' || casaLower === 'atletico' || casaLower === 'atlético-mg';
 
         if (isMandanteReal) {
             if (j.publico && j.publico !== 'N/I') {
-                let pStr = String(j.publico).replace(/\D/g, '');
-                let p = parseInt(pStr);
-                if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
+                let p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
+                if (p > 0) { publicoTotal += p; jogosComPublico++; }
             }
             if (j.renda && j.renda !== 'N/I') {
-                let rStr = String(j.renda).replace(/[^\d,]/g, '').replace(',', '.');
-                let r = parseFloat(rStr);
-                if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
+                let rValue = 0;
+                if (typeof j.renda === 'number') {
+                    rValue = j.renda;
+                } else {
+                    // Trata formatos: "R$ 1.234,56", "1234,56", "1.234,56"
+                    let cleanR = String(j.renda).replace('R$', '').trim();
+                    if (cleanR.includes(',') && cleanR.includes('.')) {
+                        cleanR = cleanR.replace(/\./g, '').replace(',', '.');
+                    } else if (cleanR.includes(',')) {
+                        cleanR = cleanR.replace(',', '.');
+                    }
+                    rValue = parseFloat(cleanR) || 0;
+                }
+                if (rValue > 0) { rendaTotal += rValue; jogosComRenda++; }
             }
         }
         
@@ -2934,12 +2966,13 @@ const sortInternal = (data, tableId) => {
         data.sort((a, b) => {
             let valA = a[column];
             let valB = b[column];
-            if (typeof valA === 'string') {
+            if (typeof valA === 'string' && valB !== undefined) {
                 return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             }
             return direction === 'asc' ? valA - valB : valB - valA;
         });
     }
+    return data;
 };
 
 const sortTable = (event, column, type) => {
