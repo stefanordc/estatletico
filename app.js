@@ -29,7 +29,8 @@ const state = {
     editingId: null,      // For Cadastros
     editingJogoId: null,  // For Jogos
     currentPage: 1,
-    rowsPerPage: 50
+    rowsPerPage: 50,
+    sortConfig: { column: null, direction: 'asc', tableId: null }
 };
 
 const showToast = (message, type = 'error') => {
@@ -746,79 +747,57 @@ const renderArtilheiros = () => {
     populateFilter('art-filter-jogador', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
     populateFilter('art-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
     populateFilter('art-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
-    populateFilter('art-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
-    populateFilter('art-filter-nacionalidade', [...new Set(state.jogadores.map(j => j.nacionalidade))]);
+    const tbody = document.querySelector('#artilheiros-table tbody');
+    if (!tbody) return;
 
-    grid.innerHTML = top10.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum artilheiro encontrado.</div>' : 
-        top10.map((a, idx) => `
-            <div class="artilheiro-card" onclick="showArtilheiroDetail('${a.nome}', event)">
-                <div class="artilheiro-rank">${idx + 1}</div>
-                <img src="${a.player?.foto || 'https://via.placeholder.com/100'}" alt="${a.nome}">
-                <h3>${a.nome}</h3>
-                <div class="pos-nac">${a.player?.posicao || '-'} | ${a.player?.nacionalidade || '-'}</div>
-                <div class="artilheiro-main-stat">
-                    <i class="fas fa-trophy"></i> ${a.goals} <span>gols</span>
-                </div>
-                <div class="artilheiro-sub-stats">
-                    <div class="artilheiro-sub-stat"><span>${a.games}</span><span>jogos</span></div>
-                    <div class="artilheiro-sub-stat"><span>${a.games > 0 ? (a.goals / a.games).toFixed(2) : 0}</span><span>média/jogo</span></div>
-                </div>
-            </div>
+    const data = artilheirosList.map(a => ({
+        ...a,
+        media: a.games > 0 ? (a.goals / a.games).toFixed(2) : 0
+    }));
+
+    const sortedData = sortInternal(data, 'artilheiros-table');
+
+    tbody.innerHTML = sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum artilheiro encontrado.</td></tr>' : 
+        sortedData.map((a, idx) => `
+            <tr onclick="showArtilheiroDetail('${a.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
+                <td><img src="${a.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
+                <td style="font-weight:bold;">${a.nome}</td>
+                <td>${a.games}</td>
+                <td style="color:var(--primary-color); font-weight:bold;">${a.goals}</td>
+                <td>${a.media}</td>
+            </tr>
         `).join('');
 };
 
-const showArtilheiroDetail = (playerName, event) => {
-    const card = event.currentTarget;
-    const existing = document.getElementById(`detail-art-${playerName.replace(/\s/g,'')}`);
+    const container = document.getElementById('artilheiro-detail-container');
+    if (!container) return;
     
-    // Remove any other open details in this grid
-    document.querySelectorAll('.detail-inline-container').forEach(d => d.remove());
-    if (existing) return;
-
-    const player = state.jogadores.find(j => j.nome_guerra === playerName);
-    const campStats = {};
-    const advStats = {};
-
-    state.jogos.forEach(jogo => {
-        const inLineup = jogo.lineupGalo?.find(l => l.jogador === playerName);
-        if (!inLineup) return;
-        const goals = parseInt(inLineup.golsCount || 0);
-        const opponent = jogo.casa === 'Atlético' ? jogo.fora : jogo.casa;
-        if (!campStats[jogo.campeonato]) campStats[jogo.campeonato] = { nome: jogo.campeonato, goals: 0, games: 0 };
-        campStats[jogo.campeonato].games++;
-        campStats[jogo.campeonato].goals += goals;
-        if (goals > 0) {
-            if (!advStats[opponent]) advStats[opponent] = { nome: opponent, goals: 0 };
-            advStats[opponent].goals += goals;
-        }
-    });
-
-    const detail = document.createElement('div');
-    detail.id = `detail-art-${playerName.replace(/\s/g,'')}`;
-    detail.className = 'detail-inline-container';
-    detail.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-            <h3>Histórico de Gols: ${playerName}</h3>
-            <button class="btn-icon" onclick="this.closest('.detail-inline-container').remove()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="form-grid" style="gap:2rem;">
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                <div class="stats-section-title">Por Campeonato</div>
-                <table class="stats-table">
-                    <thead><tr><th>Campeonato</th><th>Jogos</th><th>Gols</th></tr></thead>
-                    <tbody>${Object.values(campStats).sort((a,b)=>b.goals-a.goals).map(c => `<tr><td>${c.nome}</td><td>${c.games}</td><td><strong>${c.goals}</strong></td></tr>`).join('')}</tbody>
-                </table>
+    container.innerHTML = `
+        <div class="detail-inline-container" style="display:block; margin-top:0;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                <h3>Histórico de Gols: ${playerName}</h3>
+                <button class="btn-icon" onclick="document.getElementById('artilheiro-detail-container').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                <div class="stats-section-title">Contra Adversários</div>
-                <table class="stats-table">
-                    <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
-                    <tbody>${Object.values(advStats).sort((a,b)=>b.goals-a.goals).map(a => `<tr><td>${a.nome}</td><td><strong>${a.goals}</strong></td></tr>`).join('')}</tbody>
-                </table>
+            <div class="form-grid" style="gap:2rem;">
+                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                    <div class="stats-section-title">Por Campeonato</div>
+                    <table class="stats-table">
+                        <thead><tr><th>Campeonato</th><th>Jogos</th><th>Gols</th></tr></thead>
+                        <tbody>${Object.values(campStats).sort((a,b)=>b.goals-a.goals).map(c => `<tr><td>${c.nome}</td><td>${c.games}</td><td><strong>${c.goals}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
+                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                    <div class="stats-section-title">Contra Adversários</div>
+                    <table class="stats-table">
+                        <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
+                        <tbody>${Object.values(advStats).sort((a,b)=>b.goals-a.goals).map(a => `<tr><td>${a.nome}</td><td><strong>${a.goals}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;
-    card.after(detail);
+    container.classList.remove('hidden');
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // CARTÕES FUNCTIONS
@@ -856,33 +835,31 @@ const renderCartoes = () => {
     // Populate Seasons Filter
     populateFilter('cart-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
 
-    cardList.sort((a,b) => b.total - a.total || b.red - a.red);
-    const top10 = cardList.slice(0, 10);
+    const tbody = document.querySelector('#cartoes-table tbody');
+    if (!tbody) return;
 
-    grid.className = 'cartoes-grid';
-    grid.innerHTML = top10.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum registro de cartão encontrado.</div>' : 
-        top10.map((c, idx) => `
-            <div class="artilheiro-card" onclick="showCartoesDetail('${c.nome}', event)">
-                <div class="artilheiro-rank">${idx + 1}</div>
-                <img src="${c.player?.foto || 'https://via.placeholder.com/100'}" alt="${c.nome}">
-                <h3>${c.nome}</h3>
-                <div class="pos-nac">${c.player?.posicao || c.posicao || '-'} | ${fTime}</div>
-                <div class="artilheiro-main-stat" style="color: var(--primary-color);">
-                   <i class="fas fa-copy"></i> ${c.total} <span>cartões</span>
-                </div>
-                <div class="artilheiro-sub-stats">
-                    <div class="artilheiro-sub-stat"><span>${c.yellow}</span><span style="color:#f39c12;">amarelos</span></div>
-                    <div class="artilheiro-sub-stat"><span>${c.red}</span><span style="color:#e74c3c;">vermelhos</span></div>
-                </div>
-            </div>
+    const data = cardList.map(c => ({
+        ...c,
+        total: c.yellow + c.red
+    }));
+
+    const sortedData = sortInternal(data, 'cartoes-table');
+
+    tbody.innerHTML = sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum registro de cartão encontrado.</td></tr>' : 
+        sortedData.map((c, idx) => `
+            <tr onclick="showCartoesDetail('${c.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
+                <td><img src="${c.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
+                <td style="font-weight:bold;">${c.nome}</td>
+                <td style="color:#f39c12; font-weight:bold;">${c.yellow}</td>
+                <td style="color:#e74c3c; font-weight:bold;">${c.red}</td>
+                <td><strong>${c.total}</strong></td>
+            </tr>
         `).join('');
 };
 
 const showCartoesDetail = (playerName, event) => {
-    const card = event.currentTarget;
-    const existing = document.getElementById(`detail-cart-${playerName.replace(/\s/g,'')}`);
-    document.querySelectorAll('.detail-inline-container').forEach(d => d.remove());
-    if (existing) return;
+    const container = document.getElementById('cartoes-detail-container');
+    if (!container) return;
 
     const byCamp = {}, byAdv = {}, byArb = {};
     state.jogos.forEach(j => {
@@ -905,39 +882,39 @@ const showCartoesDetail = (playerName, event) => {
         }
     });
 
-    const detail = document.createElement('div');
-    detail.id = `detail-cart-${playerName.replace(/\s/g,'')}`;
-    detail.className = 'detail-inline-container';
-    detail.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-            <h3>Detalhamento de Cartões: ${playerName}</h3>
-            <button class="btn-icon" onclick="this.closest('.detail-inline-container').remove()"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                <div class="stats-section-title">Por Campeonato</div>
-                <table class="stats-table">
-                    <thead><tr><th>Campeonato</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                    <tbody>${Object.values(byCamp).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                </table>
+    container.innerHTML = `
+        <div class="detail-inline-container" style="display:block; margin-top:0;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                <h3>Detalhamento de Cartões: ${playerName}</h3>
+                <button class="btn-icon" onclick="document.getElementById('cartoes-detail-container').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                <div class="stats-section-title">Por Adversário</div>
-                <table class="stats-table">
-                    <thead><tr><th>Adversário</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                    <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                </table>
-            </div>
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
-                <div class="stats-section-title">Por Árbitro</div>
-                <table class="stats-table">
-                    <thead><tr><th>Árbitro</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
-                    <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
-                </table>
+            <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                    <div class="stats-section-title">Por Campeonato</div>
+                    <table class="stats-table">
+                        <thead><tr><th>Campeonato</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
+                        <tbody>${Object.values(byCamp).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
+                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                    <div class="stats-section-title">Por Adversário</div>
+                    <table class="stats-table">
+                        <thead><tr><th>Adversário</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
+                        <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
+                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                    <div class="stats-section-title">Por Árbitro</div>
+                    <table class="stats-table">
+                        <thead><tr><th>Árbitro</th><th>CA</th><th>CV</th><th>Total</th></tr></thead>
+                        <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                </div>
             </div>
         </div>
     `;
-    card.after(detail);
+    container.classList.remove('hidden');
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // ARBITRAGEM FUNCTIONS
@@ -1007,8 +984,11 @@ const renderArbitragem = () => {
     populateFilter('arb-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
     populateFilter('arb-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
 
-    tbody.innerHTML = statsArr.length === 0 ? '<tr><td colspan="16" style="text-align:center;">Nenhum árbitro encontrado com estes filtros</td></tr>' : 
-        statsArr.sort((a,b) => b.jogos - a.jogos).map(s => `
+    // Ordenação Dinâmica
+    const sortedStats = sortInternal(statsArr, 'arbitragem-table');
+
+    tbody.innerHTML = sortedStats.length === 0 ? '<tr><td colspan="16" style="text-align:center;">Nenhum árbitro encontrado com estes filtros</td></tr>' : 
+        sortedStats.map(s => `
             <tr onclick="showArbitragemJogos('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos apitados por ${s.nome}">
                 <td><img src="${s.foto}" class="mini-foto" style="width:30px;height:30px;object-fit:cover;border-radius:50%;"></td>
                 <td><strong>${s.nome}</strong></td>
@@ -1250,7 +1230,8 @@ const renderJogos = () => {
     if (fMin) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) >= parseInt(fMin || 0));
     if (fMax) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) <= parseInt(fMax || 9999999));
 
-    const sorted = filtered.sort((a, b) => new Date(b.data) - new Date(a.data));
+    // Ordenação Dinâmica
+    const sorted = sortInternal(filtered, 'jogos-table');
     const paginated = sorted.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
     populateFilter('filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
@@ -1563,7 +1544,21 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setupAutocomplete('game-assistente2', 'arbitros', 'nome');
     setupAutocomplete('game-var', 'arbitros', 'nome');
     setupAutocomplete('game-fora', 'adversarios', 'clube');
-    const estInp = document.getElementById('game-estadio'); estInp.addEventListener('change', () => { const est = state.estadios.find(e => e.nome === estInp.value); if (est) { document.getElementById('game-estadio-estado').value = est.estado; document.getElementById('game-estadio-pais').value = est.pais; if (est.mandante && est.mandante !== 'Atlético') { document.getElementById('game-casa').value = est.mandante; document.getElementById('game-fora').value = 'Atlético'; } else document.getElementById('game-casa').value = 'Atlético'; }});
+    setupAutocomplete('game-casa', 'adversarios', 'clube');
+    const estInp = document.getElementById('game-estadio'); 
+    estInp.addEventListener('change', () => { 
+        const est = state.estadios.find(e => e.nome === estInp.value); 
+        if (est) { 
+            document.getElementById('game-estadio-estado').value = est.estado; 
+            document.getElementById('game-estadio-pais').value = est.pais; 
+            if (est.mandante && est.mandante !== 'Atlético' && est.mandante !== 'Atlético-MG') { 
+                document.getElementById('game-casa').value = est.mandante; 
+                document.getElementById('game-fora').value = 'Atlético'; 
+            } else {
+                document.getElementById('game-casa').value = 'Atlético'; 
+            }
+        }
+    });
     const updWinner = () => { const c = parseInt(document.getElementById('game-gols-casa').value)||0, f = parseInt(document.getElementById('game-gols-fora').value)||0; const casa = document.getElementById('game-casa').value, fora = document.getElementById('game-fora').value; const venced = document.getElementById('game-vencedor'); if (c > f) venced.value = casa || 'Casa'; else if (f > c) venced.value = fora || 'Fora'; else venced.value = 'Empate'; };
     ['game-gols-casa', 'game-gols-fora', 'game-casa', 'game-fora'].forEach(id => document.getElementById(id).addEventListener('input', updWinner));
     const updTicket = () => { const renCk = document.getElementById('game-ren-ni').checked; const pubCk = document.getElementById('game-pub-ni').checked; const label = document.getElementById('game-ticket-label'); if (renCk || pubCk) { label.value = 'N/I'; return; } const r = parseFloat(document.getElementById('game-renda').value) || 0; const p = parseInt(document.getElementById('game-publico').value) || 0; label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; };
@@ -2461,6 +2456,10 @@ document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('cl
     } else if (page === 'estatisticas') {
         showSection('estatisticas');
         renderEstatisticas();
+    } else if (page === 'publico-renda') {
+        showSection('publico-renda-section');
+        populatePRFilters(); // Popula os filtros antes de renderizar
+        renderPublicoRenda();
     } else {
         showSection(page);
     }
@@ -2517,14 +2516,16 @@ const renderDashboard = () => {
         else if(golsGalo === golsAdv) e++;
         else d++;
         
-        // Público e Renda
-        if (j.publico && j.publico !== 'N/I') {
-            let p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : parseInt(j.publico);
-            if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
-        }
-        if (j.renda && j.renda !== 'N/I') {
-            let r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : parseFloat(j.renda);
-            if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
+        // Público e Renda (Apenas Mandante)
+        if (isMandante) {
+            if (j.publico && j.publico !== 'N/I') {
+                let p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : parseInt(j.publico);
+                if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
+            }
+            if (j.renda && j.renda !== 'N/I') {
+                let r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : parseFloat(j.renda);
+                if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
+            }
         }
         
         // Artilheiros
@@ -2608,12 +2609,266 @@ const renderDashboard = () => {
     renderRank(vermelhosMap, 'dash-rank-vermelhos', '#c0392b');
 };
 
-const clearAllData = () => {
-    if (confirm('ATENÇÃO: Isso excluirá TODOS os seus dados salvos (Jogos, Jogadores, Adversários, etc). Deseja continuar?') &&
-        confirm('TEM CERTEZA? Esta ação não pode ser desfeita.')) {
-        localStorage.clear();
-        location.reload();
+// PUBLICO E RENDA LOGIC
+const populatePRFilters = () => {
+    const jogosMandante = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+    
+    const temps = [...new Set(jogosMandante.map(j => j.temporada))].sort((a,b) => b-a);
+    const comps = [...new Set(jogosMandante.map(j => j.campeonato))].sort();
+    const advs = [...new Set(jogosMandante.map(j => j.fora))].sort();
+    const ests = [...new Set(jogosMandante.map(j => j.estadio))].filter(Boolean).sort();
+
+    const fillSelect = (id, list, placeholder) => {
+        const select = document.getElementById(id);
+        if(!select) return;
+        const currentVal = select.value;
+        select.innerHTML = `<option value="">${placeholder}</option>` + list.map(item => `<option value="${item}">${item}</option>`).join('');
+        if(list.includes(currentVal)) select.value = currentVal;
+    };
+
+    fillSelect('pr-filter-temporada', temps, 'Todas');
+    fillSelect('pr-filter-campeonato', comps, 'Todos');
+    fillSelect('pr-filter-adversario', advs, 'Todos');
+    fillSelect('pr-filter-estadio', ests, 'Todos');
+};
+
+const renderPublicoRenda = (tabId = 'hist-temporada') => {
+    // Tab switching internal
+    const prTabsHeader = document.getElementById('pr-tabs-header');
+    if (prTabsHeader) {
+        prTabsHeader.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                prTabsHeader.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('#publico-renda-section .tab-content').forEach(c => {
+                    c.style.display = 'none';
+                    c.classList.remove('active');
+                });
+                const target = document.getElementById(`tab-${btn.dataset.tab}`);
+                if (target) {
+                    target.style.display = 'block';
+                    target.classList.add('active');
+                    renderPublicoRenda(btn.dataset.tab);
+                }
+            };
+        });
     }
+
+    const fTemp = document.getElementById('pr-filter-temporada')?.value;
+    const fComp = document.getElementById('pr-filter-campeonato')?.value;
+    const fAdv = document.getElementById('pr-filter-adversario')?.value;
+    const fEst = document.getElementById('pr-filter-estadio')?.value;
+
+    let jogosMandante = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
+
+    // Aplicar Filtros
+    if(fTemp) jogosMandante = jogosMandante.filter(j => j.temporada === fTemp);
+    if(fComp) jogosMandante = jogosMandante.filter(j => j.campeonato === fComp);
+    if(fAdv) jogosMandante = jogosMandante.filter(j => j.fora === fAdv);
+    if(fEst) jogosMandante = jogosMandante.filter(j => j.estadio === fEst);
+
+    if (tabId === 'hist-temporada') {
+        const agrp = {};
+        jogosMandante.forEach(j => {
+            const temp = j.temporada;
+            if (!agrp[temp]) agrp[temp] = { temporada: temp, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pTotal: 0, rTotal: 0, jP: 0, jR: 0, menorP: Infinity, maiorP: -Infinity, menorR: Infinity, maiorR: -Infinity };
+            const isCasa = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+            const gM = parseInt(isCasa ? j.golsCasa : j.golsFora) || 0;
+            const gS = parseInt(isCasa ? j.golsFora : j.golsCasa) || 0;
+            agrp[temp].jogos++;
+            if (gM > gS) agrp[temp].v++; else if (gM === gS) agrp[temp].e++; else agrp[temp].d++;
+            agrp[temp].gm += gM; agrp[temp].gs += gS;
+            
+            if (j.publico && j.publico !== 'N/I') {
+                const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
+                if (p > 0) {
+                    agrp[temp].pTotal += p; agrp[temp].jP++;
+                    if (p < agrp[temp].menorP) agrp[temp].menorP = p;
+                    if (p > agrp[temp].maiorP) agrp[temp].maiorP = p;
+                }
+            }
+            if (j.renda && j.renda !== 'N/I') {
+                const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+                if (r > 0) {
+                    agrp[temp].rTotal += r; agrp[temp].jR++;
+                    if (r < agrp[temp].menorR) agrp[temp].menorR = r;
+                    if (r > agrp[temp].maiorR) agrp[temp].maiorR = r;
+                }
+            }
+        });
+
+        const rows = Object.values(agrp).map(v => ({
+            ...v,
+            aprov: (v.jogos > 0 ? ((v.v * 3 + v.e) / (v.jogos * 3)) * 100 : 0),
+            mediaP: (v.jP > 0 ? v.pTotal / v.jP : 0),
+            mediaR: (v.jR > 0 ? v.rTotal / v.jR : 0),
+            ticket: (v.pTotal > 0 ? v.rTotal / v.pTotal : 0)
+        }));
+
+        const sortedRows = sortInternal(rows, 'table-hist-temporada');
+        
+        const tbody = document.querySelector('#tab-hist-temporada tbody');
+        if (tbody) {
+            tbody.innerHTML = sortedRows.map(v => `
+                <tr>
+                    <td>${v.temporada}</td>
+                    <td>${v.jogos}</td>
+                    <td style="color:#2ecc71; font-weight:bold;">${v.v}</td>
+                    <td style="color:#f1c40f; font-weight:bold;">${v.e}</td>
+                    <td style="color:#e74c3c; font-weight:bold;">${v.d}</td>
+                    <td>${v.gm}</td>
+                    <td>${v.gs}</td>
+                    <td><strong>${v.aprov.toFixed(1)}%</strong></td>
+                    <td>${Math.round(v.mediaP).toLocaleString('pt-BR')}</td>
+                    <td>${formatCurrency(v.mediaR)}</td>
+                    <td>${formatCurrency(v.ticket)}</td>
+                    <td>${v.menorP === Infinity ? '0' : v.menorP.toLocaleString('pt-BR')}</td>
+                    <td>${formatCurrency(v.menorR === Infinity ? 0 : v.menorR)}</td>
+                    <td>${v.maiorP === -Infinity ? '0' : v.maiorP.toLocaleString('pt-BR')}</td>
+                    <td>${formatCurrency(v.maiorR === -Infinity ? 0 : v.maiorR)}</td>
+                </tr>
+            `).join('');
+        }
+    } else if (tabId === 'maiores-publicos' || tabId === 'menores-publicos') {
+        const list = jogosMandante.filter(j => j.publico && j.publico !== 'N/I').map(j => {
+            const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
+            const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+            return { 
+                temporada: j.temporada, 
+                adversario: j.fora, 
+                competicao: j.campeonato, 
+                publico: p, 
+                renda: isNaN(r) ? 0 : r, 
+                ticket: (p > 0 && !isNaN(r)) ? r / p : 0,
+                dataRaw: j.data
+            };
+        });
+
+        const tableId = `table-${tabId}`;
+        const sortedList = sortInternal(list, tableId);
+
+        // Fallback simple sort if no column selected
+        if (!state.sortConfig.column && state.sortConfig.tableId !== tableId) {
+            if (tabId === 'maiores-publicos') sortedList.sort((a, b) => b.publico - a.publico);
+            else sortedList.sort((a, b) => a.publico - b.publico);
+        }
+
+        const top50 = sortedList.slice(0, 50);
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        if (tbody) {
+            tbody.innerHTML = top50.map((v, i) => `
+                <tr>
+                    <td style="font-weight:bold; color:var(--primary-color)">${i + 1}º</td>
+                    <td>${v.temporada}</td>
+                    <td>${v.adversario}</td>
+                    <td>${v.competicao}</td>
+                    <td style="font-weight:bold;">${v.publico.toLocaleString('pt-BR')}</td>
+                    <td>${formatCurrency(v.renda)}</td>
+                    <td>${formatCurrency(v.ticket)}</td>
+                </tr>
+            `).join('');
+        }
+    } else if (tabId === 'estat-estadios') {
+        const estStats = {};
+        jogosMandante.forEach(j => {
+            const est = j.estadio;
+            if (!est) return;
+            if (!estStats[est]) estStats[est] = { nome: est, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pTotal: 0, rTotal: 0, jP: 0, jR: 0, menorP: Infinity, maiorP: -Infinity, menorR: Infinity, maiorR: -Infinity };
+            const gC = parseInt(j.golsCasa) || 0;
+            const gF = parseInt(j.golsFora) || 0;
+            estStats[est].jogos++;
+            if (gC > gF) estStats[est].v++; else if (gC === gF) estStats[est].e++; else estStats[est].d++;
+            estStats[est].gm += gC; estStats[est].gs += gF;
+            
+            if (j.publico && j.publico !== 'N/I') {
+                const p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : j.publico;
+                estStats[est].pTotal += p; estStats[est].jP++;
+                if (p < estStats[est].menorP) estStats[est].menorP = p;
+                if (p > estStats[est].maiorP) estStats[est].maiorP = p;
+            }
+            if (j.renda && j.renda !== 'N/I') {
+                const r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : j.renda;
+                estStats[est].rTotal += r; estStats[est].jR++;
+                if (r < estStats[est].menorR) estStats[est].menorR = r;
+                if (r > estStats[est].maiorR) estStats[est].maiorR = r;
+            }
+        });
+
+        const container = document.getElementById('cards-estat-estadios');
+        container.innerHTML = Object.values(estStats).map(s => {
+            const estObj = state.estadios.find(e => e.nome === s.nome);
+            const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
+            const aprov = (s.jogos > 0 ? ((s.v * 3 + s.e) / (s.jogos * 3)) * 100 : 0);
+            return `
+                <div class="card" style="padding:0; overflow:hidden;">
+                    <img src="${foto}" style="width:100%; height:180px; object-fit:cover;">
+                    <div style="padding:1.5rem;">
+                        <h3 style="margin-bottom:1rem; border-bottom:2px solid var(--primary-color); display:inline-block;">${s.nome}</h3>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.85rem;">
+                            <span><strong>Jogos:</strong> ${s.jogos}</span>
+                            <span><strong>Aprov:</strong> ${aprov.toFixed(1)}%</span>
+                            <span><strong>V/E/D:</strong> ${s.v}/${s.e}/${s.d}</span>
+                            <span><strong>Gols:</strong> ${s.gm}-${s.gs}</span>
+                            <span><strong>Média Público:</strong> ${(s.jP > 0 ? Math.round(s.pTotal/s.jP) : 0).toLocaleString('pt-BR')}</span>
+                            <span><strong>Média Renda:</strong> ${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span>
+                            <span><strong>Ticket Médio:</strong> ${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span>
+                        </div>
+                        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #eee; display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; font-size:0.8rem; color:var(--text-muted);">
+                            <span>Min P: ${(s.menorP === Infinity ? 0 : s.menorP).toLocaleString('pt-BR')}</span>
+                            <span>Max P: ${(s.maiorP === -Infinity ? 0 : s.maiorP).toLocaleString('pt-BR')}</span>
+                            <span>Min R: ${formatCurrency(s.menorR === Infinity ? 0 : s.menorR)}</span>
+                            <span>Max R: ${formatCurrency(s.maiorR === -Infinity ? 0 : s.maiorR)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+};
+
+const sortInternal = (data, tableId) => {
+    if (state.sortConfig.tableId === tableId && state.sortConfig.column) {
+        const { column, direction } = state.sortConfig;
+        data.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+            if (typeof valA === 'string') {
+                return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            return direction === 'asc' ? valA - valB : valB - valA;
+        });
+    }
+};
+
+const sortTable = (event, column, type) => {
+    const th = event.currentTarget;
+    const table = th.closest('table');
+    const tableId = table.id;
+
+    if (state.sortConfig.column === column && state.sortConfig.tableId === tableId) {
+        state.sortConfig.direction = state.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.sortConfig.column = column;
+        state.sortConfig.direction = 'asc';
+        state.sortConfig.tableId = tableId;
+    }
+
+    // Update icons
+    table.querySelectorAll('th i').forEach(icon => {
+        icon.className = 'fas fa-sort';
+    });
+    const icon = th.querySelector('i');
+    if (state.sortConfig.direction === 'asc') icon.className = 'fas fa-sort-up';
+    else icon.className = 'fas fa-sort-down';
+
+    // Re-render the correct section/tab
+    if (tableId === 'table-hist-temporada') renderPublicoRenda('hist-temporada');
+    else if (tableId === 'table-maiores-publicos') renderPublicoRenda('maiores-publicos');
+    else if (tableId === 'table-menores-publicos') renderPublicoRenda('menores-publicos');
+    else if (tableId === 'jogos-table') renderJogos();
+    else if (tableId === 'artilheiros-table') renderArtilheiros();
+    else if (tableId === 'cartoes-table') renderCartoes();
+    else if (tableId === 'arbitragem-table') renderArbitragem();
 };
 
 

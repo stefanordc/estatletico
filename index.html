@@ -87,6 +87,10 @@
                 <i class="fas fa-balance-scale"></i>
                 <span>Comparativo</span>
             </li>
+            <li class="nav-item" data-page="publico-renda">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Público e Renda</span>
+            </li>
         </ul>
         <div class="user-profile">
             <div class="user-avatar">SB</div>
@@ -359,20 +363,20 @@
 
             <div class="list-container">
                 <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data <i class="fas fa-sort"></i></th>
-                            <th>Campeonato <i class="fas fa-sort"></i></th>
-                            <th>Casa</th>
-                            <th>Placar</th>
-                            <th>Fora</th>
-                            <th>Árbitro</th>
-                            <th>Público <i class="fas fa-sort"></i></th>
-                            <th>Renda</th>
-                            <th>Ticket Médio</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
+                        <thead>
+                            <tr>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'data', 'string')">Data <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'campeonato', 'string')">Campeonato <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'casa', 'string')">Casa <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'placar', 'string')">Placar <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'fora', 'string')">Fora <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'arbitro', 'string')">Árbitro <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'publico', 'number')">Público <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'renda', 'number')">Renda <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'ticket', 'number')">Ticket Médio <i class="fas fa-sort"></i></th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                     <tbody id="table-body-jogos">
                         <!-- Jogos renderizados aqui -->
                     </tbody>
@@ -468,8 +472,21 @@
                 </div>
             </div>
 
-            <div id="artilheiros-grid-container" class="elenco-grid">
-                <!-- Artilheiros renderizados aqui -->
+            <div class="list-container" style="overflow-x:auto;">
+                <table class="data-table" id="artilheiros-table">
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Jogador <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'jogos', 'number')">Jogos <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'goals', 'number')">Gols <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'media', 'number')">Média <i class="fas fa-sort"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Artilheiros renderizados aqui -->
+                    </tbody>
+                </table>
             </div>
 
             <!-- Detalhes do Artilheiro (Hidden by default) -->
@@ -500,26 +517,26 @@
 
             <div class="list-container" style="overflow-x: auto;">
                 <table class="data-table" style="min-width: 1400px; font-size: 0.85rem;">
-                    <thead>
-                        <tr>
-                            <th>Foto</th>
-                            <th>Árbitro</th>
-                            <th>Idade Média</th>
-                            <th>Jogos</th>
-                            <th>Amarelos Atl</th>
-                            <th>Vermelhos Atl</th>
-                            <th>Média Amar/J Atl</th>
-                            <th>Média Verm/J Atl</th>
-                            <th>Amarelos Adv</th>
-                            <th>Vermelhos Adv</th>
-                            <th>Média Amar/J Adv</th>
-                            <th>Média Verm/J Adv</th>
-                            <th>Total Amar</th>
-                            <th>Total Verm</th>
-                            <th>Média Amar/J</th>
-                            <th>Média Verm/J</th>
-                        </tr>
-                    </thead>
+                        <thead>
+                            <tr>
+                                <th>Foto</th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Árbitro <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'idadeMedia', 'number')">Idade Média <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'jogos', 'number')">Jogos <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'amarelosAtl', 'number')">Amarelos Atl <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'vermelhosAtl', 'number')">Vermelhos Atl <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medAmarAtl', 'number')">Média Amar/J Atl <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medVermAtl', 'number')">Média Verm/J Atl <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'amarelosAdv', 'number')">Amarelos Adv <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'vermelhosAdv', 'number')">Vermelhos Adv <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medAmarAdv', 'number')">Média Amar/J Adv <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medVermAdv', 'number')">Média Verm/J Adv <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'totalAmar', 'number')">Total Amar <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'totalVerm', 'number')">Total Verm <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medAmarTotal', 'number')">Média Amar/J <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTable(event, 'medVermTotal', 'number')">Média Verm/J <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
                     <tbody id="table-body-arbitragem">
                         <!-- Renderizado via JS -->
                     </tbody>
@@ -596,8 +613,21 @@
                 </div>
             </div>
 
-            <div id="cartoes-grid-container" class="elenco-grid">
-                <!-- Ranking de Cartões renderizado aqui -->
+            <div class="list-container" style="overflow-x:auto;">
+                <table class="data-table" id="cartoes-table">
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Jogador <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'yellow', 'number')">AM <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'red', 'number')">VM <i class="fas fa-sort"></i></th>
+                            <th style="cursor:pointer;" onclick="sortTable(event, 'total', 'number')">Total <i class="fas fa-sort"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Ranking de Cartões renderizado aqui -->
+                    </tbody>
+                </table>
             </div>
 
             <!-- Detalhes do Jogador (Hidden by default) -->
@@ -721,6 +751,116 @@
                 </div>
             </div>
 
+        </section>
+
+        <!-- Público e Renda Section -->
+        <section id="publico-renda-section" class="page-section">
+            <div class="page-header">
+                <h2>Público e Renda</h2>
+                <p>Análise detalhada de arrecadação e presença de público como mandante</p>
+            </div>
+
+            <!-- Filtros Seção Público e Renda -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Temporada</label>
+                        <select id="pr-filter-temporada" onchange="renderPublicoRenda()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="pr-filter-campeonato" onchange="renderPublicoRenda()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Estádio</label>
+                        <select id="pr-filter-estadio" onchange="renderPublicoRenda()"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs-header" id="pr-tabs-header">
+                    <button class="tab-btn active" data-tab="hist-temporada">Histórico Temporada</button>
+                    <button class="tab-btn" data-tab="maiores-publicos">Maiores Públicos</button>
+                    <button class="tab-btn" data-tab="menores-publicos">Menores Públicos</button>
+                    <button class="tab-btn" data-tab="estat-estadios">Estádios</button>
+                </div>
+
+                <div class="tab-content active" id="tab-hist-temporada">
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="table-hist-temporada">
+                                <thead>
+                                    <tr>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'temporada', 'string')">Temporada <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'jogos', 'number')">Jogos <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'v', 'number')">V <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'e', 'number')">E <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'd', 'number')">D <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'gm', 'number')">GM <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'gs', 'number')">GS <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'aprov', 'number')">Aprov. <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'mediaP', 'number')">Média Público <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'mediaR', 'number')">Média Renda <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'ticket', 'number')">Ticket Médio <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'menorP', 'number')">Menor Público <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'maiorP', 'number')">Maior Público <i class="fas fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-maiores-publicos" style="display:none;">
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="table-maiores-publicos">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'temporada', 'string')">Temporada <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'adversario', 'string')">Adversário <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'competicao', 'string')">Competição <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'publico', 'number')">Público <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'renda', 'number')">Renda <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'ticket', 'number')">Ticket Médio <i class="fas fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-menores-publicos" style="display:none;">
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="table-menores-publicos">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'temporada', 'string')">Temporada <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'adversario', 'string')">Adversário <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'competicao', 'string')">Competição <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'publico', 'number')">Público <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'renda', 'number')">Renda <i class="fas fa-sort"></i></th>
+                                        <th style="cursor:pointer;" onclick="sortTable(event, 'ticket', 'number')">Ticket Médio <i class="fas fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-estat-estadios" style="display:none;">
+                    <div id="cards-estat-estadios" class="estadios-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+                        <!-- Cards dinâmicos -->
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Cadastros Section -->
