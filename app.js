@@ -3428,7 +3428,7 @@ window.changeAdvModalPage = (clubeNome, page) => {
 };
 
 window.renderAdversarioPRModal = renderAdversarioPRModal;
-window.renderAdversariosPR = renderAdversariosPR;
+
 
 function sortInternal(data, tableId) {
     if (state.sortConfig.tableId === tableId && state.sortConfig.column) {
