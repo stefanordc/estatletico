@@ -178,7 +178,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         
         // Só salva no cache o que veio com sucesso
         if (Object.keys(freshData).length > 0) {
-            localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+            try {
+                localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+            } catch(e) {
+                console.warn('Cache ignorado: localStorage cheio', e);
+            }
         }
 
         // Migração Básica de Árbitros
@@ -3575,7 +3579,7 @@ window.changeAdvModalPage = (clubeNome, page) => {
 window.renderAdversarioPRModal = renderAdversarioPRModal;
 window.renderAdversariosPR = renderAdversariosPR;
 
-const sortInternal = (data, tableId) => {
+function sortInternal(data, tableId) {
     if (state.sortConfig.tableId === tableId && state.sortConfig.column) {
         const { column, direction } = state.sortConfig;
         
@@ -3628,7 +3632,7 @@ const sortInternal = (data, tableId) => {
     return data;
 };
 
-const sortTable = (event, column, type) => {
+function sortTable(event, column, type) {
     const th = event.currentTarget;
     const table = th.closest('table');
     const tableId = table.id;
