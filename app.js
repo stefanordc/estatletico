@@ -280,6 +280,11 @@ const convertMatchTime = (inputVal) => {
     return { min: m, tempo: 1 };
 };
 
+const formatCurrency = (val) => {
+    if (val === 'N/I' || val === null || val === undefined) return 'N/I';
+    const num = parseFloat(val);
+    if (isNaN(num)) return 'N/I';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
 
 const renderTableLegend = (siglas = []) => {
