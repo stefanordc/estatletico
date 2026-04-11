@@ -3192,16 +3192,6 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 `;
             }).join('');
         }
-                    <td style="font-weight:bold; color:var(--primary-color)">${i + 1}º</td>
-                    <td>${v.temporada}</td>
-                    <td>${v.adversario}</td>
-                    <td>${v.competicao}</td>
-                    <td style="font-weight:bold;">${v.publico.toLocaleString('pt-BR')}</td>
-                    <td>${formatCurrency(v.renda)}</td>
-                    <td>${formatCurrency(v.ticket)}</td>
-                </tr>
-            `).join('');
-        }
     } else if (tabId === 'estat-estadios') {
         const estStats = {};
         jogosMandante.forEach(j => {
