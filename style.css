@@ -1380,3 +1380,33 @@ img, canvas {
         grid-template-columns: 1fr;
     }
 }
+
+/* Responsividades */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.table-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border: 1px dashed var(--border-color);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.legend-item b {
+    color: var(--primary-color);
+}

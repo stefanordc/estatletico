@@ -280,11 +280,39 @@ const convertMatchTime = (inputVal) => {
     return { min: m, tempo: 1 };
 };
 
-const formatCurrency = (val) => {
-    if (val === 'N/I' || val === null || val === undefined) return 'N/I';
-    const num = parseFloat(val);
-    if (isNaN(num)) return 'N/I';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+};
+
+const renderTableLegend = (siglas = []) => {
+    const definitions = {
+        'J': 'Jogos',
+        'V': 'Vitórias',
+        'E': 'Empates',
+        'D': 'Derrotas',
+        'GM': 'Gols Marcados',
+        'GS': 'Gols Sofridos',
+        'CS': 'Clean Sheets (Jogos sem sofrer gols)',
+        'CG': 'Clean Goals (Jogos sem marcar gols)',
+        'CA': 'Cartão Amarelo',
+        'CV': 'Cartão Vermelho',
+        'Aprov': 'Aproveitamento',
+        'MGm': 'Média de Gols Marcados',
+        'MGs': 'Média de Gols Sofridos',
+        'SG': 'Saldo de Gols',
+        'Pts': 'Pontos',
+        'GP': 'Gols Pró',
+        'GC': 'Gols Contra',
+        'CA(G)': 'Amarelos Galo',
+        'CV(G)': 'Vermelhos Galo',
+        'CA(A)': 'Amarelos Adv',
+        'CV(A)': 'Vermelhos Adv'
+    };
+
+    const items = siglas.map(s => {
+        const def = definitions[s];
+        return def ? `<div class="legend-item"><b>${s}:</b> ${def}</div>` : '';
+    }).filter(Boolean).join('');
+
+    return items ? `<div class="table-legend">${items}</div>` : '';
 };
 
 // UI Elements
@@ -775,6 +803,7 @@ const showPlayerDetail = (playerId, event) => {
                         ${tecList.map(t => `<tr><td><strong>${t.nome}</strong></td><td>${t.jogos}</td><td>${t.titular}</td><td>${t.subOut}</td><td>${t.entered}</td><td>${t.goals}</td>${isGoalie ? `<td>${t.gs}</td>` : ''}</tr>`).join('')}
                     </tbody>
                 </table>
+                ${renderTableLegend(['J', 'GS'])}
             </div>
         `;
     }
@@ -789,6 +818,7 @@ const showPlayerDetail = (playerId, event) => {
             <tbody>${seasonTableBody}</tbody>
             <tfoot>${seasonTableFooter}</tfoot>
         </table>
+        ${renderTableLegend(isTecnico ? ['J', 'GM', 'GS', 'Aprov'] : ['J', 'GS', 'CS', 'Aprov', 'CA', 'CV'])}
         ${tecTableHtml}
     `;
     card.after(detail);
@@ -2548,6 +2578,7 @@ const renderStatsColetivas = (container) => {
                 <tr style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;">${calcRow(total)}</tr>
             </tbody>
         </table>
+        ${renderTableLegend(['Pts', 'J', 'V', 'E', 'D', 'GP', 'GC', 'SG', 'MGm', 'MGs', 'CS', 'CG', 'CA(G)', 'CV(G)', 'CA(A)', 'CV(A)'])}
     `;
 
     // Render Charts
@@ -2717,6 +2748,7 @@ const renderStatsIndividuais = (container) => {
                 }).join('')}
             </tbody>
         </table>
+        ${renderTableLegend(['J', 'CS', 'Aprov'])}
     `;
 };
 
@@ -3509,6 +3541,7 @@ window.updateAdversarioModalGames = (clubeNome) => {
                 ${filtered.length === 0 ? '<tr><td colspan="6" style="text-align:center; padding:2rem;">Nenhum jogo encontrado com os filtros aplicados.</td></tr>' : ''}
             </tbody>
         </table>
+        ${renderTableLegend(['J'])}
     `;
 
     const paginContainer = document.getElementById('adv-modal-pagination');
@@ -3619,39 +3652,70 @@ const renderEstadioModal = (estadioNome) => {
     overlay.style.display = 'flex';
     overlay.style.zIndex = '4000';
     
-    const jogosMandante = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'))
+    const jogosEstadio = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'))
                                    .sort((a, b) => new Date(b.data) - new Date(a.data));
 
-    const last10 = jogosMandante.slice(0, 10);
+    const last10 = jogosEstadio.slice(0, 10);
 
-    const calcStats = (list) => {
-        const stats = { j: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pts: 0, pTotal: 0, jP: 0, rTotal: 0, jR: 0 };
-        list.forEach(j => {
-            stats.j++;
+    const calcStatsBySeason = (jogos) => {
+        const seasons = {};
+        jogos.forEach(j => {
+            const season = j.temporada;
+            if (!seasons[season]) seasons[season] = { season, j: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pts: 0, cs: 0, cg: 0 };
+            const s = seasons[season];
+            s.j++;
             const gM = parseInt(j.golsCasa) || 0;
             const gS = parseInt(j.golsFora) || 0;
-            stats.gm += gM; stats.gs += gS;
-            if (gM > gS) { stats.v++; stats.pts += 3; }
-            else if (gM === gS) { stats.e++; stats.pts += 1; }
-            else { stats.d++; }
-
-            if (j.publico && j.publico !== 'N/I' && !j.portoesFechados) {
-                const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
-                if (p > 0) { stats.pTotal += p; stats.jP++; }
-            }
-            if (j.renda && j.renda !== 'N/I' && !j.portoesFechados) {
-                const r = parseCurrency(j.renda);
-                if (r > 0) { stats.rTotal += r; stats.jR++; }
-            }
+            s.gm += gM; s.gs += gS;
+            if (gM > gS) { s.v++; s.pts += 3; }
+            else if (gM === gS) { s.e++; s.pts += 1; }
+            else { s.d++; }
+            if (gS === 0) s.cs++;
+            if (gM === 0) s.cg++;
         });
-        const aprov = stats.j > 0 ? (stats.pts / (stats.j * 3)) * 100 : 0;
-        return { ...stats, aprov };
+        return Object.values(seasons).sort((a,b) => b.season.localeCompare(a.season));
     };
 
-    const stats10 = calcStats(last10);
-    const statsAll = calcStats(jogosMandante);
+    const renderSeasonStatsTable = (jogos) => {
+        const stats = calcStatsBySeason(jogos);
+        return `
+            <table class="premium-table" style="font-size:0.75rem; margin-bottom:1.5rem;">
+                <thead>
+                    <tr>
+                        <th>Temporada</th>
+                        <th>J</th>
+                        <th>V/E/D</th>
+                        <th>GM/GS</th>
+                        <th>Aprov.</th>
+                        <th>Méd. GM/GS</th>
+                        <th>CS / %</th>
+                        <th>CG / %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stats.map(s => {
+                        const aprov = (s.pts / (s.j * 3)) * 100;
+                        const pCS = (s.cs / s.j) * 100;
+                        const pCG = (s.cg / s.j) * 100;
+                        return `
+                            <tr>
+                                <td>${s.season}</td>
+                                <td>${s.j}</td>
+                                <td>${s.v}/${s.e}/${s.d}</td>
+                                <td>${s.gm}/${s.gs}</td>
+                                <td style="font-weight:600;">${aprov.toFixed(1)}%</td>
+                                <td>${(s.gm/s.j).toFixed(2)} / ${(s.gs/s.j).toFixed(2)}</td>
+                                <td><span style="color:#3498db; font-weight:600;">${s.cs}</span> <span style="font-size:0.7rem;">(${pCS.toFixed(1)}%)</span></td>
+                                <td><span style="color:#e67e22; font-weight:600;">${s.cg}</span> <span style="font-size:0.7rem;">(${pCG.toFixed(1)}%)</span></td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    };
 
-    const renderTableGames = (list) => {
+    const renderTableGamesSimple = (list) => {
         return `
             <table class="premium-table" style="font-size:0.8rem;">
                 <thead>
@@ -3666,59 +3730,58 @@ const renderEstadioModal = (estadioNome) => {
                 <tbody>
                     ${list.map(j => `
                         <tr>
-                            <td>${formatDate(j.data)}</td>
+                            <td>${j.data.split('-').reverse().join('/')}</td>
                             <td style="font-weight:600;">${j.fora}</td>
                             <td>${j.campeonato}</td>
                             <td style="font-weight:bold;">${j.golsCasa}x${j.golsFora}</td>
                             <td>${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? '<span class="status-badge" style="background:#eee; color:#666;">P.F.</span>' : '-')}</td>
                         </tr>
                     `).join('')}
-                    ${list.length === 0 ? '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum jogo encontrado como mandante neste estádio.</td></tr>' : ''}
+                    ${list.length === 0 ? '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum jogo encontrado.</td></tr>' : ''}
                 </tbody>
             </table>
         `;
     };
 
-    const renderStatsGrid = (s) => `
-        <div class="stats-grid-modern" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-            <div class="stat-card-mini"><strong>Pontos</strong><span>${s.pts}</span></div>
-            <div class="stat-card-mini"><strong>Jogos</strong><span>${s.j}</span></div>
-            <div class="stat-card-mini"><strong>Aprov.</strong><span>${s.aprov.toFixed(1)}%</span></div>
-            <div class="stat-card-mini"><strong>V/E/D</strong><span>${s.v}/${s.e}/${s.d}</span></div>
-            <div class="stat-card-mini"><strong>Gols M/S</strong><span>${s.gm}/${s.gs}</span></div>
-            <div class="stat-card-mini"><strong>Média GM</strong><span>${(s.j > 0 ? (s.gm/s.j).toFixed(2) : 0)}</span></div>
-            <div class="stat-card-mini"><strong>Média GS</strong><span>${(s.j > 0 ? (s.gs/s.j).toFixed(2) : 0)}</span></div>
-            <div class="stat-card-mini"><strong>Média Públ.</strong><span>${(s.jP > 0 ? Math.round(s.pTotal/s.jP).toLocaleString('pt-BR') : 0)}</span></div>
-            <div class="stat-card-mini"><strong>Média Renda</strong><span>${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span></div>
-            <div class="stat-card-mini"><strong>Ticket Médio</strong><span>${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span></div>
-        </div>
-    `;
-
     overlay.innerHTML = `
-        <div class="modal-content" style="padding: 2rem; max-width: 900px;">
+        <div class="modal-content" style="padding: 2rem; max-width: 1000px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <h2 style="margin:0;">${estadioNome}</h2>
+                <h2 style="margin:0;">Estádio: ${estadioNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
             </div>
 
             <div class="tabs-container" style="margin-bottom: 1.5rem;">
-                <button class="tab-btn active" onclick="switchEstadioTab(this, 'est-last10')">Últimos 10 Jogos</button>
-                <button class="tab-btn" onclick="switchEstadioTab(this, 'est-all')">Todos os Jogos</button>
+                <button class="tab-btn active" onclick="switchEstadioTab(this, 'est-last10')"><i class="fas fa-history"></i> Últimos 10 Jogos</button>
+                <button class="tab-btn" onclick="switchEstadioTab(this, 'est-all')"><i class="fas fa-list"></i> Todos os Jogos</button>
             </div>
 
             <div id="est-last10" class="est-tab-content">
-                ${renderStatsGrid(stats10)}
-                <div class="table-container">${renderTableGames(last10)}</div>
+                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Resumo Analítico (Últimos 10)</h4>
+                ${renderSeasonStatsTable(last10)}
+                ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'Aprov', 'CS', 'CG'])}
+                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Lista de Partidas</h4>
+                <div class="table-container">${renderTableGamesSimple(last10)}</div>
             </div>
             
             <div id="est-all" class="est-tab-content" style="display:none;">
-                ${renderStatsGrid(statsAll)}
-                <div class="table-container">${renderTableGames(jogosMandante)}</div>
+                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Resumo Analítico por Temporada</h4>
+                ${renderSeasonStatsTable(jogosEstadio)}
+                ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'Aprov', 'CS', 'CG'])}
+                <h4 style="margin-bottom:1rem; color:var(--primary-color);">Histórico de Partidas</h4>
+                <div class="table-container">${renderTableGamesSimple(jogosEstadio)}</div>
             </div>
         </div>
     `;
 
     document.body.appendChild(overlay);
+};
+
+const switchEstadioTab = (btn, tabId) => {
+    const modal = btn.closest('.modal-content');
+    modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    modal.querySelectorAll('.est-tab-content').forEach(c => c.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
 };
 
 window.renderEstadioModal = renderEstadioModal;
