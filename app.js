@@ -81,11 +81,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        for (const t of tables) {
-            const { data, error } = await supabaseClient.from(t).select('*');
-            if (error) throw error;
-            state[t] = data || [];
-        }
+        const results = await Promise.all(
+            tables.map(t => supabaseClient.from(t).select('*'))
+        );
+
+        results.forEach((res, index) => {
+            if (res.error) {
+                console.error(`Erro ao carregar tabela ${tables[index]}:`, res.error);
+                throw res.error;
+            }
+            state[tables[index]] = res.data || [];
+        });
 
         // Migration: Referees 2-letter federations -> Brasil
         let migratedAny = false;
@@ -1475,6 +1481,18 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa || 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora || 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || ''}"></div></div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Gols Contra (A favor do Atlético)</label>
+                                <input type="number" id="game-gc-favor" value="${jogoToEdit?.gcFavorCount || 0}" min="0">
+                                <div id="gc-favor-details" style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Gols Contra (Sofridos pelo Atlético)</label>
+                                <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0">
+                                <div id="gc-contra-details" style="margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem;"></div>
+                            </div>
+                        </div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-2">
@@ -1564,6 +1582,33 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     const updTicket = () => { const renCk = document.getElementById('game-ren-ni').checked; const pubCk = document.getElementById('game-pub-ni').checked; const label = document.getElementById('game-ticket-label'); if (renCk || pubCk) { label.value = 'N/I'; return; } const r = parseFloat(document.getElementById('game-renda').value) || 0; const p = parseInt(document.getElementById('game-publico').value) || 0; label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; };
     ['game-renda', 'game-publico', 'game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('input', updTicket));
     ['game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('change', updTicket));
+    
+    // Gols Contra logic
+    const setupGCFields = (inputId, containerId, dataList = null) => {
+        const inp = document.getElementById(inputId);
+        const cont = document.getElementById(containerId);
+        
+        const updateGCHtml = () => {
+            cont.innerHTML = '';
+            const count = parseInt(inp.value || 0);
+            for(let i=0; i<count; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'flex'; wrapper.style.alignItems = 'center'; wrapper.style.gap = '0.3rem';
+                wrapper.innerHTML = `
+                    <input type="number" class="gc-min" placeholder="Min" style="width:50px;" value="${dataList?.[i]?.min || ''}">
+                    <select class="gc-tempo"><option value="1" ${dataList?.[i]?.tempo === '1' ? 'selected' : ''}>1T</option><option value="2" ${dataList?.[i]?.tempo === '2' ? 'selected' : ''}>2T</option></select>
+                `;
+                cont.appendChild(wrapper);
+            }
+        };
+        
+        inp.addEventListener('input', updateGCHtml);
+        if(dataList && dataList.length > 0) updateGCHtml();
+    };
+
+    setupGCFields('game-gc-favor', 'gc-favor-details', jogoToEdit?.gcFavorList);
+    setupGCFields('game-gc-contra', 'gc-contra-details', jogoToEdit?.gcContraList);
+
     const setupNIToggle = (checkId, inputId) => {
         const ck = document.getElementById(checkId); const inp = document.getElementById(inputId);
         if(!ck || !inp) return;
@@ -1727,6 +1772,19 @@ const saveNewJogo = () => {
     jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value, posicao: row.querySelector('.pos-inp')?.value, amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
     jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
     
+    // Collect Gols Contra
+    jogo.gcFavorCount = parseInt(document.getElementById('game-gc-favor').value || 0);
+    jogo.gcFavorList = Array.from(document.getElementById('gc-favor-details').children).map(div => ({
+        min: div.querySelector('.gc-min').value,
+        tempo: div.querySelector('.gc-tempo').value
+    }));
+    
+    jogo.gcContraCount = parseInt(document.getElementById('game-gc-contra').value || 0);
+    jogo.gcContraList = Array.from(document.getElementById('gc-contra-details').children).map(div => ({
+        min: div.querySelector('.gc-min').value,
+        tempo: div.querySelector('.gc-tempo').value
+    }));
+
     jogo.lineupGalo = [];
     Array.from(document.querySelectorAll('#lineup-galo-body tr')).forEach(r => {
         const l = r.querySelector('.line-player-inp')?.value || r.querySelector('input[placeholder="Jogador"]')?.value;
@@ -1950,6 +2008,20 @@ const renderComparativo = () => {
                             const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
                             if (bIdx >= 0) binsGS[bIdx]++;
                         });
+                    });
+
+                    // Add Gols Contra in general view
+                    (j.gcFavorList || []).forEach(gc => {
+                        let min = parseInt(gc.min); if (isNaN(min)) return;
+                        if (parseInt(gc.tempo) === 2) min += 45;
+                        const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                        if (bIdx >= 0) binsGM[bIdx]++;
+                    });
+                    (j.gcContraList || []).forEach(gc => {
+                        let min = parseInt(gc.min); if (isNaN(min)) return;
+                        if (parseInt(gc.tempo) === 2) min += 45;
+                        const bIdx = Math.min(Math.floor((min - 1) / 15), 5);
+                        if (bIdx >= 0) binsGS[bIdx]++;
                     });
                 }
 
@@ -2517,13 +2589,18 @@ const renderDashboard = () => {
         else d++;
         
         // Público e Renda (Apenas Mandante)
-        if (isMandante) {
+        const casaLower = (j.casa || '').toLowerCase();
+        const isMandanteReal = casaLower.includes('atlético') || casaLower.includes('atletico');
+
+        if (isMandanteReal) {
             if (j.publico && j.publico !== 'N/I') {
-                let p = typeof j.publico === 'string' ? parseInt(j.publico.replace(/\D/g, '')) : parseInt(j.publico);
+                let pStr = String(j.publico).replace(/\D/g, '');
+                let p = parseInt(pStr);
                 if (!isNaN(p)) { publicoTotal += p; jogosComPublico++; }
             }
             if (j.renda && j.renda !== 'N/I') {
-                let r = typeof j.renda === 'string' ? parseFloat(j.renda.replace(/[^\d,]/g, '').replace(',', '.')) : parseFloat(j.renda);
+                let rStr = String(j.renda).replace(/[^\d,]/g, '').replace(',', '.');
+                let r = parseFloat(rStr);
                 if (!isNaN(r)) { rendaTotal += r; jogosComRenda++; }
             }
         }
