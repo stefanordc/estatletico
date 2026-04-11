@@ -320,7 +320,16 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
-    if (sectionId === 'estatisticas') renderEstatisticas();
+    if (sectionId === 'estatisticas') {
+        const firstTab = document.querySelector('#estatisticas-section .tabs-container .tab-btn');
+        if (firstTab && !firstTab.classList.contains('active')) firstTab.click();
+        else renderEstatisticas();
+    }
+    if (sectionId === 'publico-renda') {
+        const firstTab = document.querySelector('#publico-renda-section .tabs-container .tab-btn');
+        if (firstTab && !firstTab.classList.contains('active')) firstTab.click();
+        else renderPublicoRenda();
+    }
     if (sectionId === 'comparativo') renderComparativo();
 };
 
@@ -447,7 +456,6 @@ const renderArbitros = () => {
             <form id="form-arbitros">
                 <div class="form-grid">
                     <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
-                    <div class="form-group"><label>Nascimento</label><input type="date" name="nascimento"></div>
                     <div class="form-group"><label>País *</label><input type="text" name="federacao" value="Brasil" required></div>
                 </div>
                 <div class="form-group" style="margin-bottom:1.5rem;"><label>Foto (Cole)</label><div class="paste-area" id="paste-area-arbitro">Ctrl+V</div><input type="hidden" name="foto" id="foto-input-arbitro"></div>
@@ -463,11 +471,9 @@ const renderArbitros = () => {
     document.getElementById('form-arbitros').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         const novoNome = fd.get('nome');
-        const novoNascimento = fd.get('nascimento');
         
         const isDuplicate = state.arbitros.some(a => 
             a.nome.toLowerCase() === novoNome.toLowerCase() && 
-            a.nascimento === novoNascimento &&
             a.id !== state.editingId
         );
 
@@ -476,7 +482,7 @@ const renderArbitros = () => {
             return;
         }
 
-        const item = { id: state.editingId || Date.now(), nome: novoNome, nascimento: novoNascimento, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
+        const item = { id: state.editingId || Date.now(), nome: novoNome, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
         if (state.editingId) { state.arbitros[state.arbitros.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.arbitros.push(item);
         saveData('arbitros', state.arbitros); renderTab('arbitros');
@@ -1702,16 +1708,10 @@ window.saveQuickAdd = (type, targetInputId) => {
 
 const updateRefereeInfo = () => {
     const arbName = document.getElementById('game-arbitro')?.value;
-    const matchDate = document.getElementById('game-data')?.value;
     if (!arbName) return;
 
     const arb = state.arbitros.find(a => a.nome === arbName);
     if (arb) {
-        if (arb.nascimento) {
-            document.getElementById('game-arbitro-idade').value = calculateAge(arb.nascimento, matchDate);
-        } else {
-            document.getElementById('game-arbitro-idade').value = 'N/I';
-        }
         document.getElementById('game-arbitro-federacao').value = arb.federacao || '';
     }
 };
@@ -1740,9 +1740,9 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 </div>
                 <div class="form-block" id="block-2">
                     <div class="stats-section"><div class="stats-section-title">Arbitragem e Público</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Árbitro *</label><input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}"><label class="checkbox-inline"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Idade do Árbitro</label><input type="text" name="arbitroIdade" id="game-arbitro-idade" readonly value="${jogoToEdit?.arbitroIdade || ''}"></div><div class="form-group"><label>Federação do Árbitro</label><input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Árbitro *</label><input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}"><label class="checkbox-inline"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>País do Árbitro</label><input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Assistente 1</label><input type="text" name="assistente1" id="game-assistente1" value="${jogoToEdit?.assistente1 || ''}"></div><div class="form-group"><label>Assistente 2</label><input type="text" name="assistente2" id="game-assistente2" value="${jogoToEdit?.assistente2 || ''}"></div><div class="form-group"><label>VAR</label><input type="text" name="varArbitro" id="game-var" value="${jogoToEdit?.varArbitro || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" required value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" required value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> Portões fechados</label></div></div>
                         <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
@@ -1919,6 +1919,40 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         if(ck.checked) { inp.disabled = true; inp.parentElement.classList.add('disabled'); }
     };
     setupNIToggle('game-arb-ni', 'game-arbitro'); setupNIToggle('game-pub-ni', 'game-publico'); setupNIToggle('game-ren-ni', 'game-renda');
+    
+    const ckPF = document.getElementById('game-portoes-fechados');
+    if(ckPF) {
+        ckPF.onchange = () => {
+            const isChecked = ckPF.checked;
+            const inP = document.getElementById('game-publico');
+            const inR = document.getElementById('game-renda');
+            const ckPNI = document.getElementById('game-pub-ni');
+            const ckRNI = document.getElementById('game-ren-ni');
+            
+            if(isChecked) {
+                if(ckPNI) ckPNI.checked = false;
+                if(ckRNI) ckRNI.checked = false;
+                inP.value = 0;
+                inR.value = 0;
+                inP.disabled = true;
+                inR.disabled = true;
+                inP.parentElement.classList.add('disabled');
+                inR.parentElement.classList.add('disabled');
+            } else {
+                inP.disabled = false;
+                inR.disabled = false;
+                inP.parentElement.classList.remove('disabled');
+                inR.parentElement.classList.remove('disabled');
+            }
+            updTicket();
+        };
+        if(ckPF.checked) {
+            document.getElementById('game-publico').disabled = true;
+            document.getElementById('game-renda').disabled = true;
+            document.getElementById('game-publico').parentElement.classList.add('disabled');
+            document.getElementById('game-renda').parentElement.classList.add('disabled');
+        }
+    }
     document.getElementById('game-penaltis-toggle').addEventListener('change', (e) => { document.getElementById('penaltis-placar').style.display = e.target.value === 'Sim' ? 'grid' : 'none'; });
     if(!jogoToEdit) {
         for(let i=0; i<16; i++) addLineupRow('galo');
@@ -1942,19 +1976,27 @@ const addCardRow = (team, data = null) => {
         setTimeout(() => { 
             setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
             
-            // Vertical Tab Navigation Logic
-            inp.addEventListener('keydown', (e) => {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
-                    if (targetTr) {
-                        const targetInp = targetTr.querySelector('.card-player-inp');
-                        if (targetInp) {
-                            targetInp.focus();
-                            setTimeout(() => targetInp.select(), 0);
+            // Vertical Tab Navigation Logic for all inputs in the row
+            const inputs = row.querySelectorAll('input, select');
+            inputs.forEach(inp => {
+                inp.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
+                        if (targetTr) {
+                            // Find the input in the same column (same index)
+                            const colIndex = Array.from(row.children).indexOf(inp.closest('td'));
+                            const targetTd = targetTr.children[colIndex];
+                            if (targetTd) {
+                                const targetInp = targetTd.querySelector('input, select');
+                                if (targetInp) {
+                                    targetInp.focus();
+                                    if (targetInp.select) targetInp.select();
+                                }
+                            }
                         }
                     }
-                }
+                });
             });
 
             inp.addEventListener('blur', () => { 
@@ -2019,19 +2061,27 @@ const addLineupRow = (team, data = null) => {
         setTimeout(() => { 
             setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
             
-            // Vertical Tab Navigation Logic
-            inp.addEventListener('keydown', (e) => {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
-                    if (targetTr) {
-                        const targetInp = targetTr.querySelector('.line-player-inp');
-                        if (targetInp) {
-                            targetInp.focus();
-                            setTimeout(() => targetInp.select(), 0);
+            // Vertical Tab Navigation Logic for all inputs in the row
+            const inputs = row.querySelectorAll('input, select');
+            inputs.forEach(inp => {
+                inp.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const targetTr = e.shiftKey ? row.previousElementSibling : row.nextElementSibling;
+                        if (targetTr) {
+                            // Find the input in the same column (same index)
+                            const colIndex = Array.from(row.children).indexOf(inp.closest('td'));
+                            const targetTd = targetTr.children[colIndex];
+                            if (targetTd) {
+                                const targetInp = targetTd.querySelector('input, select');
+                                if (targetInp) {
+                                    targetInp.focus();
+                                    if (targetInp.select) targetInp.select();
+                                }
+                            }
                         }
                     }
-                }
+                });
             });
 
             inp.addEventListener('blur', () => { 
@@ -2053,6 +2103,7 @@ const saveNewJogo = () => {
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
     if(document.getElementById('game-pub-ni').checked) jogo.publico = 'N/I';
     if(document.getElementById('game-ren-ni').checked) jogo.renda = 'N/I';
+    jogo.portoesFechados = document.getElementById('game-portoes-fechados')?.checked || false;
     state.isSeasonFixed = document.getElementById('fix-game-season').checked; state.fixedSeason = jogo.temporada;
     state.isCampeonatoFixed = document.getElementById('fix-game-camp').checked; state.fixedCampeonato = jogo.campeonato;
     state.isTecnicoFixed = document.getElementById('fix-game-tec').checked; state.fixedTecnicoAtle = jogo.tecnicoGalo;
@@ -2969,10 +3020,24 @@ const populatePRFilters = () => {
     ['pr-filter-temporada', 'pr-filter-campeonato', 'pr-filter-adversario', 'pr-filter-estadio'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.filterBound) {
-            el.addEventListener('input', () => { state.currentPage = 1; renderPublicoRenda(); });
+            el.addEventListener('input', () => { 
+                state.currentPage = 1;
+                const activeTab = document.querySelector('#pr-tabs-header .tab-btn.active')?.dataset.tab || 'hist-temporada';
+                renderPublicoRenda(activeTab); 
+            });
             el.dataset.filterBound = 'true';
         }
     });
+};
+
+const clearPRFilters = () => {
+    ['pr-filter-temporada', 'pr-filter-campeonato', 'pr-filter-adversario', 'pr-filter-estadio'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    state.currentPage = 1;
+    const activeTab = document.querySelector('#pr-tabs-header .tab-btn.active')?.dataset.tab || 'hist-temporada';
+    renderPublicoRenda(activeTab);
 };
 
 const renderPublicoRenda = (tabId = 'hist-temporada') => {
@@ -3027,7 +3092,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             if (gM > gS) agrp[temp].v++; else if (gM === gS) agrp[temp].e++; else agrp[temp].d++;
             agrp[temp].gm += gM; agrp[temp].gs += gS;
             
-            if (j.publico && j.publico !== 'N/I') {
+            if (j.publico && j.publico !== 'N/I' && !j.portoesFechados) {
                 const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
                 if (p > 0) {
                     agrp[temp].pTotal += p; agrp[temp].jP++;
@@ -3035,7 +3100,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                     if (p > agrp[temp].maiorP) agrp[temp].maiorP = p;
                 }
             }
-            if (j.renda && j.renda !== 'N/I') {
+            if (j.renda && j.renda !== 'N/I' && !j.portoesFechados) {
                 const r = parseCurrency(j.renda);
                 if (r > 0) {
                     agrp[temp].rTotal += r; agrp[temp].jR++;
@@ -3078,34 +3143,55 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             `).join('');
         }
     } else if (tabId === 'maiores-publicos' || tabId === 'menores-publicos') {
-        const list = jogosMandante.filter(j => j.publico && j.publico !== 'N/I').map(j => {
-            const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
-            const r = parseCurrency(j.renda);
+        const list = jogosMandante.map(j => {
+            const isNI = j.publico === 'N/I';
+            const p = isNI ? 0 : (typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0);
+            const rNI = j.renda === 'N/I';
+            const r = rNI ? 0 : parseCurrency(j.renda);
+            
             return { 
                 temporada: j.temporada, 
                 adversario: j.fora, 
                 competicao: j.campeonato, 
                 publico: p, 
-                renda: isNaN(r) ? 0 : r, 
+                renda: r,
+                rendaNI: rNI,
+                publicoNI: isNI,
                 ticket: (p > 0 && !isNaN(r)) ? r / p : 0,
                 dataRaw: j.data
             };
-        });
+        }).filter(item => !item.publicoNI); // Somente jogos com público informado entram no ranking
 
         const tableId = `table-${tabId}`;
         const sortedList = sortInternal(list, tableId);
 
-        // Always force automatic sort when entering these tabs if no manual sort is active for this specific table
+        // Force auto-sort if no manual sort
         if (state.sortConfig.tableId !== tableId) {
-            if (tabId === 'maiores-publicos') list.sort((a, b) => b.publico - a.publico);
-            else list.sort((a, b) => a.publico - b.publico);
+            if (tabId === 'maiores-publicos') sortedList.sort((a, b) => b.publico - a.publico);
+            else sortedList.sort((a, b) => a.publico - b.publico);
         }
 
         const top50 = sortedList.slice(0, 50);
         const tbody = document.querySelector(`#${tableId} tbody`);
         if (tbody) {
-            tbody.innerHTML = top50.map((v, i) => `
-                <tr>
+            tbody.innerHTML = top50.map((v, i) => {
+                const rank = i + 1;
+                const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+                const rendaDisplay = v.rendaNI ? '<span style="color:var(--text-muted); font-style:italic;">Não informada</span>' : formatCurrency(v.renda);
+                
+                return `
+                    <tr>
+                        <td><div class="rank-badge ${rankClass}">${rank}º</div></td>
+                        <td>${v.temporada}</td>
+                        <td style="font-weight: 600; color: var(--text-main);">${v.adversario}</td>
+                        <td>${v.competicao}</td>
+                        <td class="val-highlight">${v.publico.toLocaleString('pt-BR')}</td>
+                        <td>${rendaDisplay}</td>
+                        <td>${v.ticket > 0 ? formatCurrency(v.ticket) : (v.rendaNI ? '-' : 'R$ 0,00')}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
                     <td style="font-weight:bold; color:var(--primary-color)">${i + 1}º</td>
                     <td>${v.temporada}</td>
                     <td>${v.adversario}</td>
@@ -3149,7 +3235,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
             const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
             const aprov = (s.jogos > 0 ? ((s.v * 3 + s.e) / (s.jogos * 3)) * 100 : 0);
             return `
-                <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card" style="padding:0; overflow:hidden; cursor:pointer;" onclick="renderEstadioModal('${s.nome.replace(/'/g, "\\'")}')">
                     <img src="${foto}" style="width:100%; height:180px; object-fit:cover;">
                     <div style="padding:1.5rem;">
                         <h3 style="margin-bottom:1rem; border-bottom:2px solid var(--primary-color); display:inline-block;">${s.nome}</h3>
@@ -3260,5 +3346,121 @@ const sortTable = (event, column, type) => {
 };
 
 
+
+const renderEstadioModal = (estadioNome) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '4000';
+    
+    const jogosMandante = state.jogos.filter(j => j.estadio === estadioNome && (j.casa === 'Atlético' || j.casa === 'Atlético-MG'))
+                                   .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    const last10 = jogosMandante.slice(0, 10);
+
+    const calcStats = (list) => {
+        const stats = { j: 0, v: 0, e: 0, d: 0, gm: 0, gs: 0, pts: 0, pTotal: 0, jP: 0, rTotal: 0, jR: 0 };
+        list.forEach(j => {
+            stats.j++;
+            const gM = parseInt(j.golsCasa) || 0;
+            const gS = parseInt(j.golsFora) || 0;
+            stats.gm += gM; stats.gs += gS;
+            if (gM > gS) { stats.v++; stats.pts += 3; }
+            else if (gM === gS) { stats.e++; stats.pts += 1; }
+            else { stats.d++; }
+
+            if (j.publico && j.publico !== 'N/I' && !j.portoesFechados) {
+                const p = typeof j.publico === 'number' ? j.publico : parseInt(String(j.publico).replace(/\D/g, '')) || 0;
+                if (p > 0) { stats.pTotal += p; stats.jP++; }
+            }
+            if (j.renda && j.renda !== 'N/I' && !j.portoesFechados) {
+                const r = parseCurrency(j.renda);
+                if (r > 0) { stats.rTotal += r; stats.jR++; }
+            }
+        });
+        const aprov = stats.j > 0 ? (stats.pts / (stats.j * 3)) * 100 : 0;
+        return { ...stats, aprov };
+    };
+
+    const stats10 = calcStats(last10);
+    const statsAll = calcStats(jogosMandante);
+
+    const renderTableGames = (list) => {
+        return `
+            <table class="premium-table" style="font-size:0.8rem;">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Adversário</th>
+                        <th>Competição</th>
+                        <th>Placar</th>
+                        <th>Público</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.map(j => `
+                        <tr>
+                            <td>${formatDate(j.data)}</td>
+                            <td style="font-weight:600;">${j.fora}</td>
+                            <td>${j.campeonato}</td>
+                            <td style="font-weight:bold;">${j.golsCasa}x${j.golsFora}</td>
+                            <td>${(j.publico && j.publico !== 'N/I' && !j.portoesFechados) ? parseInt(j.publico).toLocaleString('pt-BR') : (j.portoesFechados ? '<span class="status-badge" style="background:#eee; color:#666;">P.F.</span>' : '-')}</td>
+                        </tr>
+                    `).join('')}
+                    ${list.length === 0 ? '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Nenhum jogo encontrado como mandante neste estádio.</td></tr>' : ''}
+                </tbody>
+            </table>
+        `;
+    };
+
+    const renderStatsGrid = (s) => `
+        <div class="stats-grid-modern" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div class="stat-card-mini"><strong>Pontos</strong><span>${s.pts}</span></div>
+            <div class="stat-card-mini"><strong>Jogos</strong><span>${s.j}</span></div>
+            <div class="stat-card-mini"><strong>Aprov.</strong><span>${s.aprov.toFixed(1)}%</span></div>
+            <div class="stat-card-mini"><strong>V/E/D</strong><span>${s.v}/${s.e}/${s.d}</span></div>
+            <div class="stat-card-mini"><strong>Gols M/S</strong><span>${s.gm}/${s.gs}</span></div>
+            <div class="stat-card-mini"><strong>Média GM</strong><span>${(s.j > 0 ? (s.gm/s.j).toFixed(2) : 0)}</span></div>
+            <div class="stat-card-mini"><strong>Média GS</strong><span>${(s.j > 0 ? (s.gs/s.j).toFixed(2) : 0)}</span></div>
+            <div class="stat-card-mini"><strong>Média Públ.</strong><span>${(s.jP > 0 ? Math.round(s.pTotal/s.jP).toLocaleString('pt-BR') : 0)}</span></div>
+            <div class="stat-card-mini"><strong>Média Renda</strong><span>${formatCurrency(s.jR > 0 ? s.rTotal/s.jR : 0)}</span></div>
+            <div class="stat-card-mini"><strong>Ticket Médio</strong><span>${formatCurrency(s.pTotal > 0 ? s.rTotal/s.pTotal : 0)}</span></div>
+        </div>
+    `;
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="padding: 2rem; max-width: 900px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                <h2 style="margin:0;">${estadioNome}</h2>
+                <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
+            </div>
+
+            <div class="tabs-container" style="margin-bottom: 1.5rem;">
+                <button class="tab-btn active" onclick="switchEstadioTab(this, 'est-last10')">Últimos 10 Jogos</button>
+                <button class="tab-btn" onclick="switchEstadioTab(this, 'est-all')">Todos os Jogos</button>
+            </div>
+
+            <div id="est-last10" class="est-tab-content">
+                ${renderStatsGrid(stats10)}
+                <div class="table-container">${renderTableGames(last10)}</div>
+            </div>
+            
+            <div id="est-all" class="est-tab-content" style="display:none;">
+                ${renderStatsGrid(statsAll)}
+                <div class="table-container">${renderTableGames(jogosMandante)}</div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+};
+
+const switchEstadioTab = (btn, tabId) => {
+    const modal = btn.closest('.modal-content');
+    modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    modal.querySelectorAll('.est-tab-content').forEach(c => c.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+};
 
 // showSection('dashboard');

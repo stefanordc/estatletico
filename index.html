@@ -773,6 +773,12 @@
                         </div>
                     </div>
                 </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button class="btn-secondary" onclick="clearPRFilters()" style="padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                        <i class="fas fa-filter-circle-xmark"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
             </div>
 
             <div class="tabs-container" id="pr-tabs-header">
@@ -814,7 +820,7 @@
                 <div class="tab-content" id="tab-maiores-publicos" style="display:none;">
                     <div class="card">
                         <div class="table-container">
-                            <table id="table-maiores-publicos">
+                            <table id="table-maiores-publicos" class="premium-table">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -835,7 +841,7 @@
                 <div class="tab-content" id="tab-menores-publicos" style="display:none;">
                     <div class="card">
                         <div class="table-container">
-                            <table id="table-menores-publicos">
+                            <table id="table-menores-publicos" class="premium-table">
                                 <thead>
                                     <tr>
                                         <th>#</th>
