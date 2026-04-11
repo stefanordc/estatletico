@@ -70,48 +70,65 @@ const saveData = async (key, data) => {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
+    console.log('Estatlético: Inicializando aplicativo...');
+    const loader = document.getElementById('global-loader');
+    
+    // Safety Timeout: Forçar a remoção do loader após 7 segundos caso algo trave
+    const safetyTimer = setTimeout(() => {
+        if (loader && loader.style.display !== 'none') {
+            console.warn('Estatlético: Timeout de segurança atingido. Removendo loader manualmente.');
+            loader.style.display = 'none';
+        }
+    }, 7000);
+
     try {
-        const loader = document.getElementById('global-loader');
         if(loader) loader.style.display = 'flex';
         
+        console.log('Estatlético: Verificando Supabase Client...');
         if (!window.supabase) {
-            throw new Error("O script do Supabase foi bloqueado pelo seu navegador (Comum ao rodar arquivos locais offline).");
+            throw new Error("O script do Supabase não foi carregado corretamente.");
         }
         
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        const results = await Promise.all(
-            tables.map(t => supabaseClient.from(t).select('*'))
+        console.log('Estatlético: Buscando tabelas em paralelo...');
+
+        // Timeout wrapper for database calls
+        const withTimeout = (promise, ms) => {
+            let timeoutPromise = new Promise((_, reject) => {
+                let id = setTimeout(() => {
+                    clearTimeout(id);
+                    reject(new Error('Timeout de conexão com o banco de dados.'));
+                }, ms);
+            });
+            return Promise.race([promise, timeoutPromise]);
+        };
+
+        const results = await withTimeout(
+            Promise.all(tables.map(t => supabaseClient.from(t).select('*'))),
+            5000 // 5 segundos de limite para o banco
         );
 
+        console.log('Estatlético: Dados recebidos. Processando estado...');
         results.forEach((res, index) => {
-            if (res.error) {
-                console.error(`Erro ao carregar tabela ${tables[index]}:`, res.error);
-                throw res.error;
-            }
+            if (res.error) console.error(`Erro na tabela ${tables[index]}:`, res.error);
             state[tables[index]] = res.data || [];
         });
 
-        // Migration: Referees 2-letter federations -> Brasil
-        let migratedAny = false;
-        state.arbitros = state.arbitros.map(a => {
+        // Migração Básica de Árbitros
+        state.arbitros = (state.arbitros || []).map(a => {
             if (a.federacao && a.federacao.trim().length === 2) {
-                migratedAny = true;
                 return { ...a, federacao: 'Brasil' };
             }
             return a;
         });
-        if (migratedAny) {
-            console.log('Migração: Árbitros com siglas de estado convertidos para "Brasil".');
-            saveData('arbitros', state.arbitros);
-        }
         
     } catch (e) {
-        console.error('Falha de inicialização:', e);
-        alert('Modo offline detectado: ' + e.message);
+        console.error('Estatlético: Falha ou timeout na inicialização:', e);
     } finally {
-        const loader = document.getElementById('global-loader');
+        clearTimeout(safetyTimer);
+        console.log('Estatlético: Escondendo loader.');
         if(loader) loader.style.display = 'none';
 
         // Sidebar functionality for mobile
