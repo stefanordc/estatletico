@@ -3662,8 +3662,34 @@ window.changeEstadioHistPage = (dir) => {
 };
 
 
+// --- Theme Management ---
+window.toggleTheme = () => {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('estatletico_theme', newTheme);
+    updateThemeUI(newTheme);
+};
+
+const updateThemeUI = (theme) => {
+    const btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    
+    if (theme === 'dark') {
+        btn.innerHTML = '<i class="fas fa-sun"></i><span>Tema Claro</span>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-moon"></i><span>Tema Escuro</span>';
+    }
+};
+
 // --- ENTRY POINT ---
 window.addEventListener('DOMContentLoaded', async () => {
+    // Initialize theme UI
+    const savedTheme = localStorage.getItem('estatletico_theme') || 'light';
+    updateThemeUI(savedTheme);
+
     console.log('Estatlético: Inicializando aplicativo...');
     const loader = document.getElementById('global-loader');
     

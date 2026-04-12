@@ -17,6 +17,44 @@
     --success-color: #2ecc71;
 }
 
+[data-theme="dark"] {
+    --bg-color: #0b0b0b;
+    --card-bg: #111111;
+    --text-main: #ffffff;
+    --text-muted: #b0b0b0;
+    --text-on-dark: #ffffff;
+    --border-color: #333333;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    --secondary-color: #000000;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    margin: 1rem 1.5rem;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.theme-toggle i {
+    font-size: 1.1rem;
+}
+
 .whistle-icon {
     width: 18px;
     height: 18px;
