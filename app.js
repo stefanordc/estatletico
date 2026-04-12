@@ -976,6 +976,8 @@ const renderArbitragem = () => {
     const fEst = document.getElementById('arb-filter-estadio').value;
     const fCamp = document.getElementById('arb-filter-campeonato').value;
     const fTipo = document.getElementById('arb-filter-tipo').value;
+    const fAnoDe = document.getElementById('arb-filter-ano-de').value;
+    const fAnoAte = document.getElementById('arb-filter-ano-ate').value;
 
     const statsArr = state.arbitros.map(arb => {
         let arbGames = [];
@@ -999,6 +1001,8 @@ const renderArbitragem = () => {
                 return comp?.tipo === fTipo;
             });
         }
+        if (fAnoDe) arbGames = arbGames.filter(j => parseInt(j.data.substring(0,4)) >= parseInt(fAnoDe));
+        if (fAnoAte) arbGames = arbGames.filter(j => parseInt(j.data.substring(0,4)) <= parseInt(fAnoAte));
 
         if (arbGames.length === 0 && fArb && fArb !== arb.nome) return null;
         if (fArb && arb.nome !== fArb) return null;
@@ -1009,26 +1013,23 @@ const renderArbitragem = () => {
             nome: arb.nome,
             jogos: arbGames.length,
             amarelosAtl: 0, vermelhosAtl: 0,
-            amarelosAdv: 0, vermelhosAdv: 0,
-            idades: []
+            amarelosAdv: 0, vermelhosAdv: 0
         };
 
         arbGames.forEach(j => {
             (j.cartoesGalo || []).forEach(c => { res.amarelosAtl += parseInt(c.amarelo || 0); res.vermelhosAtl += parseInt(c.red || 0); });
             (j.cartoesAdv || []).forEach(c => { res.amarelosAdv += parseInt(c.amarelo || 0); res.vermelhosAdv += parseInt(c.red || 0); });
-            if (arb.nascimento) res.idades.push(calculateAge(arb.nascimento, j.data));
         });
 
-        res.idadeMedia = res.idades.length > 0 ? Math.round(res.idades.reduce((a,b) => a+b, 0) / res.idades.length) : 'N/I';
-        res.medAmarAtl = res.jogos > 0 ? Math.round(res.amarelosAtl / res.jogos) : 0;
-        res.medVermAtl = res.jogos > 0 ? Math.round(res.vermelhosAtl / res.jogos) : 0;
-        res.medAmarAdv = res.jogos > 0 ? Math.round(res.amarelosAdv / res.jogos) : 0;
-        res.medVermAdv = res.jogos > 0 ? Math.round(res.vermelhosAdv / res.jogos) : 0;
+        res.medAmarAtl = res.jogos > 0 ? (res.amarelosAtl / res.jogos) : 0;
+        res.medVermAtl = res.jogos > 0 ? (res.vermelhosAtl / res.jogos) : 0;
+        res.medAmarAdv = res.jogos > 0 ? (res.amarelosAdv / res.jogos) : 0;
+        res.medVermAdv = res.jogos > 0 ? (res.vermelhosAdv / res.jogos) : 0;
         
         res.totalAmar = res.amarelosAtl + res.amarelosAdv;
         res.totalVerm = res.vermelhosAtl + res.vermelhosAdv;
-        res.medAmarTotal = res.jogos > 0 ? Math.round(res.totalAmar / res.jogos) : 0;
-        res.medVermTotal = res.jogos > 0 ? Math.round(res.totalVerm / res.jogos) : 0;
+        res.medAmarTotal = res.jogos > 0 ? (res.totalAmar / res.jogos) : 0;
+        res.medVermTotal = res.jogos > 0 ? (res.totalVerm / res.jogos) : 0;
 
         return res;
     }).filter(x => x !== null);
@@ -1040,8 +1041,18 @@ const renderArbitragem = () => {
     populateFilter('arb-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
     populateFilter('arb-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
 
+    const allYears = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
+    populateFilter('arb-filter-ano-de', allYears);
+    populateFilter('arb-filter-ano-ate', allYears);
+
     // Ordenação Dinâmica
-    const sortedStats = sortInternal(statsArr, 'arbitragem-table');
+    let sortedStats = statsArr;
+    if (state.sortConfig.tableId === 'arbitragem-table') {
+        sortedStats = sortInternal(statsArr, 'arbitragem-table');
+    } else {
+        // Default Sort: Jogos Descending
+        sortedStats.sort((a, b) => b.jogos - a.jogos);
+    }
 
     const roleLabel = state.arbTab === 'arbitro' ? 'Árbitro' : (state.arbTab === 'assistente' ? 'Assistente' : 'VAR');
 
@@ -1049,23 +1060,22 @@ const renderArbitragem = () => {
         sortedStats.map(s => `
             <tr onclick="showArbitragemJogos('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos de ${s.nome} como ${roleLabel}">
                 <td><img src="${s.foto}" class="mini-foto" style="width:30px;height:30px;object-fit:cover;border-radius:50%;"></td>
-                <td><strong>${s.nome}</strong></td>
-                <td>${s.idadeMedia}</td>
-                <td>${s.jogos}</td>
-                <td style="background:rgba(243, 156, 18, 0.1); font-weight:bold;">${s.amarelosAtl}</td>
-                <td style="background:rgba(231, 76, 60, 0.1); font-weight:bold;">${s.vermelhosAtl}</td>
-                <td>${s.medAmarAtl}</td>
-                <td>${s.medVermAtl}</td>
-                <td style="background:rgba(243, 156, 18, 0.1); font-weight:bold;">${s.amarelosAdv}</td>
-                <td style="background:rgba(231, 76, 60, 0.1); font-weight:bold;">${s.vermelhosAdv}</td>
-                <td>${s.medAmarAdv}</td>
-                <td>${s.medVermAdv}</td>
-                <td style="font-weight:bold; color:var(--primary-color);">${s.totalAmar}</td>
-                <td style="font-weight:bold; color:#e74c3c;">${s.totalVerm}</td>
-                <td>${s.medAmarTotal}</td>
-                <td>${s.medVermTotal}</td>
-            </tr>
-        `).join('');
+                                <td><strong>${s.nome}</strong></td>
+                                <td>${s.jogos}</td>
+                                <td style="background:rgba(243, 156, 18, 0.1); font-weight:bold;">${s.amarelosAtl}</td>
+                                <td style="background:rgba(231, 76, 60, 0.1); font-weight:bold;">${s.vermelhosAtl}</td>
+                                <td>${Math.round(s.medAmarAtl)}</td>
+                                <td>${Math.round(s.medVermAtl)}</td>
+                                <td style="background:rgba(243, 156, 18, 0.1); font-weight:bold;">${s.amarelosAdv}</td>
+                                <td style="background:rgba(231, 76, 60, 0.1); font-weight:bold;">${s.vermelhosAdv}</td>
+                                <td>${Math.round(s.medAmarAdv)}</td>
+                                <td>${Math.round(s.medVermAdv)}</td>
+                                <td style="font-weight:bold; color:var(--primary-color);">${s.totalAmar}</td>
+                                <td style="font-weight:bold; color:#e74c3c;">${s.totalVerm}</td>
+                                <td>${Math.round(s.medAmarTotal)}</td>
+                                <td>${Math.round(s.medVermTotal)}</td>
+                            </tr>
+                        `).join('');
 };
 
 window.showArbitragemJogos = (arbNome, event) => {
@@ -2837,8 +2847,8 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['elenco-filter-idade-min', 'elenco-filter-idade-max'].forEach(id => document.getElementById(id)?.addEventListener('input', renderElenco));
 ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArtilheiros));
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
-['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
-    ['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
+['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
+['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
 ['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
 
 document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Árbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
@@ -3862,3 +3872,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.addEventListener('hashchange', handleRouting);
     }
 });
+
+window.sortTable = sortTable;
