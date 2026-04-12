@@ -1462,3 +1462,226 @@ img, canvas {
 .legend-item b {
     color: var(--primary-color);
 }
+
+/* ============================================
+   DARK THEME - Full Coverage Override
+   ============================================ */
+[data-theme="dark"] body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+}
+
+/* Main Layout */
+[data-theme="dark"] .main-content {
+    background: var(--bg-color);
+}
+
+/* Cards & Containers */
+[data-theme="dark"] .card,
+[data-theme="dark"] .list-container,
+[data-theme="dark"] .filters-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Tabs */
+[data-theme="dark"] .tabs-container {
+    background: #1a1a1a;
+    border-color: var(--border-color);
+}
+
+/* Data Tables */
+[data-theme="dark"] .data-table {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .data-table th {
+    background: #1a1a1a;
+    border-bottom-color: var(--border-color);
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .data-table td {
+    border-bottom-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .data-table tr:hover {
+    background: #1f1f1f;
+}
+
+/* Premium table (has white hardcoded) */
+[data-theme="dark"] .premium-table tbody tr {
+    background: var(--card-bg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] .premium-table tbody tr:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+/* Stats Table */
+[data-theme="dark"] .stats-table th {
+    background: #1a1a1a;
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .stats-table td {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .stats-table input,
+[data-theme="dark"] .stats-table select {
+    background: #222;
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+/* Stats Section */
+[data-theme="dark"] .stats-section {
+    background: var(--card-bg);
+}
+
+/* Player Cards */
+[data-theme="dark"] .player-card {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .player-card.grayscale {
+    background: #151515;
+    border-color: var(--border-color);
+}
+
+/* Artilheiro Cards */
+[data-theme="dark"] .artilheiro-card {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .artilheiro-card img {
+    background: #1a1a1a;
+}
+
+[data-theme="dark"] .artilheiro-sub-stats {
+    border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .artilheiro-main-stat {
+    color: var(--text-main);
+}
+
+/* Adversario Cards */
+[data-theme="dark"] .adversario-stat-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .adversario-header {
+    border-bottom-color: var(--border-color);
+}
+
+/* Player Detail Header */
+[data-theme="dark"] .player-detail-header {
+    background: var(--card-bg);
+}
+
+/* Detail Inline Container */
+[data-theme="dark"] .detail-inline-container {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .tr-detail-row {
+    background: #111 !important;
+}
+
+/* Inputs & Selects */
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: #1a1a1a;
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+    color: var(--text-muted);
+}
+
+/* Autocomplete */
+[data-theme="dark"] .autocomplete-results {
+    background: #1a1a1a;
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .autocomplete-item {
+    border-bottom-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .autocomplete-item:hover,
+[data-theme="dark"] .autocomplete-item.selected {
+    background: #252525;
+}
+
+[data-theme="dark"] .autocomplete-item.new-item {
+    background: #1a1a10;
+}
+
+[data-theme="dark"] .autocomplete-item.new-item:hover {
+    background: #252515;
+}
+
+/* Modal content */
+[data-theme="dark"] .modal-content {
+    background: var(--card-bg);
+    color: var(--text-main);
+}
+
+/* Pagination */
+[data-theme="dark"] .page-btn {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .page-btn:hover:not(:disabled) {
+    background: #252525;
+}
+
+/* Search */
+[data-theme="dark"] .search-container input {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+/* Btn secondary */
+[data-theme="dark"] .btn-secondary {
+    background: #2a2a2a;
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: #333;
+}
+
+/* Table Legend */
+[data-theme="dark"] .table-legend {
+    background: #1a1a1a;
+    border-color: var(--border-color);
+}
+
+/* Global loader */
+[data-theme="dark"] #global-loader {
+    background: rgba(0, 0, 0, 0.97);
+}
+
+/* Loader spinner */
+[data-theme="dark"] .spinner {
+    border-color: #333;
+    border-top-color: var(--primary-color);
+}
+
