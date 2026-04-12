@@ -1593,6 +1593,39 @@ img, canvas {
     background: #111 !important;
 }
 
+[data-theme="dark"] .tr-detail-container {
+    background: #111 !important;
+    border-color: #333 !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .tr-detail-container h3 {
+    color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] .tr-detail-container p {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .tr-detail-container hr {
+    border-color: #333 !important;
+}
+
+/* Stats Section Inside Detail */
+[data-theme="dark"] .tr-detail-container .stats-section {
+    background: #1a1a1a !important;
+    border-color: #333 !important;
+}
+
+/* Badges Inside Detail */
+[data-theme="dark"] .badge {
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .stats-table tr[style*="background:#f1f8e9"] {
+    background: #1b2e1b !important; /* Gol contra a favor no modo escuro */
+}
+
 /* Inputs & Selects */
 [data-theme="dark"] .form-group input,
 [data-theme="dark"] .form-group select,
