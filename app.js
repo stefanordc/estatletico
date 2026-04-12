@@ -1752,8 +1752,14 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             if (est.mandante && est.mandante !== 'Atlético' && est.mandante !== 'Atlético-MG') { 
                 document.getElementById('game-casa').value = est.mandante; 
                 document.getElementById('game-fora').value = 'Atlético'; 
+            } else if (!est.mandante) {
+                // Sem mandante definido: Atlético no Fora, Casa vazio
+                document.getElementById('game-casa').value = ''; 
+                document.getElementById('game-fora').value = 'Atlético';
             } else {
-                document.getElementById('game-casa').value = 'Atlético'; 
+                // Mandante é o Atlético
+                document.getElementById('game-casa').value = est.mandante; 
+                document.getElementById('game-fora').value = '';
             }
         }
     });
