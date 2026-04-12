@@ -3144,7 +3144,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 ticket: (p > 0 && !isNaN(r)) ? r / p : 0,
                 dataRaw: j.data
             };
-        }).filter(item => !item.publicoNI); // Somente jogos com público informado entram no ranking
+        }).filter(item => !item.publicoNI && item.publico > 0); // Somente jogos com público informado e maior que zero entram no ranking
 
         const tableId = `table-${tabId}`;
         const sortedList = sortInternal(list, tableId);
