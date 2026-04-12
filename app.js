@@ -53,7 +53,8 @@ const state = {
     editingJogoId: null,  // For Jogos
     currentPage: 1,
     rowsPerPage: 50,
-    sortConfig: { column: null, direction: 'asc', tableId: null }
+    sortConfig: { column: null, direction: 'asc', tableId: null },
+    arbTab: 'arbitro'
 };
 
 const showToast = (message, type = 'error') => {
@@ -949,6 +950,22 @@ const toggleCartoesDetail = (playerName, row) => {
 };
 
 // ARBITRAGEM FUNCTIONS
+window.changeArbTab = (tab) => {
+    state.arbTab = tab;
+    
+    // Update Tab Buttons UI
+    const ids = ['arbitro', 'assistente', 'var'];
+    ids.forEach(id => {
+        const btn = document.getElementById(`btn-arb-tab-${id}`);
+        if (btn) {
+            if (id === tab) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+    });
+
+    renderArbitragem();
+};
+
 const renderArbitragem = () => {
     const tbody = document.getElementById('table-body-arbitragem');
     if (!tbody) return;
@@ -961,7 +978,15 @@ const renderArbitragem = () => {
     const fTipo = document.getElementById('arb-filter-tipo').value;
 
     const statsArr = state.arbitros.map(arb => {
-        let arbGames = state.jogos.filter(j => j.arbitro === arb.nome);
+        let arbGames = [];
+        
+        if (state.arbTab === 'arbitro') {
+            arbGames = state.jogos.filter(j => j.arbitro === arb.nome);
+        } else if (state.arbTab === 'assistente') {
+            arbGames = state.jogos.filter(j => j.assistente1 === arb.nome || j.assistente2 === arb.nome);
+        } else if (state.arbTab === 'var') {
+            arbGames = state.jogos.filter(j => j.varArbitro === arb.nome);
+        }
         
         // Filters
         if (fTemp) arbGames = arbGames.filter(j => j.temporada === fTemp);
@@ -1018,9 +1043,11 @@ const renderArbitragem = () => {
     // Ordenação Dinâmica
     const sortedStats = sortInternal(statsArr, 'arbitragem-table');
 
-    tbody.innerHTML = sortedStats.length === 0 ? '<tr><td colspan="16" style="text-align:center;">Nenhum árbitro encontrado com estes filtros</td></tr>' : 
+    const roleLabel = state.arbTab === 'arbitro' ? 'Árbitro' : (state.arbTab === 'assistente' ? 'Assistente' : 'VAR');
+
+    tbody.innerHTML = sortedStats.length === 0 ? `<tr><td colspan="16" style="text-align:center;">Nenhum ${roleLabel.toLowerCase()} encontrado com estes filtros</td></tr>` : 
         sortedStats.map(s => `
-            <tr onclick="showArbitragemJogos('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos apitados por ${s.nome}">
+            <tr onclick="showArbitragemJogos('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos de ${s.nome} como ${roleLabel}">
                 <td><img src="${s.foto}" class="mini-foto" style="width:30px;height:30px;object-fit:cover;border-radius:50%;"></td>
                 <td><strong>${s.nome}</strong></td>
                 <td>${s.idadeMedia}</td>
@@ -1047,7 +1074,16 @@ window.showArbitragemJogos = (arbNome, event) => {
     document.querySelectorAll('.tr-detail-row').forEach(r => r.remove());
     if (existing) return;
 
-    const jogosArb = state.jogos.filter(j => j.arbitro === arbNome).sort((a,b) => new Date(b.data) - new Date(a.data));
+    let jogosArb = [];
+    if (state.arbTab === 'arbitro') {
+        jogosArb = state.jogos.filter(j => j.arbitro === arbNome);
+    } else if (state.arbTab === 'assistente') {
+        jogosArb = state.jogos.filter(j => j.assistente1 === arbNome || j.assistente2 === arbNome);
+    } else if (state.arbTab === 'var') {
+        jogosArb = state.jogos.filter(j => j.varArbitro === arbNome);
+    }
+
+    jogosArb.sort((a,b) => new Date(b.data) - new Date(a.data));
 
     const detailRow = document.createElement('tr');
     detailRow.id = `detail-arb-${arbNome.replace(/\s/g,'')}`;
@@ -1056,7 +1092,7 @@ window.showArbitragemJogos = (arbNome, event) => {
         <td colspan="16">
             <div class="tr-detail-container">
                 <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                    <h3>Jogos do Atlético apitados por: ${arbNome}</h3>
+                    <h3>Jogos do Atlético: ${arbNome} (${state.arbTab.charAt(0).toUpperCase() + state.arbTab.slice(1)})</h3>
                     <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <table class="stats-table">
