@@ -1674,7 +1674,7 @@ window.saveQuickAdd = (type, targetInputId) => {
     if(inp) { 
         inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
         inp.dispatchEvent(new Event('change')); 
-        if (type === 'arbitros' && targetInputId === 'game-arbitro') {
+        if (type === 'arbitros' && ['game-arbitro', 'game-assistente1', 'game-assistente2', 'game-var'].includes(targetInputId)) {
             updateRefereeInfo();
         }
     }
@@ -1682,13 +1682,38 @@ window.saveQuickAdd = (type, targetInputId) => {
 };
 
 const updateRefereeInfo = () => {
-    const arbName = document.getElementById('game-arbitro')?.value;
-    if (!arbName) return;
+    const fields = [
+        { nameId: 'game-arbitro', imgId: 'img-game-arbitro' },
+        { nameId: 'game-assistente1', imgId: 'img-game-assistente1' },
+        { nameId: 'game-assistente2', imgId: 'img-game-assistente2' },
+        { nameId: 'game-var', imgId: 'img-game-var' }
+    ];
 
-    const arb = state.arbitros.find(a => a.nome === arbName);
-    if (arb) {
-        document.getElementById('game-arbitro-federacao').value = arb.federacao || '';
-    }
+    fields.forEach(f => {
+        const name = document.getElementById(f.nameId)?.value || '';
+        const img = document.getElementById(f.imgId);
+        if (!img) return;
+
+        if (!name || name === 'N/I') {
+            img.src = DEFAULT_REF_PHOTO;
+            if (f.nameId === 'game-arbitro') {
+                const fed = document.getElementById('game-arbitro-federacao');
+                if (fed) fed.value = '';
+            }
+            return;
+        }
+
+        const arb = state.arbitros.find(a => a.nome === name);
+        if (arb) {
+            img.src = arb.foto || DEFAULT_REF_PHOTO;
+            if (f.nameId === 'game-arbitro') {
+                const fed = document.getElementById('game-arbitro-federacao');
+                if (fed) fed.value = arb.federacao || '';
+            }
+        } else {
+            img.src = DEFAULT_REF_PHOTO;
+        }
+    });
 };
 
 const renderNovoJogoPage = (jogoToEdit = null) => {
@@ -1715,8 +1740,43 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 </div>
                 <div class="form-block" id="block-2">
                     <div class="stats-section"><div class="stats-section-title">Arbitragem e Público</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Árbitro *</label><input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}"><label class="checkbox-inline"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>País do Árbitro</label><input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Assistente 1</label><input type="text" name="assistente1" id="game-assistente1" value="${jogoToEdit?.assistente1 || ''}"></div><div class="form-group"><label>Assistente 2</label><input type="text" name="assistente2" id="game-assistente2" value="${jogoToEdit?.assistente2 || ''}"></div><div class="form-group"><label>VAR</label><input type="text" name="varArbitro" id="game-var" value="${jogoToEdit?.varArbitro || ''}"></div></div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Árbitro *</label>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
+                                    <img id="img-game-arbitro" src="${DEFAULT_REF_PHOTO}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid #ddd;">
+                                    <input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}" style="margin:0;">
+                                </div>
+                                <label class="checkbox-inline" style="margin-top:0.5rem;"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label>
+                            </div>
+                            <div class="form-group">
+                                <label>País do Árbitro</label>
+                                <input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}">
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Assistente 1</label>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
+                                    <img id="img-game-assistente1" src="${DEFAULT_REF_PHOTO}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid #ddd;">
+                                    <input type="text" name="assistente1" id="game-assistente1" value="${jogoToEdit?.assistente1 || ''}" style="margin:0;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Assistente 2</label>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
+                                    <img id="img-game-assistente2" src="${DEFAULT_REF_PHOTO}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid #ddd;">
+                                    <input type="text" name="assistente2" id="game-assistente2" value="${jogoToEdit?.assistente2 || ''}" style="margin:0;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>VAR</label>
+                                <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
+                                    <img id="img-game-var" src="${DEFAULT_REF_PHOTO}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid #ddd;">
+                                    <input type="text" name="varArbitro" id="game-var" value="${jogoToEdit?.varArbitro || ''}" style="margin:0;">
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" required value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> Portões fechados</label></div></div>
                         <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
@@ -1775,7 +1835,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
     setupAutocomplete('game-estadio', 'estadios', 'nome');
     setupAutocomplete('game-arbitro', 'arbitros', 'nome');
-    document.getElementById('game-arbitro').addEventListener('change', updateRefereeInfo);
+    document.getElementById('game-arbitro').addEventListener('blur', updateRefereeInfo);
     document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
 
     // Sync the year in game-data when temporada changes
@@ -1789,10 +1849,18 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             dataInp.value = `${season}-${month}-${day}`;
         }
     });
-    
+
     setupAutocomplete('game-assistente1', 'arbitros', 'nome');
+    document.getElementById('game-assistente1').addEventListener('blur', updateRefereeInfo);
+
     setupAutocomplete('game-assistente2', 'arbitros', 'nome');
+    document.getElementById('game-assistente2').addEventListener('blur', updateRefereeInfo);
+
     setupAutocomplete('game-var', 'arbitros', 'nome');
+    document.getElementById('game-var').addEventListener('blur', updateRefereeInfo);
+
+    // Initial photo load if editing
+    setTimeout(updateRefereeInfo, 100);
     setupAutocomplete('game-fora', 'adversarios', 'clube');
     setupAutocomplete('game-casa', 'adversarios', 'clube');
     const estInp = document.getElementById('game-estadio'); 
