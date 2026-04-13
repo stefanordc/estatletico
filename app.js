@@ -54,7 +54,10 @@ const state = {
     currentPage: 1,
     rowsPerPage: 50,
     sortConfig: { column: null, direction: 'asc', tableId: null },
-    arbTab: 'arbitro'
+    arbTab: 'arbitro',
+    advTab: 'clubes',
+    advClubePage: 1,
+    advTecPage: 1
 };
 
 const showToast = (message, type = 'error') => {
@@ -222,7 +225,10 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
-    if (sectionId === 'adversarios') renderAdversariosPage();
+    if (sectionId === 'adversarios') {
+        // Garante que a aba correta fique visível ao navegar para Adversários
+        window.changeAdvTab(state.advTab || 'clubes');
+    }
     if (sectionId === 'estatisticas') {
         const firstTab = document.querySelector('#estatisticas-section .tabs-container .tab-btn');
         if (firstTab && !firstTab.classList.contains('active')) firstTab.click();
@@ -1099,7 +1105,7 @@ window.showArbitragemJogos = (arbNome, event) => {
     detailRow.id = `detail-arb-${arbNome.replace(/\s/g,'')}`;
     detailRow.className = 'tr-detail-row';
     detailRow.innerHTML = `
-        <td colspan="16">
+        <td colspan="15">
             <div class="tr-detail-container">
                 <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
                     <h3>Jogos do Atlético: ${arbNome} (${state.arbTab.charAt(0).toUpperCase() + state.arbTab.slice(1)})</h3>
@@ -1969,7 +1975,16 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value)); 
+            
+            inp.addEventListener('blur', () => { 
+                const currentSeason = document.getElementById('game-temporada').value;
+                const player = state.jogadores.find(j => j.nome_guerra === inp.value && String(j.temporada) === String(currentSeason)); 
+                if(player) { 
+                    const posInp = row.querySelector('.pos-inp');
+                    if (posInp) posInp.value = player.posicao; 
+                } 
+            }); 
         }, 10); 
     }
     tbody.appendChild(row);
@@ -1985,7 +2000,6 @@ const addLineupRow = (team, data = null) => {
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
         <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}" required></div>`}</td>
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
-        <td class="col-mini"><input type="text" class="age-inp" readonly style="width:40px;" value="${data?.idade || '-'}"></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
         <td class="tempo-goals-td col-small"></td>
@@ -2026,7 +2040,7 @@ const addLineupRow = (team, data = null) => {
         const id = 'lq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(season)); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value)); 
             
             // Vertical Tab Navigation Logic for all inputs in the row
             const inputs = row.querySelectorAll('input, select');
@@ -2054,11 +2068,11 @@ const addLineupRow = (team, data = null) => {
             });
 
             inp.addEventListener('blur', () => { 
-                const p = state.jogadores.find(j => j.nome_guerra === inp.value && j.temporada === season); 
+                const currentSeason = document.getElementById('game-temporada').value;
+                const p = state.jogadores.find(j => j.nome_guerra === inp.value && String(j.temporada) === String(currentSeason)); 
                 if(p) { 
                     row.querySelector('.mini-foto').src = p.foto; 
                     row.querySelector('.pos-inp').value = p.posicao; 
-                    row.querySelector('.age-inp').value = calculateAge(p.nascimento, document.getElementById('game-data').value); 
                 } 
             }); 
         }, 10); 
@@ -3294,11 +3308,11 @@ window.clearAdvFilters = () => {
     renderAdversariosPage();
 };
 
-const renderAdversariosPage = () => {
-    setupAutocomplete('adv-filter-temporada', 'jogos', 'temporada', null, renderAdversariosPage);
-    setupAutocomplete('adv-filter-campeonato', 'jogos', 'campeonato', null, renderAdversariosPage);
-    setupAutocomplete('adv-filter-adversario', 'adversarios', 'clube', null, renderAdversariosPage);
-    setupAutocomplete('adv-filter-estadio', 'estadios', 'nome', null, renderAdversariosPage);
+const renderClubeStats = () => {
+    setupAutocomplete('adv-filter-temporada', 'jogos', 'temporada', null, renderClubeStats);
+    setupAutocomplete('adv-filter-campeonato', 'jogos', 'campeonato', null, renderClubeStats);
+    setupAutocomplete('adv-filter-adversario', 'adversarios', 'clube', null, renderClubeStats);
+    setupAutocomplete('adv-filter-estadio', 'estadios', 'nome', null, renderClubeStats);
 
     const container = document.getElementById('cards-estat-adversarios');
     if (!container) return;
@@ -3359,9 +3373,14 @@ const renderAdversariosPage = () => {
     });
 
     const list = Object.values(advStats).sort((a, b) => b.jogos - a.jogos);
+    const rowsPerPage = 10;
+    const totalPages = Math.ceil(list.length / rowsPerPage);
+    if (state.advClubePage > totalPages) state.advClubePage = 1;
+    const page = state.advClubePage;
+    const paginated = list.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
     container.className = 'adversarios-grid';
-    container.innerHTML = list.map(s => {
+    container.innerHTML = paginated.map(s => {
         const aprov = s.jogos > 0 ? ((s.pts / (s.jogos * 3)) * 100).toFixed(1) : 0;
         return `
             <div class="adversario-stat-card" onclick="renderAdversarioPRModal('${s.nome.replace(/'/g, "\\'")}')">
@@ -3385,6 +3404,224 @@ const renderAdversariosPage = () => {
             </div>
         `;
     }).join('');
+
+    // Paginação
+    const paginDiv = document.getElementById('adv-clube-pagination');
+    if (paginDiv) {
+        if (totalPages > 1) {
+            paginDiv.style.display = 'flex';
+            paginDiv.innerHTML = `
+                <button class="page-btn" onclick="state.advClubePage=${page-1}; renderClubeStats();" ${page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                <span style="font-weight:600; color:var(--text-main);">Página ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${list.length} clubes)</span></span>
+                <button class="page-btn" onclick="state.advClubePage=${page+1}; renderClubeStats();" ${page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            `;
+        } else {
+            paginDiv.style.display = 'none';
+        }
+    }
+};
+
+window.changeAdvTab = (tab) => {
+    state.advTab = tab;
+
+    // Esconder todas as abas de conteúdo
+    const allContents = document.querySelectorAll('#adversarios-section .tab-content');
+    allContents.forEach(c => {
+        c.classList.remove('active');
+        c.style.display = 'none';
+    });
+
+    // Remover active de todos os botões de aba
+    document.querySelectorAll('#adversarios-section .tabs-container .tab-btn').forEach(b => b.classList.remove('active'));
+
+    if (tab === 'clubes') {
+        const btn = document.getElementById('btn-adv-tab-clubes');
+        const content = document.getElementById('tab-content-clubes');
+        if (btn) btn.classList.add('active');
+        if (content) { content.classList.add('active'); content.style.display = 'block'; }
+        renderClubeStats();
+    } else {
+        const btn = document.getElementById('btn-adv-tab-tecnicos');
+        const content = document.getElementById('tab-content-tecnicos');
+        if (btn) btn.classList.add('active');
+        if (content) { content.classList.add('active'); content.style.display = 'block'; }
+        renderTecnicoStats();
+    }
+};
+
+const renderTecnicoStats = () => {
+    const tbody = document.getElementById('table-body-tecnicos-adv');
+    if (!tbody) return;
+
+    setupAutocomplete('adv-tec-filter-temporada', 'jogos', 'temporada', null, () => { state.advTecPage = 1; renderTecnicoStats(); });
+    setupAutocomplete('adv-tec-filter-tecnico', 'jogos', 'tecnicoAdv', null, () => { state.advTecPage = 1; renderTecnicoStats(); });
+    setupAutocomplete('adv-tec-filter-clube', 'adversarios', 'clube', null, () => { state.advTecPage = 1; renderTecnicoStats(); });
+
+    const minJogosEl = document.getElementById('adv-tec-filter-min-jogos');
+    if (minJogosEl && !minJogosEl._listenerAdded) {
+        minJogosEl._listenerAdded = true;
+        minJogosEl.addEventListener('input', () => { state.advTecPage = 1; renderTecnicoStats(); });
+    }
+
+    const fTemp = document.getElementById('adv-tec-filter-temporada')?.value;
+    const fTec = document.getElementById('adv-tec-filter-tecnico')?.value;
+    const fClube = document.getElementById('adv-tec-filter-clube')?.value;
+    const fMinJogos = parseInt(document.getElementById('adv-tec-filter-min-jogos')?.value) || 0;
+
+    let filteredJogos = state.jogos;
+    if(fTemp) filteredJogos = filteredJogos.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
+    if(fTec) filteredJogos = filteredJogos.filter(j => j.tecnicoAdv && j.tecnicoAdv.toLowerCase().includes(fTec.toLowerCase()));
+    if(fClube) filteredJogos = filteredJogos.filter(j => (j.casa.toLowerCase().includes(fClube.toLowerCase()) || j.fora.toLowerCase().includes(fClube.toLowerCase())));
+
+    const tecStats = {};
+
+    filteredJogos.forEach(j => {
+        if (!j.tecnicoAdv) return;
+        const tec = j.tecnicoAdv;
+        const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+        const advClube = isGaloMandante ? j.fora : j.casa;
+        
+        if (!tecStats[tec]) {
+            tecStats[tec] = {
+                tecnico: tec,
+                totalClubes: new Set(),
+                jogos: 0,
+                v: 0, e: 0, d: 0,
+                gm: 0, gs: 0
+            };
+        }
+
+        const s = tecStats[tec];
+        s.totalClubes.add(advClube);
+        s.jogos++;
+
+        const galoGols = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
+        const advGols = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
+
+        // Perspectiva do Técnico Adversário
+        s.gm += advGols;
+        s.gs += galoGols;
+
+        if (advGols > galoGols) s.v++;
+        else if (advGols === galoGols) s.e++;
+        else s.d++;
+    });
+
+    let statsArr = Object.values(tecStats).map(s => {
+        const pts = (s.v * 3) + s.e;
+        return {
+            ...s,
+            clubesCount: s.totalClubes.size,
+            aprov: s.jogos > 0 ? ((pts / (s.jogos * 3)) * 100).toFixed(1) : 0,
+            medGM: s.jogos > 0 ? (s.gm / s.jogos).toFixed(2) : 0,
+            medGS: s.jogos > 0 ? (s.gs / s.jogos).toFixed(2) : 0
+        };
+    });
+
+    // Filtro de mínimo de jogos
+    if (fMinJogos > 0) statsArr = statsArr.filter(s => s.jogos >= fMinJogos);
+
+    const sorted = sortInternal(statsArr, 'table-tecnicos-adv');
+
+    // Paginação 50 a 50
+    const rowsPerPage = 50;
+    const totalPages = Math.ceil(sorted.length / rowsPerPage);
+    if (state.advTecPage > totalPages) state.advTecPage = 1;
+    const page = state.advTecPage;
+    const paginated = sorted.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+    tbody.innerHTML = paginated.map(s => `
+        <tr onclick="showTecnicoJogos('${s.tecnico.replace(/'/g, "\\'")}', event)" style="cursor:pointer;" title="Clique para ver os jogos contra este técnico">
+            <td><strong>${s.tecnico}</strong></td>
+            <td>${s.clubesCount}</td>
+            <td>${s.jogos}</td>
+            <td style="color:#27ae60; font-weight:bold;">${s.v}</td>
+            <td>${s.e}</td>
+            <td style="color:#e74c3c; font-weight:bold;">${s.d}</td>
+            <td>${s.gm}</td>
+            <td>${s.gs}</td>
+            <td style="font-weight:bold;">${s.aprov}%</td>
+            <td>${s.medGM}</td>
+            <td>${s.medGS}</td>
+        </tr>
+    `).join('');
+
+    // Renderizar paginação
+    const paginDiv = document.getElementById('adv-tec-pagination');
+    if (paginDiv) {
+        if (totalPages > 1) {
+            paginDiv.style.display = 'flex';
+            paginDiv.innerHTML = `
+                <button class="page-btn" onclick="state.advTecPage=${page-1}; renderTecnicoStats();" ${page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                <span style="font-weight:600; color:var(--text-main);">Página ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${sorted.length} técnicos)</span></span>
+                <button class="page-btn" onclick="state.advTecPage=${page+1}; renderTecnicoStats();" ${page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            `;
+        } else {
+            paginDiv.style.display = 'none';
+            paginDiv.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">${sorted.length} técnico(s)</span>`;
+            if (sorted.length > 0) paginDiv.style.display = 'flex';
+        }
+    }
+};
+
+window.showTecnicoJogos = (tecnicoNome, event) => {
+    const row = event.currentTarget.closest('tr');
+    const existing = document.getElementById(`tec-detail-${tecnicoNome.replace(/\s+/g, '-')}`);
+    document.querySelectorAll('.tr-detail-row-tec').forEach(r => r.remove());
+    if (existing) return;
+
+    const tecGames = state.jogos.filter(j => j.tecnicoAdv === tecnicoNome).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    const html = `
+        <tr id="tec-detail-${tecnicoNome.replace(/\s+/g, '-')}" class="tr-detail-row-tec">
+            <td colspan="12">
+                <div class="tr-detail-container" style="background:var(--bg-color); border:1px solid var(--border-color); padding:1rem; animation: slideDown 0.3s ease;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                        <h4 style="margin:0;">Jogos de ${tecnicoNome} contra o Atlético</h4>
+                        <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Temporada</th>
+                                <th>Campeonato</th>
+                                <th>Equipe Técnico</th>
+                                <th>Placar</th>
+                                <th>Estádio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tecGames.map(j => {
+                                const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+                                const tecEquipe = isGaloMandante ? j.fora : j.casa;
+                                const placar = isGaloMandante ? `${j.golsFora} x ${j.golsCasa}` : `${j.golsCasa} x ${j.golsFora}`; // Perspectiva do Técnico
+                                return `
+                                    <tr>
+                                        <td>${j.data.split('-').reverse().join('/')}</td>
+                                        <td>${j.temporada}</td>
+                                        <td>${j.campeonato}</td>
+                                        <td><strong>${tecEquipe}</strong></td>
+                                        <td style="font-weight:bold;">${placar}</td>
+                                        <td>${j.estadio}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    `;
+    row.insertAdjacentHTML('afterend', html);
+};
+
+window.renderAdversariosPage = () => {
+    if (state.advTab === 'clubes') {
+        renderClubeStats();
+    } else {
+        renderTecnicoStats();
+    }
 };
 
 let advModalPage = 1;
@@ -3564,6 +3801,7 @@ function sortTable(event, column, type) {
     else if (tableId === 'artilheiros-table') renderArtilheiros();
     else if (tableId === 'cartoes-table') renderCartoes();
     else if (tableId === 'arbitragem-table') renderArbitragem();
+    else if (tableId === 'table-tecnicos-adv') renderTecnicoStats();
 };
 
 

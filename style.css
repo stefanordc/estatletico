@@ -28,6 +28,25 @@
     --secondary-color: #000000;
 }
 
+[data-theme="dark"] .tabs-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .tab-btn {
+    color: #999;
+}
+
+[data-theme="dark"] .tab-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    background: var(--primary-color);
+    color: #000;
+}
+
 /* Theme Toggle Button */
 .theme-toggle {
     margin: 1rem 1.5rem;
@@ -371,7 +390,12 @@ body {
 
 .data-table td {
     padding: 1rem;
-    border-bottom: 1px solid #f9f9f9;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.data-table .actions {
+    white-space: nowrap;
     vertical-align: middle;
 }
 
@@ -951,32 +975,47 @@ body {
     box-shadow: var(--shadow);
 }
 
+[data-theme="dark"] .tabs-container {
+    background: rgba(255,255,255,0.07);
+}
+
 .win-text { color: var(--success-color); font-weight: bold; }
 .loss-text { color: #e74c3c; font-weight: bold; }
 
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
+    background: var(--card-bg);
 }
 
 .data-table th {
-    background: #f8f9fa;
+    background: var(--card-bg);
     padding: 1rem;
     text-align: left;
     font-size: 0.85rem;
     text-transform: uppercase;
     color: var(--text-muted);
-    border-bottom: 2px solid #eee;
+    border-bottom: 2px solid var(--border-color);
 }
 
 .data-table td {
     padding: 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+.data-table td:last-child,
+.data-table th:last-child {
+    white-space: nowrap;
+}
+
+.data-table tr:hover td {
+    background: rgba(0,0,0,0.02);
+}
+
+[data-theme="dark"] .data-table tr:hover td {
+    background: rgba(255,255,255,0.03);
 }
 
 .data-table tr:hover {
