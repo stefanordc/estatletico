@@ -597,8 +597,38 @@ body {
 
 .stats-table td {
     padding: 0.6rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
+}
+
+[data-theme="dark"] .stats-table th {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-row-tec {
+    background-color: var(--card-bg);
+}
+
+[data-theme="dark"] .detail-row-tec {
+    background-color: #1a1a1a;
+}
+
+.atle-tec-pagination {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.atle-tec-pagination span {
+    padding: 0.6rem 1.2rem;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
 }
 
 .stats-table input, .stats-table select {
@@ -701,7 +731,7 @@ body {
 
 .stats-section {
     margin-bottom: 3rem;
-    background: white;
+    background: var(--card-bg);
     padding: 1.5rem;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);

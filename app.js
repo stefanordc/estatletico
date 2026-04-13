@@ -17,8 +17,8 @@ const parseCurrency = (val) => {
     if (val === undefined || val === null || val === 'N/I' || val === '') return 0;
     if (typeof val === 'number') return val;
     
-    // Remove R$, espaços e pontos de milhar, mantendo apenas a vírgula para decimal
-    let clean = String(val).replace('R$', '').replace(/\s/g, '');
+    // Remove R$, %, espaços e pontos de milhar, mantendo apenas a vírgula para decimal
+    let clean = String(val).replace('R$', '').replace('%', '').replace(/\s/g, '');
     
     // Se tem vírgula e ponto, o ponto é milhar e a vírgula é decimal (Padrão BR: 1.234,56)
     if (clean.includes(',') && clean.includes('.')) {
@@ -2567,6 +2567,7 @@ const getAtleticoTecnicoStats = () => {
                 nome: tecnico, 
                 jogos: 0, v: 0, e: 0, d: 0, 
                 gm: 0, gc: 0, points: 0,
+                cs: 0, cg: 0,
                 campeonatos: {} 
             };
         }
@@ -2574,7 +2575,7 @@ const getAtleticoTecnicoStats = () => {
         const s = stats[tecnico];
         const camp = j.campeonato || 'Outros';
         if (!s.campeonatos[camp]) {
-            s.campeonatos[camp] = { nome: camp, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gc: 0, points: 0 };
+            s.campeonatos[camp] = { nome: camp, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gc: 0, points: 0, cs: 0, cg: 0 };
         }
         const sc = s.campeonatos[camp];
 
@@ -2598,6 +2599,9 @@ const getAtleticoTecnicoStats = () => {
             s.d++;
             sc.d++;
         }
+
+        if (advGols === 0) { s.cs++; sc.cs++; }
+        if (galoGols === 0) { s.cg++; sc.cg++; }
     });
 
     statsCache.atleticoTecnicos = Object.values(stats).map(s => ({
@@ -2657,22 +2661,43 @@ const renderAtleticoTecnicos = (container) => {
         }
     }
 
-    // Ordenação automática por número de jogos (decrescente)
-    tecnicos.sort((a, b) => b.jogos - a.jogos);
+    // Aplicar Ordenação
+    const sorted = sortInternal(tecnicos, 'table-atletico-tecnicos');
+    
+    // Se não houver ordenação manual, manter a padrão por jogos
+    if (!state.sortConfig.column || state.sortConfig.tableId !== 'table-atletico-tecnicos') {
+        sorted.sort((a, b) => b.jogos - a.jogos);
+    }
 
     // Paginação
     const rowsPerPage = 20;
-    const totalPages = Math.ceil(tecnicos.length / rowsPerPage);
+    const totalPages = Math.ceil(sorted.length / rowsPerPage);
     state.atleTecPage = Math.min(state.atleTecPage || 1, totalPages || 1);
     const start = (state.atleTecPage - 1) * rowsPerPage;
-    const paginated = tecnicos.slice(start, start + rowsPerPage);
+    const paginated = sorted.slice(start, start + rowsPerPage);
+
+    const getSortIcon = (col) => {
+        if (state.sortConfig.tableId === 'table-atletico-tecnicos' && state.sortConfig.column === col) {
+            return state.sortConfig.direction === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+        }
+        return '<i class="fas fa-sort" style="opacity:0.3;"></i>';
+    };
 
     container.innerHTML = `
-        <table class="data-table" style="text-align:center;">
+        <table class="data-table" id="table-atletico-tecnicos" style="text-align:center;">
             <thead>
                 <tr>
-                    <th style="text-align:left;">Técnico</th>
-                    <th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th>
+                    <th style="text-align:left; cursor:pointer;" onclick="sortTable(event, 'nome')">Técnico ${getSortIcon('nome')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'jogos')">J ${getSortIcon('jogos')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'v')">V ${getSortIcon('v')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'e')">E ${getSortIcon('e')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'd')">D ${getSortIcon('d')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gm')">GM ${getSortIcon('gm')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gc')">GC ${getSortIcon('gc')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'saldo')">SG ${getSortIcon('saldo')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'aproveitamento')">% ${getSortIcon('aproveitamento')}</th>
+                    <th style="cursor:pointer; color:#3498db;" onclick="sortTable(event, 'cs')" title="Clean Sheets">CS ${getSortIcon('cs')}</th>
+                    <th style="cursor:pointer; color:#e67e22;" onclick="sortTable(event, 'cg')" title="Clean Goals">CG ${getSortIcon('cg')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -2687,16 +2712,18 @@ const renderAtleticoTecnicos = (container) => {
                         <td>${t.gc}</td>
                         <td style="font-weight:bold;">${t.saldo > 0 ? '+' : ''}${t.saldo}</td>
                         <td style="font-weight:bold;">${t.aproveitamento}%</td>
+                        <td style="color:#3498db; font-weight:bold;">${t.cs}</td>
+                        <td style="color:#e67e22; font-weight:bold;">${t.cg}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
-        <div class="pagination" style="margin-top:1rem; display:flex; justify-content:center; gap:0.5rem;">
+        <div class="atle-tec-pagination">
             <button class="btn-secondary" ${state.atleTecPage === 1 ? 'disabled' : ''} onclick="state.atleTecPage--; renderEstatisticas();"><i class="fas fa-chevron-left"></i></button>
-            <span style="padding:0.5rem 1rem; background:white; border-radius:4px; border:1px solid #ddd;">Página ${state.atleTecPage} de ${totalPages || 1}</span>
+            <span>Página ${state.atleTecPage} de ${totalPages || 1}</span>
             <button class="btn-secondary" ${state.atleTecPage >= totalPages ? 'disabled' : ''} onclick="state.atleTecPage++; renderEstatisticas();"><i class="fas fa-chevron-right"></i></button>
         </div>
-        ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'SG', 'Aprov'])}
+        ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'SG', 'Aprov', 'CS', 'CG'])}
     `;
 
     // Populate Filters
@@ -2720,30 +2747,37 @@ const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
 
     const detailHtml = `
         <tr class="detail-row-tec" id="detail-ate-tec-${tecnicoNome.replace(/\s/g, '-')}">
-            <td colspan="9" style="padding:1.5rem; background:#fcfcfc;">
+            <td colspan="11" style="padding:1.5rem;">
                 <div style="display:flex; gap:2rem; flex-wrap:wrap;">
                     <div style="flex: 0 0 150px;">
-                        <img src="${photoUrl}" style="width:150px; height:150px; border-radius:12px; object-fit:cover; border:3px solid white; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-                        <h4 style="margin-top:1rem; text-align:center;">${tecnicoNome}</h4>
+                        <img src="${photoUrl}" style="width:150px; height:150px; border-radius:12px; object-fit:cover; border:3px solid var(--border-color); box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                        <h4 style="margin-top:1rem; text-align:center; color:var(--text-main);">${tecnicoNome}</h4>
                     </div>
                     <div style="flex:1; min-width:300px;">
                         <h4 style="margin-bottom:1rem; color:var(--primary-color);">Desempenho por Campeonato</h4>
                         <table class="stats-table" style="font-size:0.9rem;">
                             <thead>
-                                <tr><th style="text-align:left;">Campeonato</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th></tr>
+                                <tr>
+                                    <th style="text-align:left;">Campeonato</th>
+                                    <th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th>
+                                    <th style="color:#3498db;">CS</th>
+                                    <th style="color:#e67e22;">CG</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 ${tecData.campeonatos.sort((a,b) => b.jogos - a.jogos).map(c => `
                                     <tr>
-                                        <td style="text-align:left;">${c.nome}</td>
-                                        <td>${c.jogos}</td>
+                                        <td style="text-align:left; color:var(--text-main);"><strong>${c.nome}</strong></td>
+                                        <td style="color:var(--text-main);">${c.jogos}</td>
                                         <td><span class="win-text">${c.v}</span></td>
                                         <td><span class="draw-text">${c.e}</span></td>
                                         <td><span class="loss-text">${c.d}</span></td>
-                                        <td>${c.gm}</td>
-                                        <td>${c.gc}</td>
-                                        <td>${c.saldo > 0 ? '+' : ''}${c.saldo}</td>
-                                        <td><strong>${c.aproveitamento}%</strong></td>
+                                        <td style="color:var(--text-main);">${c.gm}</td>
+                                        <td style="color:var(--text-main);">${c.gc}</td>
+                                        <td style="color:var(--text-main);">${c.saldo > 0 ? '+' : ''}${c.saldo}</td>
+                                        <td style="color:var(--text-main);"><strong>${c.aproveitamento}%</strong></td>
+                                        <td style="color:#3498db; font-weight:bold;">${c.cs}</td>
+                                        <td style="color:#e67e22; font-weight:bold;">${c.cg}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -4126,6 +4160,7 @@ function sortTable(event, column, type) {
     else if (tableId === 'cartoes-table') renderCartoes();
     else if (tableId === 'arbitragem-table') renderArbitragem();
     else if (tableId === 'table-tecnicos-adv') renderTecnicoStats();
+    else if (tableId === 'table-atletico-tecnicos') renderAtleticoTecnicos(document.getElementById('stats-content-container'));
 };
 
 
