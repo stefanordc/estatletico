@@ -1707,7 +1707,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             <form id="multi-step-form">
                 <div class="form-block active" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || 2026}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? state.fixedSeason + '-01-01' : '2026-01-01')}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
@@ -2093,14 +2093,25 @@ const saveNewJogo = () => {
     saveData('fixedSeason', state.fixedSeason); saveData('isSeasonFixed', state.isSeasonFixed);
     saveData('fixedCampeonato', state.fixedCampeonato); saveData('isCampeonatoFixed', state.isCampeonatoFixed);
     saveData('fixedTecnicoAtle', state.fixedTecnicoAtle); saveData('isTecnicoFixed', state.isTecnicoFixed);
-    jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value, posicao: row.querySelector('.pos-inp')?.value, amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
-    jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', amarelo: row.querySelector('.yellow-sel').value, red: row.querySelector('.red-sel').value, minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' }));
+    jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ 
+        jogador: row.querySelector('.card-player-inp')?.value || '', 
+        posicao: row.querySelector('.pos-inp')?.value || '', 
+        amarelo: row.querySelector('.yellow-sel')?.value || '0', 
+        red: row.querySelector('.red-sel')?.value || '0', 
+        minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
+    }));
+    jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ 
+        jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', 
+        amarelo: row.querySelector('.yellow-sel')?.value || '0', 
+        red: row.querySelector('.red-sel')?.value || '0', 
+        minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
+    }));
     
     // Collect Gols Contra
-    jogo.gcFavorCount = parseInt(document.getElementById('game-gc-favor').value || 0);
-    jogo.gcFavorList = Array.from(document.getElementById('gc-favor-details').children).map(div => ({
-        min: div.querySelector('.gc-min').value,
-        tempo: div.querySelector('.gc-tempo').value
+    jogo.gcFavorCount = parseInt(document.getElementById('game-gc-favor')?.value || 0);
+    jogo.gcFavorList = Array.from(document.getElementById('gc-favor-details')?.children || []).map(div => ({
+        min: div.querySelector('.gc-min')?.value || '',
+        tempo: div.querySelector('.gc-tempo')?.value || '1'
     }));
 
     jogo.lineupGalo = [];
@@ -2111,18 +2122,17 @@ const saveNewJogo = () => {
         const gsCnt = gsInps.length > 0 ? parseInt(gsInps[0].value || 0) : 0;
         
         jogo.lineupGalo.push({
-            foto: r.querySelector('img').src,
+            foto: r.querySelector('img')?.src || 'https://via.placeholder.com/35',
             jogador: l,
-            posicao: r.querySelector('.pos-inp').value,
-            idade: r.querySelector('.age-inp').value,
-            golsCount: parseInt(r.querySelector('.goals-inp').value || 0),
+            posicao: r.querySelector('.pos-inp')?.value || '-',
+            golsCount: parseInt(r.querySelector('.goals-inp')?.value || 0),
             golsMin: Array.from(r.querySelectorAll('.min-g-inp')).map(i => i.value),
             golsTempo: Array.from(r.querySelectorAll('.tempo-goals-td select')).map(i => i.value),
             gsCount: gsCnt,
             gsMin: Array.from(r.querySelectorAll('.min-gs-inp')).map(i => i.value),
             gsTempo: Array.from(r.querySelectorAll('.tempo-gs-td select')).map(i => i.value),
-            titular: r.querySelector('.titular-ck').checked,
-            substituido: r.querySelector('.sub-ck').checked
+            titular: r.querySelector('.titular-ck')?.checked || false,
+            substituido: r.querySelector('.sub-ck')?.checked || false
         });
     });
 
@@ -3373,7 +3383,7 @@ const renderClubeStats = () => {
     });
 
     const list = Object.values(advStats).sort((a, b) => b.jogos - a.jogos);
-    const rowsPerPage = 10;
+    const rowsPerPage = 40;
     const totalPages = Math.ceil(list.length / rowsPerPage);
     if (state.advClubePage > totalPages) state.advClubePage = 1;
     const page = state.advClubePage;
@@ -3498,12 +3508,12 @@ const renderTecnicoStats = () => {
         const galoGols = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
         const advGols = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
 
-        // Perspectiva do Técnico Adversário
-        s.gm += advGols;
-        s.gs += galoGols;
+        // Perspectiva do Galo (Atlético)
+        s.gm += galoGols;
+        s.gs += advGols;
 
-        if (advGols > galoGols) s.v++;
-        else if (advGols === galoGols) s.e++;
+        if (galoGols > advGols) s.v++;
+        else if (galoGols === advGols) s.e++;
         else s.d++;
     });
 
@@ -3520,6 +3530,9 @@ const renderTecnicoStats = () => {
 
     // Filtro de mínimo de jogos
     if (fMinJogos > 0) statsArr = statsArr.filter(s => s.jogos >= fMinJogos);
+
+    // Ordenação automática por número de jogos (maior para menor)
+    statsArr.sort((a, b) => b.jogos - a.jogos);
 
     const sorted = sortInternal(statsArr, 'table-tecnicos-adv');
 
@@ -4062,7 +4075,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             try {
                 localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
             } catch(e) {
-                console.warn('Cache ignorado: localStorage cheio', e);
+                console.warn('Cache ignorado: localStorage cheio. Limpando cache antigo...');
+                localStorage.removeItem('estatletico_cache');
             }
         }
 
