@@ -670,6 +670,9 @@
                 <button class="tab-btn" id="btn-stats-individuais" onclick="switchStatsTab('individuais')">
                     <i class="fas fa-user"></i> Individuais
                 </button>
+                <button class="tab-btn" id="btn-stats-tecnicos" onclick="switchStatsTab('tecnicos')">
+                    <i class="fas fa-user-tie"></i> Técnicos
+                </button>
             </div>
 
             <div id="stats-filters-coletivas" class="filters-card">
@@ -702,6 +705,24 @@
                     </div>
                     <div class="form-group"><label>Posição</label><select id="sti-filter-posicao"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Campeonato</label><select id="sti-filter-campeonato"><option value="">Todos</option></select></div>
+                </div>
+            </div>
+
+            <div id="stats-filters-tecnicos" class="filters-card hidden">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Técnico</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="stt-filter-tecnico" placeholder="Nome do técnico...">
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Temporada</label><select id="stt-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Campeonato</label><select id="stt-filter-campeonato"><option value="">Todos</option></select></div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin:0; padding-bottom:10px;">
+                            <i class="fas fa-info-circle"></i> As estatísticas abaixo são exibidas sob a ótica do Atlético.
+                        </p>
+                    </div>
                 </div>
             </div>
 

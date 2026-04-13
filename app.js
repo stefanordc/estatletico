@@ -5,7 +5,7 @@ let supabaseClient = null;
 
 // Foto placeholders
 const DEFAULT_PLAYER_PHOTO = 'https://via.placeholder.com/150';
-const DEFAULT_REF_PHOTO = 'file:///C:/Users/stefa/.gemini/antigravity/brain/7be9b8b1-0746-42f0-bad4-4ee41bc8586a/media__1775704256344.png';
+const DEFAULT_REF_PHOTO = 'media__1775704256344.png';
 const DEFAULT_CLUB_PHOTO = 'https://via.placeholder.com/100';
 
 const normalizeString = (str) => {
@@ -61,8 +61,35 @@ const state = {
     sortConfig: { column: null, direction: 'asc', tableId: null },
     arbTab: 'arbitro',
     advTab: 'clubes',
+    statsTab: 'coletivas', // Nova aba padrão para Estatísticas
     advClubePage: 1,
-    advTecPage: 1
+    advTecPage: 1,
+    atleTecPage: 1, // Página para a nova aba de técnicos do Atlético
+};
+
+// Cache para estatísticas pesadas para evitar travamentos
+const statsCache = {
+    atleticoTecnicos: null,
+    coletivas: {},
+    artilheiros: null,
+    cartoes: null,
+    lastUpdate: 0
+};
+
+const invalidateCache = () => {
+    statsCache.atleticoTecnicos = null;
+    statsCache.coletivas = {};
+    statsCache.artilheiros = null;
+    statsCache.cartoes = null;
+    statsCache.lastUpdate = Date.now();
+};
+
+const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
 };
 
 const showToast = (message, type = 'error') => {
@@ -91,6 +118,8 @@ const saveData = async (key, data) => {
             if (error) {
                 console.error('Supabase Error:', error);
                 showToast(`Erro ao salvar (${key}): ${error.message || JSON.stringify(error)}`);
+            } else {
+                invalidateCache(); // Invalida o cache ao salvar no banco
             }
         } else {
             localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data));
@@ -557,80 +586,74 @@ const showPlayerDetail = (playerId, event) => {
     if (existing) return;
 
     const player = state.jogadores.find(j => j.id === playerId);
-    const seasons = [...new Set(state.jogos.map(j => j.temporada))].sort((a,b) => b-a);
     const isTecnico = player.posicao === 'Técnico';
     const isGoalie = player.posicao === 'Goleiro';
 
-    let statsBySeason = [];
+    let statsBySeasonMap = {};
     let statsByTecnico = {};
 
-    seasons.forEach(s => {
-        const seasonJogos = state.jogos.filter(j => j.temporada === s);
-        let gamesCount = 0, goals = 0, gs = 0, wins = 0, draws = 0, losses = 0, yellow = 0, red = 0;
-        let titularCount = 0, subOutCount = 0, enteredCount = 0;
+    // Processamento otimizado: Um único laço pelos jogos
+    state.jogos.forEach(jogo => {
+        const s = jogo.temporada;
+        if (!statsBySeasonMap[s]) {
+            statsBySeasonMap[s] = { season: s, gamesCount: 0, goals: 0, gs: 0, wins: 0, draws: 0, losses: 0, yellow: 0, red: 0, titularCount: 0, subOutCount: 0, enteredCount: 0, cs: 0 };
+        }
+        const ss = statsBySeasonMap[s];
 
-        seasonJogos.forEach(jogo => {
-            let matches = false;
-            if (isTecnico) {
-                if (jogo.tecnicoGalo === player.nome_guerra) {
-                    matches = true;
-                    gamesCount++;
-                    const gm = parseInt(jogo.casa === 'Atlético' ? jogo.golsCasa : jogo.golsFora);
-                    const gc = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa);
-                    goals += gm; gs += gc;
-                    if (jogo.vencedor === 'Atlético') wins++;
-                    else if (jogo.vencedor === 'Empate') draws++;
-                    else losses++;
-                }
-            } else {
-                const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
-                if (inLineup) {
-                    matches = true;
-                    gamesCount++;
-                    goals += parseInt(inLineup.golsCount || 0);
-                    gs += parseInt(inLineup.gsCount || 0);
-                    if (inLineup.titular) titularCount++;
-                    if (inLineup.substituido) subOutCount++;
-                    if (!inLineup.titular) enteredCount++;
-
-                    if (jogo.vencedor === 'Atlético') wins++;
-                    else if (jogo.vencedor === 'Empate') draws++;
-                    else losses++;
-
-                    const cards = jogo.cartoesGalo?.filter(c => c.jogador === player.nome_guerra);
-                    cards?.forEach(c => { yellow += parseInt(c.amarelo || 0); red += parseInt(c.red || 0); });
-
-                    // Aggregate stats by técnico
-                    const tec = jogo.tecnicoGalo || 'Desconhecido';
-                    if (!statsByTecnico[tec]) statsByTecnico[tec] = { nome: tec, jogos: 0, titular: 0, subOut: 0, entered: 0, goals: 0, gs: 0 };
-                    const st = statsByTecnico[tec];
-                    st.jogos++;
-                    st.goals += parseInt(inLineup.golsCount || 0);
-                    st.gs += parseInt(inLineup.gsCount || 0);
-                    if (inLineup.titular) st.titular++;
-                    if (inLineup.substituido) st.subOut++;
-                    if (!inLineup.titular) st.entered++;
-                }
+        if (isTecnico) {
+            if (jogo.tecnicoGalo === player.nome_guerra) {
+                ss.gamesCount++;
+                const isCasa = jogo.casa === 'Atlético' || jogo.casa === 'Atlético-MG';
+                const gm = parseInt(isCasa ? jogo.golsCasa : jogo.golsFora) || 0;
+                const gc = parseInt(isCasa ? jogo.golsFora : jogo.golsCasa) || 0;
+                ss.goals += gm; ss.gs += gc;
+                if (jogo.vencedor === 'Atlético') ss.wins++;
+                else if (jogo.vencedor === 'Empate') ss.draws++;
+                else ss.losses++;
             }
-        });
+        } else {
+            const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
+            if (inLineup) {
+                ss.gamesCount++;
+                ss.goals += parseInt(inLineup.golsCount || 0);
+                ss.gs += parseInt(inLineup.gsCount || 0);
+                if (inLineup.titular) ss.titularCount++;
+                if (inLineup.substituido) ss.subOutCount++;
+                if (!inLineup.titular) ss.enteredCount++;
 
-        if (gamesCount > 0) {
-            const aprov = ((wins * 3 + draws) / (gamesCount * 3) * 100).toFixed(1) + '%';
-            
-            let csCount = 0;
-            if (isGoalie) {
-                seasonJogos.forEach(jogo => {
-                    const inL = jogo.lineupGalo?.some(l => l.jogador === player.nome_guerra);
-                    if (inL) {
-                        const advG = (jogo.casa === 'Atlético' || jogo.casa === 'Atlético-MG') ? parseInt(jogo.golsFora) : parseInt(jogo.golsCasa);
-                        if (advG === 0) csCount++;
-                    }
-                });
+                if (jogo.vencedor === 'Atlético') ss.wins++;
+                else if (jogo.vencedor === 'Empate') ss.draws++;
+                else ss.losses++;
+
+                const cards = jogo.cartoesGalo?.filter(c => c.jogador === player.nome_guerra);
+                cards?.forEach(c => { ss.yellow += parseInt(c.amarelo || 0); ss.red += parseInt(c.red || 0); });
+
+                if (isGoalie) {
+                    const isCasa = jogo.casa === 'Atlético' || jogo.casa === 'Atlético-MG';
+                    const advG = isCasa ? parseInt(jogo.golsFora) : parseInt(jogo.golsCasa);
+                    if (advG === 0) ss.cs++;
+                }
+
+                const tec = jogo.tecnicoGalo || 'Desconhecido';
+                if (!statsByTecnico[tec]) statsByTecnico[tec] = { nome: tec, jogos: 0, titular: 0, subOut: 0, entered: 0, goals: 0, gs: 0 };
+                const st = statsByTecnico[tec];
+                st.jogos++;
+                st.goals += parseInt(inLineup.golsCount || 0);
+                st.gs += parseInt(inLineup.gsCount || 0);
+                if (inLineup.titular) st.titular++;
+                if (inLineup.substituido) st.subOut++;
+                if (!inLineup.titular) st.entered++;
             }
-
-            statsBySeason.push({ season: s, gamesCount, goals, gs, wins, draws, losses, aprov, yellow, red, titularCount, subOutCount, enteredCount, cs: csCount });
         }
     });
+
+    const statsBySeason = Object.values(statsBySeasonMap)
+        .filter(s => s.gamesCount > 0)
+        .sort((a,b) => b.season - a.season)
+        .map(s => ({
+            ...s,
+            aprov: ((s.wins * 3 + s.draws) / (s.gamesCount * 3) * 100).toFixed(1) + '%'
+        }));
 
     const total = statsBySeason.reduce((acc, s) => {
         acc.gamesCount += s.gamesCount; acc.goals += s.goals; acc.gs += s.gs; acc.wins += s.wins; acc.draws += s.draws; acc.losses += s.losses; acc.yellow += s.yellow; acc.red += s.red;
@@ -2505,8 +2528,12 @@ const renderComparativoCharts = (dsGM, dsGS) => {
 const switchStatsTab = (tab) => {
     document.getElementById('btn-stats-coletivas').classList.toggle('active', tab === 'coletivas');
     document.getElementById('btn-stats-individuais').classList.toggle('active', tab === 'individuais');
+    document.getElementById('btn-stats-tecnicos').classList.toggle('active', tab === 'tecnicos');
+    
     document.getElementById('stats-filters-coletivas').classList.toggle('hidden', tab !== 'coletivas');
     document.getElementById('stats-filters-individuais').classList.toggle('hidden', tab !== 'individuais');
+    document.getElementById('stats-filters-tecnicos').classList.toggle('hidden', tab !== 'tecnicos');
+    
     state.currentStatsTab = tab;
     
     // Update URL hash without breaking the navigation
@@ -2522,9 +2549,211 @@ const renderEstatisticas = () => {
     
     if (tab === 'coletivas') {
         renderStatsColetivas(container);
-    } else {
+    } else if (tab === 'individuais') {
         renderStatsIndividuais(container);
+    } else if (tab === 'tecnicos') {
+        renderAtleticoTecnicos(container);
     }
+};
+
+const getAtleticoTecnicoStats = () => {
+    if (statsCache.atleticoTecnicos) return statsCache.atleticoTecnicos;
+
+    const stats = {};
+    state.jogos.forEach(j => {
+        const tecnico = j.tecnicoGalo || 'N/I';
+        if (!stats[tecnico]) {
+            stats[tecnico] = { 
+                nome: tecnico, 
+                jogos: 0, v: 0, e: 0, d: 0, 
+                gm: 0, gc: 0, points: 0,
+                campeonatos: {} 
+            };
+        }
+        
+        const s = stats[tecnico];
+        const camp = j.campeonato || 'Outros';
+        if (!s.campeonatos[camp]) {
+            s.campeonatos[camp] = { nome: camp, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gc: 0, points: 0 };
+        }
+        const sc = s.campeonatos[camp];
+
+        s.jogos++;
+        sc.jogos++;
+
+        const isCasa = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+        const galoGols = isCasa ? parseInt(j.golsCasa) : parseInt(j.golsFora);
+        const advGols = isCasa ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+        
+        s.gm += galoGols; sc.gm += galoGols;
+        s.gc += advGols; sc.gc += advGols;
+
+        if (galoGols > advGols) { 
+            s.v++; s.points += 3; 
+            sc.v++; sc.points += 3;
+        } else if (galoGols === advGols) { 
+            s.e++; s.points += 1; 
+            sc.e++; sc.points += 1;
+        } else { 
+            s.d++;
+            sc.d++;
+        }
+    });
+
+    statsCache.atleticoTecnicos = Object.values(stats).map(s => ({
+        ...s,
+        aproveitamento: s.jogos > 0 ? ((s.points / (s.jogos * 3)) * 100).toFixed(2) : "0.00",
+        mediaGM: s.jogos > 0 ? (s.gm / s.jogos).toFixed(2) : "0.00",
+        mediaGC: s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00",
+        saldo: s.gm - s.gc,
+        campeonatos: Object.values(s.campeonatos).map(c => ({
+            ...c,
+            aproveitamento: c.jogos > 0 ? ((c.points / (c.jogos * 3)) * 100).toFixed(2) : "0.00",
+            saldo: c.gm - c.gc
+        }))
+    }));
+
+    return statsCache.atleticoTecnicos;
+};
+
+const renderAtleticoTecnicos = (container) => {
+    const fTec = document.getElementById('stt-filter-tecnico')?.value;
+    const fTemp = document.getElementById('stt-filter-temporada')?.value;
+    const fCamp = document.getElementById('stt-filter-campeonato')?.value;
+
+    let tecnicos = getAtleticoTecnicoStats();
+
+    // Filtros pesados
+    if (fTec || fTemp || fCamp) {
+        // Se houver filtros, precisamos recalcular ou refinar
+        // Para simplicidade e performance, filtramos o cache se for só nome
+        if (fTec) tecnicos = tecnicos.filter(t => normalizeString(t.nome).includes(normalizeString(fTec)));
+        
+        // Se houver filtro de temporada ou campeonato, os números mudam, então recalculamos localmente
+        if (fTemp || fCamp) {
+            const tempStats = {};
+            state.jogos.forEach(j => {
+                if (fTemp && j.temporada !== fTemp) return;
+                if (fCamp && j.campeonato !== fCamp) return;
+                if (fTec && !normalizeString(j.tecnicoGalo).includes(normalizeString(fTec))) return;
+                
+                const tecnico = j.tecnicoGalo || 'N/I';
+                if (!tempStats[tecnico]) tempStats[tecnico] = { nome: tecnico, jogos: 0, v: 0, e: 0, d: 0, gm: 0, gc: 0, points: 0 };
+                const s = tempStats[tecnico];
+                s.jogos++;
+                const isCasa = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+                const galoGols = isCasa ? parseInt(j.golsCasa) : parseInt(j.golsFora);
+                const advGols = isCasa ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+                s.gm += galoGols; s.gc += advGols;
+                if (galoGols > advGols) { s.v++; s.points += 3; }
+                else if (galoGols === advGols) { s.e++; s.points += 1; }
+                else s.d++;
+            });
+            tecnicos = Object.values(tempStats).map(s => ({
+                ...s,
+                aproveitamento: s.jogos > 0 ? ((s.points / (s.jogos * 3)) * 100).toFixed(2) : "0.00",
+                saldo: s.gm - s.gc
+            }));
+        }
+    }
+
+    // Ordenação automática por número de jogos (decrescente)
+    tecnicos.sort((a, b) => b.jogos - a.jogos);
+
+    // Paginação
+    const rowsPerPage = 20;
+    const totalPages = Math.ceil(tecnicos.length / rowsPerPage);
+    state.atleTecPage = Math.min(state.atleTecPage || 1, totalPages || 1);
+    const start = (state.atleTecPage - 1) * rowsPerPage;
+    const paginated = tecnicos.slice(start, start + rowsPerPage);
+
+    container.innerHTML = `
+        <table class="data-table" style="text-align:center;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">Técnico</th>
+                    <th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${paginated.map(t => `
+                    <tr onclick="showAtleticoTecnicoDetail('${t.nome.replace(/'/g, "\\'")}', this)" style="cursor:pointer;">
+                        <td style="text-align:left; font-weight:bold; color:var(--primary-color);">${t.nome}</td>
+                        <td>${t.jogos}</td>
+                        <td><span class="win-text">${t.v}</span></td>
+                        <td><span class="draw-text">${t.e}</span></td>
+                        <td><span class="loss-text">${t.d}</span></td>
+                        <td>${t.gm}</td>
+                        <td>${t.gc}</td>
+                        <td style="font-weight:bold;">${t.saldo > 0 ? '+' : ''}${t.saldo}</td>
+                        <td style="font-weight:bold;">${t.aproveitamento}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <div class="pagination" style="margin-top:1rem; display:flex; justify-content:center; gap:0.5rem;">
+            <button class="btn-secondary" ${state.atleTecPage === 1 ? 'disabled' : ''} onclick="state.atleTecPage--; renderEstatisticas();"><i class="fas fa-chevron-left"></i></button>
+            <span style="padding:0.5rem 1rem; background:white; border-radius:4px; border:1px solid #ddd;">Página ${state.atleTecPage} de ${totalPages || 1}</span>
+            <button class="btn-secondary" ${state.atleTecPage >= totalPages ? 'disabled' : ''} onclick="state.atleTecPage++; renderEstatisticas();"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'SG', 'Aprov'])}
+    `;
+
+    // Populate Filters
+    populateFilter('stt-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
+    populateFilter('stt-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+};
+
+const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
+    const existing = document.getElementById(`detail-ate-tec-${tecnicoNome.replace(/\s/g, '-')}`);
+    if (existing) { existing.remove(); return; }
+    
+    // Fecha outros detalhes abertos
+    document.querySelectorAll('.detail-row-tec').forEach(r => r.remove());
+
+    const tecData = getAtleticoTecnicoStats().find(t => t.nome === tecnicoNome);
+    if (!tecData) return;
+
+    // Foto do técnico (Tenta achar no elenco)
+    const player = state.jogadores.find(p => p.nome_guerra === tecnicoNome);
+    const photoUrl = player?.foto || DEFAULT_REF_PHOTO;
+
+    const detailHtml = `
+        <tr class="detail-row-tec" id="detail-ate-tec-${tecnicoNome.replace(/\s/g, '-')}">
+            <td colspan="9" style="padding:1.5rem; background:#fcfcfc;">
+                <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+                    <div style="flex: 0 0 150px;">
+                        <img src="${photoUrl}" style="width:150px; height:150px; border-radius:12px; object-fit:cover; border:3px solid white; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                        <h4 style="margin-top:1rem; text-align:center;">${tecnicoNome}</h4>
+                    </div>
+                    <div style="flex:1; min-width:300px;">
+                        <h4 style="margin-bottom:1rem; color:var(--primary-color);">Desempenho por Campeonato</h4>
+                        <table class="stats-table" style="font-size:0.9rem;">
+                            <thead>
+                                <tr><th style="text-align:left;">Campeonato</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th></tr>
+                            </thead>
+                            <tbody>
+                                ${tecData.campeonatos.sort((a,b) => b.jogos - a.jogos).map(c => `
+                                    <tr>
+                                        <td style="text-align:left;">${c.nome}</td>
+                                        <td>${c.jogos}</td>
+                                        <td><span class="win-text">${c.v}</span></td>
+                                        <td><span class="draw-text">${c.e}</span></td>
+                                        <td><span class="loss-text">${c.d}</span></td>
+                                        <td>${c.gm}</td>
+                                        <td>${c.gc}</td>
+                                        <td>${c.saldo > 0 ? '+' : ''}${c.saldo}</td>
+                                        <td><strong>${c.aproveitamento}%</strong></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
+    row.insertAdjacentHTML('afterend', detailHtml);
 };
 
 const renderStatsColetivas = (container) => {
@@ -2945,8 +3174,17 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArtilheiros));
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
 ['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
-['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
-['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => document.getElementById(id)?.addEventListener('change', renderEstatisticas));
+['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+});
+['stt-filter-temporada', 'stt-filter-campeonato'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+});
+document.getElementById('stt-filter-tecnico')?.addEventListener('input', debounce(() => renderEstatisticas(), 300));
+
+['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+});
 
 document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Árbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
 document.getElementById('export-artilheiros-csv')?.addEventListener('click', () => {
