@@ -3,6 +3,11 @@ const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
 let supabaseClient = null;
 
+// Foto placeholders
+const DEFAULT_PLAYER_PHOTO = 'https://via.placeholder.com/150';
+const DEFAULT_REF_PHOTO = 'file:///C:/Users/stefa/.gemini/antigravity/brain/7be9b8b1-0746-42f0-bad4-4ee41bc8586a/media__1775704256344.png';
+const DEFAULT_CLUB_PHOTO = 'https://via.placeholder.com/100';
+
 const normalizeString = (str) => {
     if (!str) return '';
     return str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
