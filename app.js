@@ -1486,8 +1486,20 @@ window.showJogoDetail = (jogoId, event) => {
 };
 
 const populateFilter = (id, values) => {
-    const s = document.getElementById(id); if(!s) return; const cur = s.value;
-    s.innerHTML = '<option value="">Selecione...</option>' + values.sort().map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
+    const s = document.getElementById(id); 
+    if(!s) return; 
+    
+    const curValue = s.value;
+    const sortedValues = [...new Set(values)].sort();
+    
+    // Comparar se as opções mudaram antes de reconstruir o DOM
+    const currentOptions = Array.from(s.options).map(o => o.value).filter(v => v !== "");
+    const isSame = sortedValues.length === currentOptions.length && sortedValues.every((v, i) => v === currentOptions[i]);
+    
+    if (isSame && s.options.length > 0) return;
+
+    s.innerHTML = '<option value="">Selecione...</option>' + 
+                  sortedValues.map(v => `<option value="${v}" ${v === curValue ? 'selected' : ''}>${v}</option>`).join('');
 };
 
 const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
@@ -2696,7 +2708,7 @@ const renderAtleticoTecnicos = (container) => {
                     <th style="cursor:pointer;" onclick="sortTable(event, 'gc')">GC ${getSortIcon('gc')}</th>
                     <th style="cursor:pointer;" onclick="sortTable(event, 'saldo')">SG ${getSortIcon('saldo')}</th>
                     <th style="cursor:pointer;" onclick="sortTable(event, 'aproveitamento')">% ${getSortIcon('aproveitamento')}</th>
-                    <th style="cursor:pointer; color:#3498db;" onclick="sortTable(event, 'cs')" title="Clean Sheets">CS ${getSortIcon('cs')}</th>
+                    <th style="cursor:pointer; color:var(--primary-color);" onclick="sortTable(event, 'cs')" title="Clean Sheets">CS ${getSortIcon('cs')}</th>
                     <th style="cursor:pointer; color:#e67e22;" onclick="sortTable(event, 'cg')" title="Clean Goals">CG ${getSortIcon('cg')}</th>
                 </tr>
             </thead>
@@ -2712,7 +2724,7 @@ const renderAtleticoTecnicos = (container) => {
                         <td>${t.gc}</td>
                         <td style="font-weight:bold;">${t.saldo > 0 ? '+' : ''}${t.saldo}</td>
                         <td style="font-weight:bold;">${t.aproveitamento}%</td>
-                        <td style="color:#3498db; font-weight:bold;">${t.cs}</td>
+                        <td style="color:var(--primary-color); font-weight:bold;">${t.cs}</td>
                         <td style="color:#e67e22; font-weight:bold;">${t.cg}</td>
                     </tr>
                 `).join('')}
@@ -2776,7 +2788,7 @@ const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
                                         <td style="color:var(--text-main);">${c.gc}</td>
                                         <td style="color:var(--text-main);">${c.saldo > 0 ? '+' : ''}${c.saldo}</td>
                                         <td style="color:var(--text-main);"><strong>${c.aproveitamento}%</strong></td>
-                                        <td style="color:#3498db; font-weight:bold;">${c.cs}</td>
+                                        <td style="color:var(--primary-color); font-weight:bold;">${c.cs}</td>
                                         <td style="color:#e67e22; font-weight:bold;">${c.cg}</td>
                                     </tr>
                                 `).join('')}
@@ -2850,7 +2862,7 @@ const renderStatsColetivas = (container) => {
         const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:#3498db; font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
+        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
 
