@@ -65,6 +65,7 @@ const state = {
     advClubePage: 1,
     advTecPage: 1,
     atleTecPage: 1, // Página para a nova aba de técnicos do Atlético
+    isUpdating: false, // Flag para evitar loops de renderização
 };
 
 // Cache para estatísticas pesadas para evitar travamentos
@@ -1498,8 +1499,13 @@ const populateFilter = (id, values) => {
     
     if (isSame && s.options.length > 0) return;
 
+    // Marcamos como atualização interna para evitar loop de eventos
+    state.isUpdating = true;
     s.innerHTML = '<option value="">Selecione...</option>' + 
                   sortedValues.map(v => `<option value="${v}" ${v === curValue ? 'selected' : ''}>${v}</option>`).join('');
+    
+    // Pequeno timeout para limpar a flag após o ciclo de renderização do DOM
+    setTimeout(() => state.isUpdating = false, 50);
 };
 
 const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
@@ -2772,7 +2778,7 @@ const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
                                 <tr>
                                     <th style="text-align:left;">Campeonato</th>
                                     <th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GC</th><th>SG</th><th>%</th>
-                                    <th style="color:#3498db;">CS</th>
+                                    <th style="color:var(--primary-color);">CS</th>
                                     <th style="color:#e67e22;">CG</th>
                                 </tr>
                             </thead>
@@ -2869,7 +2875,7 @@ const renderStatsColetivas = (container) => {
     container.innerHTML = `
         <table class="data-table" style="text-align:center;">
             <thead>
-                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th title="Clean Sheets">CS</th><th title="Clean Goals">CG</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
+                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th style="color:var(--primary-color);" title="Clean Sheets">CS</th><th style="color:#e67e22;" title="Clean Goals">CG</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
             </thead>
             <tbody>
                 ${list.map(calcRow).join('')}
@@ -2886,7 +2892,7 @@ const renderStatsColetivas = (container) => {
 let goalsMarkedChart = null;
 let goalsConcededChart = null;
 
-const renderGoalDistributionCharts = (filteredJogos) => {
+const renderGoalDistributionCharts = debounce((filteredJogos) => {
     const bins = ["0-15", "16-30", "31-45", "46-60", "61-75", "76-90"];
     const gmData = [0, 0, 0, 0, 0, 0];
     const gsData = [0, 0, 0, 0, 0, 0];
@@ -2949,7 +2955,7 @@ const renderGoalDistributionCharts = (filteredJogos) => {
 
     goalsMarkedChart = createChart('chart-goals-marked', 'Gols Marcados por Minuto', gmData, 'rgba(46, 204, 113, 0.7)', goalsMarkedChart);
     goalsConcededChart = createChart('chart-goals-conceded', 'Gols Sofridos por Minuto', gsData, 'rgba(231, 76, 60, 0.7)', goalsConcededChart);
-};
+}, 300);
 
 const renderStatsIndividuais = (container) => {
     const fTemp = document.getElementById('sti-filter-temporada').value;
@@ -3024,7 +3030,7 @@ const renderStatsIndividuais = (container) => {
                     <th>Vitórias <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
                     <th>Derrotas <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
                     <th>Aprov. <i class="fas fa-sort" style="font-size:0.7rem; opacity:0.5;"></i></th>
-                    <th title="Clean Sheets">CS</th>
+                    <th style="color:var(--primary-color);" title="Clean Sheets">CS</th>
                 </tr>
             </thead>
             <tbody>
@@ -3040,7 +3046,7 @@ const renderStatsIndividuais = (container) => {
                             <td><span class="win-text">${s.v}</span></td>
                             <td><span class="loss-text">${s.d}</span></td>
                             <td>${aprove}%</td>
-                            <td style="color:#3498db; font-weight:bold;">${s.cs > 0 ? s.cs : '-'}</td>
+                            <td style="color:var(--primary-color); font-weight:bold;">${s.cs > 0 ? s.cs : '-'}</td>
                         </tr>
                     `;
                 }).join('')}
@@ -3221,15 +3227,27 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
 ['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
 ['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+    document.getElementById(id)?.addEventListener('change', () => {
+        if (state.isUpdating) return;
+        renderEstatisticas();
+    });
 });
 ['stt-filter-temporada', 'stt-filter-campeonato'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+    document.getElementById(id)?.addEventListener('change', () => {
+        if (state.isUpdating) return;
+        renderEstatisticas();
+    });
 });
-document.getElementById('stt-filter-tecnico')?.addEventListener('input', debounce(() => renderEstatisticas(), 300));
+document.getElementById('stt-filter-tecnico')?.addEventListener('input', debounce(() => {
+    if (state.isUpdating) return;
+    renderEstatisticas();
+}, 300));
 
 ['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', renderEstatisticas);
+    document.getElementById(id)?.addEventListener('change', () => {
+        if (state.isUpdating) return;
+        renderEstatisticas();
+    });
 });
 
 document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Árbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
