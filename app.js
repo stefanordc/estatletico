@@ -1582,6 +1582,12 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
             add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
             drop.appendChild(add); 
         }
+        
+        if (drop.children.length > 0) {
+            selectedIndex = 0;
+            drop.children[0].classList.add('selected');
+        }
+
         drop.style.width = inp.offsetWidth + 'px';
         cont.appendChild(drop);
     });
