@@ -3200,11 +3200,21 @@ const setupPasteHandler = (areaId, inputId) => {
 const setupAutofillHandler = () => {
     const nameInp = document.getElementById('input-nome-completo');
     if(nameInp) nameInp.addEventListener('blur', (e) => {
-        const j = state.jogadores.find(p => p.nome_completo.toLowerCase() === e.target.value.toLowerCase());
-        if (j) {
+        const others = state.jogadores.filter(p => p.nome_completo.toLowerCase() === e.target.value.toLowerCase());
+        if (others.length > 0) {
+            const enriched = { ...others[0] };
+            others.forEach(rec => {
+                ['nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'].forEach(prop => {
+                    if (!enriched[prop] && rec[prop] && rec[prop] !== 'https://via.placeholder.com/40') {
+                        enriched[prop] = rec[prop];
+                    }
+                });
+            });
             ['nome_guerra', 'posicao', 'nacionalidade', 'nascimento', 'numero', 'observacao'].forEach(k => {
                 const inp = document.getElementById(`input-${k.replace('_','-')}`);
-                if(inp) inp.value = j[k];
+                if(inp && enriched[k] !== undefined && enriched[k] !== null && enriched[k] !== '') {
+                    inp.value = enriched[k];
+                }
             });
             // Filling photo as well
             const fotoInp = document.getElementById('foto-input-jogador');
