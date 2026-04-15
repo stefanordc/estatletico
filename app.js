@@ -1964,7 +1964,17 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     });
     const updWinner = () => { const c = parseInt(document.getElementById('game-gols-casa').value)||0, f = parseInt(document.getElementById('game-gols-fora').value)||0; const casa = document.getElementById('game-casa').value, fora = document.getElementById('game-fora').value; const venced = document.getElementById('game-vencedor'); if (c > f) venced.value = casa || 'Casa'; else if (f > c) venced.value = fora || 'Fora'; else venced.value = 'Empate'; };
     ['game-gols-casa', 'game-gols-fora', 'game-casa', 'game-fora'].forEach(id => document.getElementById(id).addEventListener('input', updWinner));
-    const updTicket = () => { const renCk = document.getElementById('game-ren-ni').checked; const pubCk = document.getElementById('game-pub-ni').checked; const label = document.getElementById('game-ticket-label'); if (renCk || pubCk) { label.value = 'N/I'; return; } const r = parseFloat(document.getElementById('game-renda').value) || 0; const p = parseInt(document.getElementById('game-publico').value) || 0; label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; };
+    const updTicket = () => { 
+        const renCk = document.getElementById('game-ren-ni').checked; 
+        const pubCk = document.getElementById('game-pub-ni').checked; 
+        const label = document.getElementById('game-ticket-label'); 
+        if (renCk || pubCk) { label.value = 'N/I'; return; } 
+        const renVal = document.getElementById('game-renda').value;
+        const pubVal = document.getElementById('game-publico').value;
+        const r = parseFloat(String(renVal).replace(/\./g, '').replace(',', '.')) || 0; 
+        const p = parseInt(String(pubVal).replace(/\./g, '')) || 0; 
+        label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; 
+    };
     ['game-renda', 'game-publico', 'game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('input', updTicket));
     ['game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('change', updTicket));
     
@@ -3022,11 +3032,13 @@ const renderStatsPorFase = (container) => {
 };
 
 let chartStatsAprovFase = null;
-let chartStatsGolsFase = null;
+let chartStatsGolsMarcadosFase = null;
+let chartStatsGolsSofridosFase = null;
 
 const renderStatsPorFaseCharts = (data) => {
     if (chartStatsAprovFase) chartStatsAprovFase.destroy();
-    if (chartStatsGolsFase) chartStatsGolsFase.destroy(); // Note: Em index.html são dois gráficos separados para gols
+    if (chartStatsGolsMarcadosFase) chartStatsGolsMarcadosFase.destroy();
+    if (chartStatsGolsSofridosFase) chartStatsGolsSofridosFase.destroy();
 
     const labels = data.map(d => d.nome);
     const aproveData = data.map(d => parseFloat(((d.pontos / (d.jogos * 3)) * 100).toFixed(1)));
@@ -3059,8 +3071,7 @@ const renderStatsPorFaseCharts = (data) => {
     // Gols Marcados
     const ctxGM = document.getElementById('chart-spf-gols-marcados')?.getContext('2d');
     if (ctxGM) {
-        // Como o gráfico agora é GM isolado, podemos usar um novo objeto de gráfico ou reutilizar
-        new Chart(ctxGM, {
+        chartStatsGolsMarcadosFase = new Chart(ctxGM, {
             type: 'bar',
             data: {
                 labels: labels,
@@ -3078,7 +3089,7 @@ const renderStatsPorFaseCharts = (data) => {
     // Gols Sofridos
     const ctxGC = document.getElementById('chart-spf-gols-sofridos')?.getContext('2d');
     if (ctxGC) {
-        new Chart(ctxGC, {
+        chartStatsGolsSofridosFase = new Chart(ctxGC, {
             type: 'bar',
             data: {
                 labels: labels,
