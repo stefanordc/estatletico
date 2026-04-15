@@ -487,9 +487,15 @@ const renderJogadores = () => {
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
 
-        const isFora = item.foraDoElenco;
+        const syncProps = ['foraDoElenco', 'nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'];
         state.jogadores.forEach(j => {
-            if (j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase()) j.foraDoElenco = isFora;
+            if (j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase()) {
+                syncProps.forEach(prop => {
+                    if (item[prop] !== undefined && item[prop] !== '' && item[prop] !== 'https://via.placeholder.com/40') {
+                        j[prop] = item[prop];
+                    }
+                });
+            }
         });
 
         saveData('jogadores', state.jogadores); renderTab('jogadores');
@@ -3148,7 +3154,31 @@ const deleteItem = async (tab, id) => {
         }
     }
 };
-const prepareEdit = (tab, id) => { state.editingId = id; renderTab(tab); const item = state[tab].find(i => i.id === id); const form = document.querySelector(`#form-${tab}`); if(!form) return; Array.from(form.elements).forEach(inp => { if (inp.name && inp.name !== 'foto') { if (inp.type === 'checkbox') inp.checked = item[inp.name] || false; else inp.value = item[inp.name] !== undefined && item[inp.name] !== null ? item[inp.name] : ''; } }); window.scrollTo(0,0); };
+const prepareEdit = (tab, id) => { 
+    state.editingId = id; renderTab(tab); 
+    let item = state[tab].find(i => i.id === id); 
+    if (tab === 'jogadores') {
+        const enriched = { ...item };
+        const others = state.jogadores.filter(j => j.nome_completo.toLowerCase() === item.nome_completo.toLowerCase());
+        others.forEach(rec => {
+            ['nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'].forEach(prop => {
+                if (!enriched[prop] && rec[prop] && rec[prop] !== 'https://via.placeholder.com/40') {
+                    enriched[prop] = rec[prop];
+                }
+            });
+        });
+        item = enriched;
+    }
+    const form = document.querySelector(`#form-${tab}`); 
+    if(!form) return; 
+    Array.from(form.elements).forEach(inp => { 
+        if (inp.name && inp.name !== 'foto') { 
+            if (inp.type === 'checkbox') inp.checked = item[inp.name] || false; 
+            else inp.value = item[inp.name] !== undefined && item[inp.name] !== null ? item[inp.name] : ''; 
+        } 
+    }); 
+    window.scrollTo(0,0); 
+};
 const handleSearch = (tab) => { const search = document.getElementById('search-input'); if(search) search.addEventListener('input', (e) => { const tbody = document.getElementById(`table-body-${tab}`); if(tbody) tbody.innerHTML = renderTableRows(tab, e.target.value); }); };
 const setupPasteHandler = (areaId, inputId) => {
     const area = document.getElementById(areaId); const input = document.getElementById(inputId);
