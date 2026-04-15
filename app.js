@@ -3158,16 +3158,28 @@ const prepareEdit = (tab, id) => {
     state.editingId = id; renderTab(tab); 
     let item = state[tab].find(i => i.id === id); 
     if (tab === 'jogadores') {
-        const enriched = { ...item };
-        const others = state.jogadores.filter(j => j.nome_completo.toLowerCase() === item.nome_completo.toLowerCase());
-        others.forEach(rec => {
-            ['nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'].forEach(prop => {
-                if (!enriched[prop] && rec[prop] && rec[prop] !== 'https://via.placeholder.com/40') {
-                    enriched[prop] = rec[prop];
-                }
+        const nome = item.nome_completo.toLowerCase();
+        const others = state.jogadores.filter(j => j.nome_completo.toLowerCase() === nome);
+
+        // Função auxiliar: melhor valor entre todos os registros do jogador
+        const getBest = (field, defaults = []) => {
+            const nonDefault = others.find(m => {
+                const v = m[field];
+                return v !== undefined && v !== null && v !== '' &&
+                       v !== 'https://via.placeholder.com/40' &&
+                       !defaults.map(d => d.toLowerCase()).includes(String(v).toLowerCase().trim());
             });
-        });
-        item = enriched;
+            return nonDefault ? nonDefault[field] : (item[field] || '');
+        };
+
+        item = {
+            ...item,
+            nacionalidade: getBest('nacionalidade', ['brasil']),
+            foto: getBest('foto', ['https://via.placeholder.com/40']) || item.foto,
+            nome_guerra: getBest('nome_guerra'),
+            nascimento: getBest('nascimento'),
+            observacao: getBest('observacao'),
+        };
     }
     const form = document.querySelector(`#form-${tab}`); 
     if(!form) return; 
@@ -3176,7 +3188,14 @@ const prepareEdit = (tab, id) => {
             if (inp.type === 'checkbox') inp.checked = item[inp.name] || false; 
             else inp.value = item[inp.name] !== undefined && item[inp.name] !== null ? item[inp.name] : ''; 
         } 
-    }); 
+    });
+    // Preenche a foto manualmente pois é um hidden input
+    const fotoInp = form.querySelector('[name="foto"]');
+    const pasteArea = document.getElementById('paste-area-jogador');
+    if (fotoInp && item.foto && item.foto !== 'https://via.placeholder.com/40') {
+        fotoInp.value = item.foto;
+        if (pasteArea) pasteArea.innerHTML = `<img src="${item.foto}" style="max-height:80px;">`;
+    }
     window.scrollTo(0,0); 
 };
 const handleSearch = (tab) => { const search = document.getElementById('search-input'); if(search) search.addEventListener('input', (e) => { const tbody = document.getElementById(`table-body-${tab}`); if(tbody) tbody.innerHTML = renderTableRows(tab, e.target.value); }); };
@@ -3204,39 +3223,58 @@ const setupAutofillHandler = () => {
         const nome = e.target.value.trim().toLowerCase();
         if (!nome) return;
 
-        // Filtra todos os registros com esse nome e pega o mais recente (maior ID)
         const matches = state.jogadores.filter(p => p.nome_completo.trim().toLowerCase() === nome);
         if (matches.length === 0) return;
 
-        // Ordena por ID decrescente — maior ID = cadastrado mais recentemente
-        matches.sort((a, b) => b.id - a.id);
-        const src = matches[0];
-
-        // Preenche os campos simples
-        const fieldMap = {
-            'nome_guerra': 'input-nome-guerra',
-            'posicao': 'input-posicao',
-            'nacionalidade': 'input-nacionalidade',
-            'nascimento': 'input-nascimento',
-            'numero': 'input-numero',
-            'observacao': 'input-observacao'
-        };
-        Object.entries(fieldMap).forEach(([key, elId]) => {
-            const el = document.getElementById(elId);
-            if (el && src[key] !== undefined && src[key] !== null) {
-                el.value = src[key];
-            }
+        // Ordena por ID decrescente — suporta ID numérico ou string
+        matches.sort((a, b) => {
+            const nA = Number(a.id), nB = Number(b.id);
+            if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
+            return String(b.id).localeCompare(String(a.id));
         });
+        const src = matches[0]; // mais recente como base
 
-        // Preenche a foto
+        // Função auxiliar: pega o melhor valor de um campo entre todos os registros
+        // Para um dado campo, prefere valores que não sejam os defaults/vazios
+        const getBestValue = (field, defaults = []) => {
+            const nonDefault = matches.find(m => {
+                const v = m[field];
+                return v !== undefined && v !== null && v !== '' &&
+                       !defaults.map(d => d.toLowerCase()).includes(String(v).toLowerCase().trim());
+            });
+            return nonDefault ? nonDefault[field] : (src[field] || '');
+        };
+
+        // Preenche cada campo com o melhor valor disponível
+        const elNomeGuerra = document.getElementById('input-nome-guerra');
+        if (elNomeGuerra) elNomeGuerra.value = getBestValue('nome_guerra');
+
+        const elPosicao = document.getElementById('input-posicao');
+        if (elPosicao) elPosicao.value = getBestValue('posicao');
+
+        // Nacionalidade: prioriza qualquer valor diferente de 'Brasil' (padrão do form)
+        const elNac = document.getElementById('input-nacionalidade');
+        if (elNac) elNac.value = getBestValue('nacionalidade', ['brasil']);
+
+        const elNascimento = document.getElementById('input-nascimento');
+        if (elNascimento) elNascimento.value = getBestValue('nascimento');
+
+        const elNumero = document.getElementById('input-numero');
+        if (elNumero) elNumero.value = src.numero !== undefined && src.numero !== null ? src.numero : '';
+
+        const elObs = document.getElementById('input-observacao');
+        if (elObs) elObs.value = src.observacao || '';
+
+        // Foto: pega a melhor (não placeholder)
+        const bestFoto = getBestValue('foto', ['https://via.placeholder.com/40']);
         const fotoInp = document.getElementById('foto-input-jogador');
         const pasteArea = document.getElementById('paste-area-jogador');
-        if (fotoInp && src.foto && src.foto !== 'https://via.placeholder.com/40') {
-            fotoInp.value = src.foto;
-            pasteArea.innerHTML = `<img src="${src.foto}" style="max-height:80px;">`;
+        if (fotoInp && bestFoto && bestFoto !== 'https://via.placeholder.com/40') {
+            fotoInp.value = bestFoto;
+            pasteArea.innerHTML = `<img src="${bestFoto}" style="max-height:80px;">`;
         }
 
-        // Preenche checkbox Fora do Elenco
+        // Checkbox Fora do Elenco
         const foraCheck = document.getElementById('input-fora-do-elenco');
         if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
     });
