@@ -486,6 +486,12 @@ const renderJogadores = () => {
         const item = { id: state.editingId || Date.now(), temporada: novaTemporada, nome_completo: novoNomeCompleto, nome_guerra: fd.get('nome_guerra'), posicao: fd.get('posicao'), nacionalidade: fd.get('nacionalidade'), nascimento: novoNascimento, numero: fd.get('numero'), foto: fd.get('foto') || 'https://via.placeholder.com/40', observacao: fd.get('observacao'), foraDoElenco: document.getElementById('input-fora-do-elenco').checked };
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
+
+        const isFora = item.foraDoElenco;
+        state.jogadores.forEach(j => {
+            if (j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase()) j.foraDoElenco = isFora;
+        });
+
         saveData('jogadores', state.jogadores); renderTab('jogadores');
     });
     handleSearch('jogadores');
@@ -3142,7 +3148,7 @@ const deleteItem = async (tab, id) => {
         }
     }
 };
-const prepareEdit = (tab, id) => { state.editingId = id; renderTab(tab); const item = state[tab].find(i => i.id === id); const form = document.querySelector(`#form-${tab}`); if(!form) return; Object.keys(item).forEach(k => { const inp = form.querySelector(`[name="${k}"]`); if (inp && k !== 'foto') inp.value = item[k]; }); window.scrollTo(0,0); };
+const prepareEdit = (tab, id) => { state.editingId = id; renderTab(tab); const item = state[tab].find(i => i.id === id); const form = document.querySelector(`#form-${tab}`); if(!form) return; Array.from(form.elements).forEach(inp => { if (inp.name && inp.name !== 'foto') { if (inp.type === 'checkbox') inp.checked = item[inp.name] || false; else inp.value = item[inp.name] !== undefined && item[inp.name] !== null ? item[inp.name] : ''; } }); window.scrollTo(0,0); };
 const handleSearch = (tab) => { const search = document.getElementById('search-input'); if(search) search.addEventListener('input', (e) => { const tbody = document.getElementById(`table-body-${tab}`); if(tbody) tbody.innerHTML = renderTableRows(tab, e.target.value); }); };
 const setupPasteHandler = (areaId, inputId) => {
     const area = document.getElementById(areaId); const input = document.getElementById(inputId);
