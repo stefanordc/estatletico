@@ -3219,11 +3219,11 @@ const setupAutofillHandler = () => {
             // Filling photo as well
             const fotoInp = document.getElementById('foto-input-jogador');
             const pasteArea = document.getElementById('paste-area-jogador');
-            if(fotoInp && j.foto) {
-                fotoInp.value = j.foto;
-                pasteArea.innerHTML = `<img src="${j.foto}" style="max-height:80px;">`;
+            if(fotoInp && enriched.foto) {
+                fotoInp.value = enriched.foto;
+                pasteArea.innerHTML = `<img src="${enriched.foto}" style="max-height:80px;">`;
             }
-            if(j.foraDoElenco) document.getElementById('input-fora-do-elenco').checked = true;
+            if(enriched.foraDoElenco !== undefined) document.getElementById('input-fora-do-elenco').checked = enriched.foraDoElenco;
         }
     });
 };
