@@ -194,6 +194,21 @@ const formatCurrency = (val) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
 
+const formatPublico = (val) => {
+    if (val === 'N/I' || val === null || val === undefined || val === '') return 'N/I';
+    const num = parseInt(String(val).replace(/\D/g, '')) || 0;
+    return num.toLocaleString('pt-BR');
+};
+
+const formatRenda = (val) => {
+    if (val === 'N/I' || val === null || val === undefined || val === '') return 'N/I';
+    // Se já for string formatada, tenta extrair o número
+    let cleanVal = String(val).replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+    const num = parseFloat(cleanVal);
+    if (isNaN(num)) return 'N/I';
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 const renderTableLegend = (siglas = []) => {
     const definitions = {
         'J': 'Jogos',
@@ -487,7 +502,7 @@ const renderJogadores = () => {
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
 
-        const syncProps = ['foraDoElenco', 'nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'];
+        const syncProps = ['foraDoElenco', 'nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'observacao'];
         state.jogadores.forEach(j => {
             if (j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase()) {
                 syncProps.forEach(prop => {
@@ -1159,11 +1174,11 @@ window.showArbitragemJogos = (arbNome, event) => {
                             <tr>
                                 <td>${j.data.split('-').reverse().join('/')}</td>
                                 <td>${j.campeonato}</td>
-                                <td>${j.casa}</td>
-                                <td><strong>${j.golsCasa} x ${j.golsFora}</strong></td>
-                                <td>${j.fora}</td>
-                                <td>${j.publico === 'N/I' ? 'N/I' : parseInt(j.publico || 0).toLocaleString()}</td>
-                            </tr>
+                                 <td>${j.casa}</td>
+                                 <td><strong>${j.golsCasa} x ${j.golsFora}</strong></td>
+                                 <td>${j.fora}</td>
+                                 <td>${formatPublico(j.publico)}</td>
+                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
@@ -1396,8 +1411,8 @@ const renderJogos = () => {
     }
 
     tableBody.innerHTML = paginated.map(j => {
-        const pub = j.publico === 'N/I' ? 'N/I' : parseInt(j.publico || 0).toLocaleString();
-        const ren = j.renda === 'N/I' ? 'N/I' : formatCurrency(j.renda);
+        const pub = formatPublico(j.publico);
+        const ren = formatRenda(j.renda);
         const tic = (j.publico > 0 && j.renda !== 'N/I') ? formatCurrency(j.renda / j.publico) : 'N/I';
         return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn view-btn" onclick="showJogoDetail(${j.id}, event)" title="Visualizar Detalhes"><i class="fas fa-search"></i></button><button class="action-btn" onclick="editJogo(${j.id})" title="Editar"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})" title="Excluir"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
     }).join('');
@@ -1841,7 +1856,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                                 </div>
                             </div>
                         </div>
-                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="number" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : jogoToEdit?.publico}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="number" name="renda" id="game-renda" step="0.01" required value="${jogoToEdit?.renda === 'N/I' ? '' : jogoToEdit?.renda}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> Portões fechados</label></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="text" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : formatPublico(jogoToEdit?.publico)}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="text" name="renda" id="game-renda" required value="${jogoToEdit?.renda === 'N/I' ? '' : formatRenda(jogoToEdit?.renda)}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> Portões fechados</label></div></div>
                         <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
@@ -2059,6 +2074,30 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             }
             updTicket();
         };
+
+        // Listeners para máscaras de Público e Renda
+        const inP = document.getElementById('game-publico');
+        const inR = document.getElementById('game-renda');
+
+        if (inP) {
+            inP.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val) {
+                    e.target.value = Number(val).toLocaleString('pt-BR');
+                }
+            });
+        }
+
+        if (inR) {
+            inR.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val) {
+                    const num = parseInt(val) / 100;
+                    e.target.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            });
+        }
+
         if(ckPF.checked) {
             document.getElementById('game-publico').disabled = true;
             document.getElementById('game-renda').disabled = true;
@@ -2216,8 +2255,24 @@ const saveNewJogo = () => {
     const fd = new FormData(document.getElementById('multi-step-form'));
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
-    if(document.getElementById('game-pub-ni').checked) jogo.publico = 'N/I';
-    if(document.getElementById('game-ren-ni').checked) jogo.renda = 'N/I';
+    
+    // Processar Público e Renda (remover máscaras)
+    if(document.getElementById('game-pub-ni').checked) {
+        jogo.publico = 'N/I';
+    } else {
+        const pubVal = document.getElementById('game-publico').value;
+        const cleanPub = String(pubVal).replace(/\./g, '');
+        jogo.publico = isNaN(parseInt(cleanPub)) ? 0 : parseInt(cleanPub);
+    }
+
+    if(document.getElementById('game-ren-ni').checked) {
+        jogo.renda = 'N/I';
+    } else {
+        const renVal = document.getElementById('game-renda').value;
+        const cleanRen = String(renVal).replace(/\./g, '').replace(',', '.');
+        jogo.renda = isNaN(parseFloat(cleanRen)) ? 0 : parseFloat(cleanRen);
+    }
+
     jogo.portoesFechados = document.getElementById('game-portoes-fechados')?.checked || false;
     state.isSeasonFixed = document.getElementById('fix-game-season').checked; state.fixedSeason = jogo.temporada;
     state.isCampeonatoFixed = document.getElementById('fix-game-camp').checked; state.fixedCampeonato = jogo.campeonato;
@@ -2565,10 +2620,12 @@ const switchStatsTab = (tab) => {
     document.getElementById('btn-stats-coletivas').classList.toggle('active', tab === 'coletivas');
     document.getElementById('btn-stats-individuais').classList.toggle('active', tab === 'individuais');
     document.getElementById('btn-stats-tecnicos').classList.toggle('active', tab === 'tecnicos');
+    document.getElementById('btn-stats-por-fase').classList.toggle('active', tab === 'por-fase');
     
     document.getElementById('stats-filters-coletivas').classList.toggle('hidden', tab !== 'coletivas');
     document.getElementById('stats-filters-individuais').classList.toggle('hidden', tab !== 'individuais');
     document.getElementById('stats-filters-tecnicos').classList.toggle('hidden', tab !== 'tecnicos');
+    document.getElementById('stats-filters-por-fase').classList.toggle('hidden', tab !== 'por-fase');
     
     state.currentStatsTab = tab;
     
@@ -2589,6 +2646,8 @@ const renderEstatisticas = () => {
         renderStatsIndividuais(container);
     } else if (tab === 'tecnicos') {
         renderAtleticoTecnicos(container);
+    } else if (tab === 'por-fase') {
+        renderStatsPorFase(container);
     }
 };
 
@@ -2826,6 +2885,215 @@ const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
     row.insertAdjacentHTML('afterend', detailHtml);
 };
 
+const renderStatsPorFase = (container) => {
+    const fTemp = document.getElementById('spf-filter-temporada').value;
+    const fCamp = document.getElementById('spf-filter-campeonato').value;
+    const fAdv = document.getElementById('spf-filter-adversario').value;
+    const fRodDe = parseInt(document.getElementById('spf-filter-rodada-de').value) || 0;
+    const fRodAte = parseInt(document.getElementById('spf-filter-rodada-ate').value) || 999;
+
+    const filteredJogos = state.jogos.filter(j => {
+        if (fTemp && j.temporada !== fTemp) return false;
+        if (fCamp && j.campeonato !== fCamp) return false;
+        if (fAdv && (j.casa !== fAdv && j.fora !== fAdv)) return false;
+        
+        // Tentativa de extrair o número da rodada (ex: "1ª rodada" -> 1)
+        const rodNum = parseInt(j.rodada?.replace(/\D/g, '')) || 0;
+        if (fRodDe > 0 && rodNum < fRodDe) return false;
+        if (fRodAte < 999 && rodNum > fRodAte) return false;
+        
+        return true;
+    });
+
+    const stats = {};
+    filteredJogos.forEach(j => {
+        const fase = j.rodada || 'Não Informada';
+        if (!stats[fase]) {
+            stats[fase] = { nome: fase, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, cs: 0, cg: 0, order: parseInt(fase.replace(/\D/g, '')) || 999 };
+        }
+        
+        const s = stats[fase];
+        s.jogos++;
+        
+        const isCasa = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+        const galoGols = isCasa ? parseInt(j.golsCasa) : parseInt(j.golsFora);
+        const advGols = isCasa ? parseInt(j.golsFora) : parseInt(j.golsCasa);
+        
+        s.gp += galoGols;
+        s.gc += advGols;
+        
+        if (galoGols > advGols) { s.v++; s.pontos += 3; }
+        else if (galoGols === advGols) { s.e++; s.pontos += 1; }
+        else s.d++;
+
+        if (advGols === 0) s.cs++;
+        if (galoGols === 0) s.cg++;
+    });
+
+    // Populando filtros caso estejam vazios ou mudados
+    populateFilter('spf-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
+    populateFilter('spf-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+    populateFilter('spf-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
+
+    // Vincular eventos se necessário (apenas uma vez)
+    ['spf-filter-temporada', 'spf-filter-campeonato', 'spf-filter-adversario', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.bound) {
+            el.addEventListener('change', () => renderStatsPorFase(container));
+            if (el.tagName === 'INPUT') el.addEventListener('input', () => renderStatsPorFase(container));
+            el.dataset.bound = 'true';
+        }
+    });
+
+    let list = Object.values(stats);
+    
+    // Ordenação padrão por número da rodada se não houver ordenação ativa
+    if (!state.sortConfig.column || state.sortConfig.tableId !== 'table-stats-fase') {
+        list.sort((a, b) => a.order - b.order);
+    } else {
+        list = sortInternal(list, 'table-stats-fase');
+    }
+
+    const total = list.reduce((acc, c) => {
+        acc.pontos += c.pontos; acc.jogos += c.jogos; acc.v += c.v; acc.e += c.e; acc.d += c.d; acc.gp += c.gp; acc.gc += c.gc;
+        acc.cs += c.cs; acc.cg += c.cg;
+        return acc;
+    }, { nome: 'TOTAL', pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, cs: 0, cg: 0 });
+
+    const getSortIcon = (col) => {
+        if (state.sortConfig.tableId === 'table-stats-fase' && state.sortConfig.column === col) {
+            return state.sortConfig.direction === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+        }
+        return '<i class="fas fa-sort" style="opacity:0.3;"></i>';
+    };
+
+    const calcRow = (s, isTotal = false) => {
+        const sg = s.gp - s.gc;
+        const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
+        const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
+        const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
+        const style = isTotal ? 'style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;"' : '';
+        
+        return `<tr ${style}>
+            <td style="text-align:left;"><strong>${s.nome}</strong></td>
+            <td>${s.jogos}</td>
+            <td><span class="win-text">${s.v}</span></td>
+            <td><span class="draw-text">${s.e}</span></td>
+            <td><span class="loss-text">${s.d}</span></td>
+            <td>${s.gp}</td>
+            <td>${s.gc}</td>
+            <td style="font-weight:bold;">${sg > 0 ? '+' : ''}${sg}</td>
+            <td><strong>${aprove}%</strong></td>
+            <td>${mgm}</td>
+            <td>${mgs}</td>
+            <td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td>
+            <td style="color:#e67e22; font-weight:bold;">${s.cg}</td>
+        </tr>`;
+    };
+
+    container.innerHTML = `
+        <table class="data-table" id="table-stats-fase" style="text-align:center;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; cursor:pointer;" onclick="sortTable(event, 'nome')">Fase / Rodada ${getSortIcon('nome')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'jogos')">J ${getSortIcon('jogos')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'v')">V ${getSortIcon('v')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'e')">E ${getSortIcon('e')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'd')">D ${getSortIcon('d')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gp')">GP ${getSortIcon('gp')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gc')">GC ${getSortIcon('gc')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'sg')">SG ${getSortIcon('sg')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'aproveitamento')">% ${getSortIcon('aproveitamento')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'mgm')">MGm ${getSortIcon('mgm')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'mgs')">MGs ${getSortIcon('mgs')}</th>
+                    <th style="cursor:pointer; color:var(--primary-color);" onclick="sortTable(event, 'cs')" title="Clean Sheets">CS ${getSortIcon('cs')}</th>
+                    <th style="cursor:pointer; color:#e67e22;" onclick="sortTable(event, 'cg')" title="Clean Goals">CG ${getSortIcon('cg')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${list.map(s => calcRow(s)).join('')}
+                ${list.length > 0 ? calcRow(total, true) : '<tr><td colspan="13">Nenhum dado encontrado</td></tr>'}
+            </tbody>
+        </table>
+        ${renderTableLegend(['J', 'V', 'E', 'D', 'GP', 'GC', 'SG', '%', 'MGm', 'MGs', 'CS', 'CG'])}
+    `;
+
+    renderStatsPorFaseCharts(list);
+};
+
+let chartStatsAprovFase = null;
+let chartStatsGolsFase = null;
+
+const renderStatsPorFaseCharts = (data) => {
+    if (chartStatsAprovFase) chartStatsAprovFase.destroy();
+    if (chartStatsGolsFase) chartStatsGolsFase.destroy(); // Note: Em index.html são dois gráficos separados para gols
+
+    const labels = data.map(d => d.nome);
+    const aproveData = data.map(d => parseFloat(((d.pontos / (d.jogos * 3)) * 100).toFixed(1)));
+    const gpData = data.map(d => d.gp);
+    const gcData = data.map(d => d.gc);
+
+    const ctxAprov = document.getElementById('chart-spf-aproveitamento')?.getContext('2d');
+    if (ctxAprov) {
+        chartStatsAprovFase = new Chart(ctxAprov, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Aproveitamento (%)',
+                    data: aproveData,
+                    backgroundColor: 'rgba(212, 175, 55, 0.7)',
+                    borderColor: 'rgba(212, 175, 55, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100 } }
+            }
+        });
+    }
+
+    // Gols Marcados
+    const ctxGM = document.getElementById('chart-spf-gols-marcados')?.getContext('2d');
+    if (ctxGM) {
+        // Como o gráfico agora é GM isolado, podemos usar um novo objeto de gráfico ou reutilizar
+        new Chart(ctxGM, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Gols Marcados',
+                    data: gpData,
+                    backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+
+    // Gols Sofridos
+    const ctxGC = document.getElementById('chart-spf-gols-sofridos')?.getContext('2d');
+    if (ctxGC) {
+        new Chart(ctxGC, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Gols Sofridos',
+                    data: gcData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+};
+
 const renderStatsColetivas = (container) => {
     const fTemp = document.getElementById('stc-filter-temporada').value;
     const fCamp = document.getElementById('stc-filter-campeonato').value;
@@ -2839,6 +3107,15 @@ const renderStatsColetivas = (container) => {
         if (fTec && j.tecnicoGalo !== fTec) return false;
         if (fTipo && comp?.tipo !== fTipo) return false;
         return true;
+    });
+
+    // Bind listeners (apenas uma vez)
+    ['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.bound) {
+            el.addEventListener('change', () => renderStatsColetivas(container));
+            el.dataset.bound = 'true';
+        }
     });
 
     // Populate Filters
@@ -2873,31 +3150,70 @@ const renderStatsColetivas = (container) => {
         (j.cartoesAdv || []).forEach(c => { s.yellowAdv += parseInt(c.amarelo || 0); s.redAdv += parseInt(c.red || 0); });
     });
 
-    const list = Object.values(stats);
+    for (let jId in stats) {
+        const s = stats[jId];
+        s.aproveitamento = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
+    }
+
+    let list = Object.values(stats);
+    
+    // Aplicar Ordenação
+    if (state.sortConfig.tableId === 'table-stats-coletivas') {
+        list = sortInternal(list, 'table-stats-coletivas');
+    } else {
+        list.sort((a,b) => b.pontos - a.pontos || b.gp - a.gp);
+    }
+
+    const getSortIcon = (col) => {
+        if (state.sortConfig.tableId === 'table-stats-coletivas' && state.sortConfig.column === col) {
+            return state.sortConfig.direction === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+        }
+        return '<i class="fas fa-sort" style="opacity:0.3;"></i>';
+    };
+
     const total = list.reduce((acc, c) => {
         acc.pontos += c.pontos; acc.jogos += c.jogos; acc.v += c.v; acc.e += c.e; acc.d += c.d; acc.gp += c.gp; acc.gc += c.gc;
         acc.yellowAtl += c.yellowAtl; acc.redAtl += c.redAtl; acc.yellowAdv += c.yellowAdv; acc.redAdv += c.redAdv;
         acc.cs += c.cs; acc.cg += c.cg;
         return acc;
     }, { nome: 'TOTAL', pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0, cs: 0, cg: 0 });
+    total.aproveitamento = total.jogos > 0 ? ((total.pontos / (total.jogos * 3)) * 100).toFixed(2) : "0.00";
 
-    const calcRow = (s) => {
+    const calcRow = (s, isTotal = false) => {
         const sg = s.gp - s.gc;
-        const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        return `<tr><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${aprove}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
+        const style = isTotal ? 'style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;"' : '';
+        return `<tr ${style}><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${s.aproveitamento}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
-
     container.innerHTML = `
-        <table class="data-table" style="text-align:center;">
+        <table class="data-table" id="table-stats-coletivas" style="text-align:center;">
             <thead>
-                <tr><th style="text-align:left;">Campeonato</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th><th>%</th><th>MGm</th><th>MGs</th><th style="color:var(--primary-color);" title="Clean Sheets">CS</th><th style="color:#e67e22;" title="Clean Goals">CG</th><th title="Amarelos Galo">CA(G)</th><th title="Vermelhos Galo">CV(G)</th><th title="Amarelos Adv">CA(A)</th><th title="Vermelhos Adv">CV(A)</th></tr>
+                <tr>
+                    <th style="text-align:left; cursor:pointer;" onclick="sortTable(event, 'nome')">Campeonato ${getSortIcon('nome')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'pontos')">Pts ${getSortIcon('pontos')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'jogos')">J ${getSortIcon('jogos')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'v')">V ${getSortIcon('v')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'e')">E ${getSortIcon('e')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'd')">D ${getSortIcon('d')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gp')">GP ${getSortIcon('gp')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'gc')">GC ${getSortIcon('gc')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'sg')">SG ${getSortIcon('sg')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'aproveitamento')">% ${getSortIcon('aproveitamento')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'mgm')">MGm ${getSortIcon('mgm')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'mgs')">MGs ${getSortIcon('mgs')}</th>
+                    <th style="cursor:pointer; color:var(--primary-color);" onclick="sortTable(event, 'cs')" title="Clean Sheets">CS ${getSortIcon('cs')}</th>
+                    <th style="cursor:pointer; color:#e67e22;" onclick="sortTable(event, 'cg')" title="Clean Goals">CG ${getSortIcon('cg')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'yellowAtl')" title="Amarelos Galo">CA(G) ${getSortIcon('yellowAtl')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'redAtl')" title="Vermelhos Galo">CV(G) ${getSortIcon('redAtl')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'yellowAdv')" title="Amarelos Adv">CA(A) ${getSortIcon('yellowAdv')}</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'redAdv')" title="Vermelhos Adv">CV(A) ${getSortIcon('redAdv')}</th>
+                </tr>
             </thead>
             <tbody>
-                ${list.map(calcRow).join('')}
-                <tr style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;">${calcRow(total)}</tr>
+                ${list.map(s => calcRow(s)).join('')}
+                ${list.length > 0 ? calcRow(total, true) : '<tr><td colspan="18">Nenhum dado filtrado</td></tr>'}
             </tbody>
         </table>
         ${renderTableLegend(['Pts', 'J', 'V', 'E', 'D', 'GP', 'GC', 'SG', 'MGm', 'MGs', 'CS', 'CG', 'CA(G)', 'CV(G)', 'CA(A)', 'CV(A)'])}
@@ -3175,7 +3491,6 @@ const prepareEdit = (tab, id) => {
         item = {
             ...item,
             nacionalidade: getBest('nacionalidade', ['brasil']),
-            foto: getBest('foto', ['https://via.placeholder.com/40']) || item.foto,
             nome_guerra: getBest('nome_guerra'),
             nascimento: getBest('nascimento'),
             observacao: getBest('observacao'),
@@ -3267,8 +3582,8 @@ const setupAutofillHandler = () => {
         const elObs = document.getElementById('input-observacao');
         if (elObs) elObs.value = src.observacao || '';
 
-        // Foto: pega a melhor (não placeholder)
-        const bestFoto = getBestValue('foto', ['https://via.placeholder.com/40']);
+        // Foto: Usa a do registro mais recente como sugestão inicial se não tiver foto atual
+        const bestFoto = src.foto;
         const fotoInp = document.getElementById('foto-input-jogador');
         const pasteArea = document.getElementById('paste-area-jogador');
         if (fotoInp && bestFoto && bestFoto !== 'https://via.placeholder.com/40') {
@@ -4297,6 +4612,8 @@ function sortTable(event, column, type) {
     else if (tableId === 'arbitragem-table') renderArbitragem();
     else if (tableId === 'table-tecnicos-adv') renderTecnicoStats();
     else if (tableId === 'table-atletico-tecnicos') renderAtleticoTecnicos(document.getElementById('stats-content-container'));
+    else if (tableId === 'table-stats-fase') renderStatsPorFase(document.getElementById('stats-content-container'));
+    else if (tableId === 'table-stats-coletivas') renderStatsColetivas(document.getElementById('stats-content-container'));
 };
 
 
