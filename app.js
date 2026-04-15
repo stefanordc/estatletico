@@ -3199,32 +3199,46 @@ const setupPasteHandler = (areaId, inputId) => {
 };
 const setupAutofillHandler = () => {
     const nameInp = document.getElementById('input-nome-completo');
-    if(nameInp) nameInp.addEventListener('blur', (e) => {
-        const others = state.jogadores.filter(p => p.nome_completo.toLowerCase() === e.target.value.toLowerCase());
-        if (others.length > 0) {
-            const enriched = { ...others[0] };
-            others.forEach(rec => {
-                ['nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'foto', 'observacao'].forEach(prop => {
-                    if (!enriched[prop] && rec[prop] && rec[prop] !== 'https://via.placeholder.com/40') {
-                        enriched[prop] = rec[prop];
-                    }
-                });
-            });
-            ['nome_guerra', 'posicao', 'nacionalidade', 'nascimento', 'numero', 'observacao'].forEach(k => {
-                const inp = document.getElementById(`input-${k.replace('_','-')}`);
-                if(inp && enriched[k] !== undefined && enriched[k] !== null && enriched[k] !== '') {
-                    inp.value = enriched[k];
-                }
-            });
-            // Filling photo as well
-            const fotoInp = document.getElementById('foto-input-jogador');
-            const pasteArea = document.getElementById('paste-area-jogador');
-            if(fotoInp && enriched.foto) {
-                fotoInp.value = enriched.foto;
-                pasteArea.innerHTML = `<img src="${enriched.foto}" style="max-height:80px;">`;
+    if (!nameInp) return;
+    nameInp.addEventListener('blur', (e) => {
+        const nome = e.target.value.trim().toLowerCase();
+        if (!nome) return;
+
+        // Filtra todos os registros com esse nome e pega o mais recente (maior ID)
+        const matches = state.jogadores.filter(p => p.nome_completo.trim().toLowerCase() === nome);
+        if (matches.length === 0) return;
+
+        // Ordena por ID decrescente — maior ID = cadastrado mais recentemente
+        matches.sort((a, b) => b.id - a.id);
+        const src = matches[0];
+
+        // Preenche os campos simples
+        const fieldMap = {
+            'nome_guerra': 'input-nome-guerra',
+            'posicao': 'input-posicao',
+            'nacionalidade': 'input-nacionalidade',
+            'nascimento': 'input-nascimento',
+            'numero': 'input-numero',
+            'observacao': 'input-observacao'
+        };
+        Object.entries(fieldMap).forEach(([key, elId]) => {
+            const el = document.getElementById(elId);
+            if (el && src[key] !== undefined && src[key] !== null) {
+                el.value = src[key];
             }
-            if(enriched.foraDoElenco !== undefined) document.getElementById('input-fora-do-elenco').checked = enriched.foraDoElenco;
+        });
+
+        // Preenche a foto
+        const fotoInp = document.getElementById('foto-input-jogador');
+        const pasteArea = document.getElementById('paste-area-jogador');
+        if (fotoInp && src.foto && src.foto !== 'https://via.placeholder.com/40') {
+            fotoInp.value = src.foto;
+            pasteArea.innerHTML = `<img src="${src.foto}" style="max-height:80px;">`;
         }
+
+        // Preenche checkbox Fora do Elenco
+        const foraCheck = document.getElementById('input-fora-do-elenco');
+        if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
     });
 };
 
