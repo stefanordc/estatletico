@@ -2107,7 +2107,7 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value)); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico'); 
             
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
@@ -2172,7 +2172,7 @@ const addLineupRow = (team, data = null) => {
         const id = 'lq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value)); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico'); 
             
             // Vertical Tab Navigation Logic for all inputs in the row
             const inputs = row.querySelectorAll('input, select');
@@ -3216,14 +3216,16 @@ const setupPasteHandler = (areaId, inputId) => {
         }
     });
 };
+const normalizeStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 const setupAutofillHandler = () => {
     const nameInp = document.getElementById('input-nome-completo');
     if (!nameInp) return;
     nameInp.addEventListener('blur', (e) => {
-        const nome = e.target.value.trim().toLowerCase();
+        const nome = normalizeStr(e.target.value);
         if (!nome) return;
 
-        const matches = state.jogadores.filter(p => p.nome_completo.trim().toLowerCase() === nome);
+        // Compara sem acentos para suportar digitação de "Matias" == "Matías"
+        const matches = state.jogadores.filter(p => normalizeStr(p.nome_completo) === nome);
         if (matches.length === 0) return;
 
         // Ordena por ID decrescente — suporta ID numérico ou string
