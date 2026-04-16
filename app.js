@@ -584,7 +584,7 @@ const renderElenco = () => {
     populateFilter('elenco-filter-nome', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
     populateFilter('elenco-filter-nacionalidade', [...new Set(state.jogadores.map(j => j.nacionalidade))]);
 
-    grid.innerHTML = filtered.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum jogador encontrado para os filtros selecionados.</div>' : 
+    grid.innerHTML = filtered.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;border-radius:8px;" class="detail-section-bg">Nenhum jogador encontrado para os filtros selecionados.</div>' : 
         filtered.map(j => {
             let photoUrl = j.foto && j.foto.trim() !== '' ? j.foto : null;
             if (!photoUrl) {
@@ -709,8 +709,8 @@ const showPlayerDetail = (playerId, event) => {
     }).join('');
 
     let seasonTableFooter = isTecnico
-        ? `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.wins}</td><td>${total.draws}</td><td>${total.losses}</td><td>${total.goals}</td><td>${total.gs}</td><td>${total.aprov}</td></tr>`
-        : `<tr style="font-weight:700; background:#f9f9f9;"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularCount}</td><td>${total.subOutCount}</td><td>${total.enteredCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td><td style="color:#3498db; font-weight:bold;">${total.cs}</td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}</td><td>${total.yellow}</td><td>${total.red}</td></tr>`;
+        ? `<tr class="table-total-row"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.wins}</td><td>${total.draws}</td><td>${total.losses}</td><td>${total.goals}</td><td>${total.gs}</td><td>${total.aprov}</td></tr>`
+        : `<tr class="table-total-row"><td>TOTAL</td><td>${total.gamesCount}</td><td>${total.titularCount}</td><td>${total.subOutCount}</td><td>${total.enteredCount}</td><td>${total.goals}</td>${isGoalie ? `<td><strong>${total.gs}</strong></td><td style="color:#3498db; font-weight:bold;">${total.cs}</td>` : ''}<td><span class="win-text">${total.wins}</span></td><td><span class="draw-text">${total.draws}</span></td><td><span class="loss-text">${total.losses}</span></td><td>${total.aprov}</td><td>${total.yellow}</td><td>${total.red}</td></tr>`;
 
     // Analytics by Coach for players
     let tecTableHtml = '';
@@ -726,7 +726,7 @@ const showPlayerDetail = (playerId, event) => {
             <div style="margin-top: 2rem;">
                 <h4 style="margin-bottom:1rem; color:var(--primary-color);">Estatísticas por Técnico</h4>
                 
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#fcfcfc; border-radius:8px; border:1px solid #eee;">
+                <div class="detail-section-bg" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
                     <div style="font-size:0.85rem;"><i class="fas fa-shield-halved" style="color:#333;"></i> <strong>Mais titular com:</strong><br>${topTitular.titular > 0 ? topTitular.nome : '-'} (${topTitular.titular}x)</div>
                     <div style="font-size:0.85rem;"><i class="fas fa-right-from-bracket" style="color:#e67e22;"></i> <strong>Mais substituído por:</strong><br>${topSub.subOut > 0 ? topSub.nome : '-'} (${topSub.subOut}x)</div>
                     <div style="font-size:0.85rem;"><i class="fas fa-right-to-bracket" style="color:#27ae60;"></i> <strong>Mais utilizado reserva:</strong><br>${topEntrou.entered > 0 ? topEntrou.nome : '-'} (${topEntrou.entered}x)</div>
@@ -865,14 +865,14 @@ const showArtilheiroDetail = (playerName, event) => {
                 <button class="btn-icon" onclick="document.getElementById('artilheiro-detail-container').classList.add('hidden')"><i class="fas fa-times"></i></button>
             </div>
             <div class="form-grid" style="gap:2rem;">
-                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                     <div class="stats-section-title">Por Campeonato</div>
                     <table class="stats-table">
                         <thead><tr><th>Campeonato</th><th>Jogos</th><th>Gols</th></tr></thead>
                         <tbody>${Object.values(campStats).sort((a,b)=>b.goals-a.goals).map(c => `<tr><td>${c.nome}</td><td>${c.games}</td><td><strong>${c.goals}</strong></td></tr>`).join('')}</tbody>
                     </table>
                 </div>
-                <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                     <div class="stats-section-title">Contra Adversários</div>
                     <table class="stats-table">
                         <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
@@ -974,28 +974,28 @@ const toggleCartoesDetail = (playerName, row) => {
 
     const detailHtml = `
         <tr class="detail-row">
-            <td colspan="5" style="padding: 1.5rem; background: #fcfcfc;">
+            <td colspan="5" style="padding: 1.5rem;" class="table-total-row">
                 <div class="detail-inline-container" style="display:block; margin:0; border:none; box-shadow:none; background:transparent;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
                         <h3 style="margin:0; font-size:1.1rem; color:var(--primary-color);">Detalhamento de Cartões: ${playerName}</h3>
                         <button class="btn-icon" onclick="this.closest('.detail-row').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                        <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                             <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Campeonato</div>
                             <table class="stats-table" style="font-size:0.85rem;">
                                 <thead><tr><th>Campeonato</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
                                 <tbody>${Object.values(byCamp).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
                             </table>
                         </div>
-                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                        <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                             <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Adversário</div>
                             <table class="stats-table" style="font-size:0.85rem;">
                                 <thead><tr><th>Adversário</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
                                 <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
                             </table>
                         </div>
-                        <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+                        <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                             <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Árbitro</div>
                             <table class="stats-table" style="font-size:0.85rem;">
                                 <thead><tr><th>Árbitro</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
@@ -1248,7 +1248,7 @@ const renderEquipeArbitragem = () => {
 
     const cards = Object.values(profissionais).sort((a,b) => b.jogos.length - a.jogos.length);
     
-    grid.innerHTML = cards.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;background:white;border-radius:8px;">Nenhum profissional encontrado.</div>' : 
+    grid.innerHTML = cards.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;border-radius:8px;" class="detail-section-bg">Nenhum profissional encontrado.</div>' : 
         cards.map(c => {
             let primaryRole = 'Assistente';
             if (c.roles['Árbitro'] >= c.roles['Assistente'] && c.roles['Árbitro'] >= c.roles['VAR']) primaryRole = 'Árbitro';
@@ -1325,7 +1325,7 @@ window.showEquipeArbitragemDetail = (name, event) => {
         </div>
 
         <div class="form-grid" style="gap:2rem;">
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                 <div class="stats-section-title">Por Temporada</div>
                 <table class="stats-table" style="text-align:center;">
                     <thead><tr><th style="padding-left:1rem;">Temporada</th><th>Jogos</th><th>V</th><th>E</th><th>D</th><th>% Aprov</th></tr></thead>
@@ -1333,7 +1333,7 @@ window.showEquipeArbitragemDetail = (name, event) => {
                 </table>
             </div>
             
-            <div class="stats-section" style="margin:0; box-shadow:none; border:1px solid #eee;">
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
                 <div class="stats-section-title">Todos os Jogos</div>
                 <div style="max-height: 250px; overflow-y: auto;">
                     <table class="stats-table">
@@ -1430,14 +1430,14 @@ window.showJogoDetail = (jogoId, event) => {
     const detailHtml = `
         <tr id="detail-jogo-${jogoId}" class="tr-detail-row">
             <td colspan="11">
-                <div class="tr-detail-container" style="background:#f9f9f9; border: 1px solid #eee; border-radius: 8px; margin: 10px 0; animation: slideDown 0.3s ease-out;">
+                <div class="tr-detail-container detail-section-bg" style="margin: 10px 0; animation: slideDown 0.3s ease-out;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid #ddd;">
                         <h3 style="margin:0; color:var(--primary-color);">Ficha Técnica do Jogo</h3>
                         <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     
                     <div class="form-grid" style="gap:1.5rem;">
-                        <div class="stats-section" style="margin:0; background:white;">
+                        <div class="stats-section detail-section-bg" style="margin:0;">
                             <div class="stats-section-title">Informações Gerais</div>
                             <div style="padding:1rem;">
                                 <p><strong>Data:</strong> ${j.data.split('-').reverse().join('/')}</p>
@@ -1449,7 +1449,7 @@ window.showJogoDetail = (jogoId, event) => {
                             </div>
                         </div>
                         
-                        <div class="stats-section" style="margin:0; background:white;">
+                        <div class="stats-section detail-section-bg" style="margin:0;">
                             <div class="stats-section-title">Financeiro e Arbitragem</div>
                             <div style="padding:1rem;">
                                 <p><strong>Público:</strong> ${j.publico === 'N/I' ? 'Não Identificado' : parseInt(j.publico).toLocaleString()}</p>
@@ -1464,7 +1464,7 @@ window.showJogoDetail = (jogoId, event) => {
                         </div>
                     </div>
 
-                    <div class="stats-section" style="margin-top:1.5rem; background:white;">
+                    <div class="stats-section detail-section-bg" style="margin-top:1.5rem;">
                         <div class="stats-section-title">Escalação do Atlético</div>
                         <div style="overflow-x:auto;">
                             <table class="stats-table" style="font-size:0.85rem;">
@@ -1492,7 +1492,7 @@ window.showJogoDetail = (jogoId, event) => {
                                         </tr>
                                     `).join('')}
                                     ${(j.gcFavorList || []).length > 0 ? `
-                                        <tr style="background:#f1f8e9;">
+                                        <tr class="highlight-success-bg">
                                             <td><strong>Gol Contra (Favor)</strong></td>
                                             <td>-</td>
                                             <td style="color:#27ae60; font-weight:bold;">${j.gcFavorList.length}</td>

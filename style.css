@@ -15,6 +15,7 @@
     --border-radius: 12px;
     --transition: all 0.3s ease;
     --success-color: #2ecc71;
+    --bg-highlight: #f9f9f9;
 }
 
 [data-theme="dark"] {
@@ -26,6 +27,7 @@
     --border-color: #333333;
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     --secondary-color: #000000;
+    --bg-highlight: #1c1c1c;
 }
 
 [data-theme="dark"] .tabs-container {
@@ -647,6 +649,24 @@ td.actions .action-btn {
     border: 1px solid #ddd;
     border-radius: 4px;
     width: 100%;
+}
+
+/* Novos estilos para correção de tema escuro */
+.table-total-row {
+    background-color: var(--bg-highlight) !important;
+}
+
+.detail-section-bg {
+    background-color: var(--bg-highlight);
+    border: 1px solid var(--border-color);
+}
+
+.highlight-success-bg {
+    background-color: rgba(46, 204, 113, 0.1) !important;
+}
+
+[data-theme="dark"] .highlight-success-bg {
+    background-color: rgba(46, 204, 113, 0.2) !important;
 }
 
 .stats-table .col-mini { width: 50px; }
