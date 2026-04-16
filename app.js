@@ -1074,11 +1074,19 @@ const renderArbitragem = () => {
             foto: arb.foto,
             nome: arb.nome,
             jogos: arbGames.length,
+            vitorias: 0,
+            derrotas: 0,
             amarelosAtl: 0, vermelhosAtl: 0,
             amarelosAdv: 0, vermelhosAdv: 0
         };
 
         arbGames.forEach(j => {
+            const isCasa = j.casa === 'Atlético';
+            const gGalo = parseInt(isCasa ? j.golsCasa : j.golsFora);
+            const gAdv = parseInt(isCasa ? j.golsFora : j.golsCasa);
+            if (gGalo > gAdv) res.vitorias++;
+            else if (gGalo < gAdv) res.derrotas++;
+
             (j.cartoesGalo || []).forEach(c => { res.amarelosAtl += parseInt(c.amarelo || 0); res.vermelhosAtl += parseInt(c.red || 0); });
             (j.cartoesAdv || []).forEach(c => { res.amarelosAdv += parseInt(c.amarelo || 0); res.vermelhosAdv += parseInt(c.red || 0); });
         });
@@ -1118,12 +1126,14 @@ const renderArbitragem = () => {
 
     const roleLabel = state.arbTab === 'arbitro' ? 'Árbitro' : (state.arbTab === 'assistente' ? 'Assistente' : 'VAR');
 
-    tbody.innerHTML = sortedStats.length === 0 ? `<tr><td colspan="16" style="text-align:center;">Nenhum ${roleLabel.toLowerCase()} encontrado com estes filtros</td></tr>` : 
+    tbody.innerHTML = sortedStats.length === 0 ? `<tr><td colspan="18" style="text-align:center;">Nenhum ${roleLabel.toLowerCase()} encontrado com estes filtros</td></tr>` : 
         sortedStats.map(s => `
             <tr onclick="showArbitragemJogos('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos de ${s.nome} como ${roleLabel}">
                 <td><img src="${s.foto}" class="mini-foto" style="width:30px;height:30px;object-fit:cover;border-radius:50%;"></td>
-                                <td><strong>${s.nome}</strong></td>
-                                <td>${s.jogos}</td>
+                <td><strong>${s.nome}</strong></td>
+                <td>${s.jogos}</td>
+                <td style="color:#27ae60; font-weight:bold;">${s.vitorias}</td>
+                <td style="color:#e74c3c; font-weight:bold;">${s.derrotas}</td>
                                 <td style="background:rgba(243, 156, 18, 0.1); font-weight:bold;">${s.amarelosAtl}</td>
                                 <td style="background:rgba(231, 76, 60, 0.1); font-weight:bold;">${s.vermelhosAtl}</td>
                                 <td>${Math.round(s.medAmarAtl)}</td>
