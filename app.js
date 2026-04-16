@@ -1971,8 +1971,8 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         if (renCk || pubCk) { label.value = 'N/I'; return; } 
         const renVal = document.getElementById('game-renda').value;
         const pubVal = document.getElementById('game-publico').value;
-        const r = parseFloat(String(renVal).replace(/\./g, '').replace(',', '.')) || 0; 
-        const p = parseInt(String(pubVal).replace(/\./g, '')) || 0; 
+        const r = (parseInt(String(renVal).replace(/\D/g, '')) || 0) / 100;
+        const p = parseInt(String(pubVal).replace(/\D/g, '')) || 0;
         label.value = (p > 0) ? formatCurrency(r/p) : 'N/I'; 
     };
     ['game-renda', 'game-publico', 'game-ren-ni', 'game-pub-ni'].forEach(id => document.getElementById(id)?.addEventListener('input', updTicket));
@@ -2266,21 +2266,18 @@ const saveNewJogo = () => {
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
     
-    // Processar Público e Renda (remover máscaras)
+    // Processar Público e Renda (remover máscaras de forma robusta)
     if(document.getElementById('game-pub-ni').checked) {
         jogo.publico = 'N/I';
     } else {
         const pubVal = document.getElementById('game-publico').value;
-        const cleanPub = String(pubVal).replace(/\./g, '');
-        jogo.publico = isNaN(parseInt(cleanPub)) ? 0 : parseInt(cleanPub);
+        jogo.publico = parseInt(String(pubVal).replace(/\D/g, '')) || 0;
     }
-
     if(document.getElementById('game-ren-ni').checked) {
         jogo.renda = 'N/I';
     } else {
         const renVal = document.getElementById('game-renda').value;
-        const cleanRen = String(renVal).replace(/\./g, '').replace(',', '.');
-        jogo.renda = isNaN(parseFloat(cleanRen)) ? 0 : parseFloat(cleanRen);
+        jogo.renda = (parseInt(String(renVal).replace(/\D/g, '')) || 0) / 100;
     }
 
     jogo.portoesFechados = document.getElementById('game-portoes-fechados')?.checked || false;
