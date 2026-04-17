@@ -66,6 +66,14 @@ const state = {
     advTecPage: 1,
     atleTecPage: 1, // Página para a nova aba de técnicos do Atlético
     isUpdating: false, // Flag para evitar loops de renderização
+    
+    // Novo estado para filtros multi-seleção
+    statsMultiFilters: {
+        coletivas: [],
+        porFase: [],
+        individuais: [],
+        tecnicos: []
+    }
 };
 
 // Cache para estatísticas pesadas para evitar travamentos
@@ -245,6 +253,103 @@ const renderTableLegend = (siglas = []) => {
 
     return items ? `<div class="table-legend">${items}</div>` : '';
 };
+
+// --- Multi-Select Logic ---
+const initMultiSelect = (containerId, options, tabKey, callback) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Inicializa o estado se vazio (Todos marcados por padrão)
+    if (!state.statsMultiFilters[tabKey] || state.statsMultiFilters[tabKey].length === 0) {
+        state.statsMultiFilters[tabKey] = ['Todos', ...options];
+    }
+
+    renderMultiSelect(containerId, options, tabKey, callback);
+    
+    // Fechar dropdown ao clicar fora
+    const clickHandler = (e) => {
+        if (!container.contains(e.target)) {
+            container.classList.remove('open');
+        }
+    };
+    
+    // Remove listener antigo se existir para evitar duplicatas
+    document.removeEventListener('click', container._msClickHandler);
+    container._msClickHandler = clickHandler;
+    document.addEventListener('click', clickHandler);
+};
+
+const renderMultiSelect = (containerId, options, tabKey, callback) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const selected = state.statsMultiFilters[tabKey] || [];
+    const isAllSelected = selected.includes('Todos');
+    
+    let summaryText = "";
+    if (isAllSelected) {
+        summaryText = "Todos selecionados";
+    } else if (selected.length === 0) {
+        summaryText = "Nenhum selecionado";
+    } else {
+        summaryText = selected.length === 1 ? selected[0] : `${selected.length} selecionados`;
+    }
+
+    container.innerHTML = `
+        <div class="multi-select-trigger" onclick="this.parentElement.classList.toggle('open')">
+            <span class="multi-select-summary">${summaryText}</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="multi-select-dropdown">
+            <div class="multi-select-option all-option" onclick="toggleMultiSelectAll('${tabKey}', '${containerId}', ${JSON.stringify(options).replace(/"/g, '&quot;')}, ${callback.name})">
+                <input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="event.preventDefault()">
+                <span>Todos</span>
+            </div>
+            ${options.map(opt => `
+                <div class="multi-select-option" onclick="toggleMultiSelectOption('${tabKey}', '${opt.replace(/'/g, "\\'")}', '${containerId}', ${JSON.stringify(options).replace(/"/g, '&quot;')}, ${callback.name})">
+                    <input type="checkbox" ${selected.includes(opt) ? 'checked' : ''} onchange="event.preventDefault()">
+                    <span>${opt}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+};
+
+window.toggleMultiSelectAll = (tabKey, containerId, allOptions, callback) => {
+    const current = state.statsMultiFilters[tabKey] || [];
+    if (current.includes('Todos')) {
+        state.statsMultiFilters[tabKey] = [];
+    } else {
+        state.statsMultiFilters[tabKey] = ['Todos', ...allOptions];
+    }
+    renderMultiSelect(containerId, allOptions, tabKey, callback);
+    if (callback) callback();
+};
+
+window.toggleMultiSelectOption = (tabKey, option, containerId, allOptions, callback) => {
+    let current = state.statsMultiFilters[tabKey] || [];
+    
+    // Se "Todos" estava marcado, ao desmarcar um item, "Todos" sai fora
+    if (current.includes('Todos')) {
+        current = current.filter(item => item !== 'Todos');
+    }
+
+    if (current.includes(option)) {
+        current = current.filter(item => item !== option);
+    } else {
+        current.push(option);
+    }
+
+    // Se agora todos os itens individuais estão marcados, marca o "Todos" também
+    if (allOptions.every(opt => current.includes(opt))) {
+        current = ['Todos', ...allOptions];
+    }
+
+    state.statsMultiFilters[tabKey] = current;
+    renderMultiSelect(containerId, allOptions, tabKey, callback);
+    if (callback) callback();
+};
+
 
 // UI Elements
 const tabContent = document.getElementById('tab-content');
@@ -2739,7 +2844,9 @@ const getAtleticoTecnicoStats = () => {
 const renderAtleticoTecnicos = (container) => {
     const fTec = document.getElementById('stt-filter-tecnico')?.value;
     const fTemp = document.getElementById('stt-filter-temporada')?.value;
-    const fCamp = document.getElementById('stt-filter-campeonato')?.value;
+
+    // Obtém campeonatos selecionados
+    const selectedCamps = state.statsMultiFilters['tecnicos'] || [];
 
     let tecnicos = getAtleticoTecnicoStats();
 
@@ -2754,7 +2861,13 @@ const renderAtleticoTecnicos = (container) => {
             const tempStats = {};
             state.jogos.forEach(j => {
                 if (fTemp && j.temporada !== fTemp) return;
-                if (fCamp && j.campeonato !== fCamp) return;
+                
+                // Filtro Multi-Seleção
+                if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato)) {
+                    if (!selectedCamps.includes('Todos')) return;
+                } else if (selectedCamps.length === 0) {
+                    return;
+                }
                 if (fTec && !normalizeString(j.tecnicoGalo).includes(normalizeString(fTec))) return;
                 
                 const tecnico = j.tecnicoGalo || 'N/I';
@@ -2844,7 +2957,10 @@ const renderAtleticoTecnicos = (container) => {
 
     // Populate Filters
     populateFilter('stt-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('stt-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+
+    // Inicializa o Multi-Select de Campeonatos
+    const availableCamps = [...new Set(state.jogos.filter(j => !fTemp || j.temporada === fTemp).map(j => j.campeonato))].sort();
+    initMultiSelect('stt-multi-campeonato', availableCamps, 'tecnicos', () => renderAtleticoTecnicos(container));
 };
 
 const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
@@ -2908,17 +3024,25 @@ const showAtleticoTecnicoDetail = (tecnicoNome, row) => {
 
 const renderStatsPorFase = (container) => {
     const fTemp = document.getElementById('spf-filter-temporada').value;
-    const fCamp = document.getElementById('spf-filter-campeonato').value;
     const fAdv = document.getElementById('spf-filter-adversario').value;
     const fRodDe = parseInt(document.getElementById('spf-filter-rodada-de').value) || 0;
     const fRodAte = parseInt(document.getElementById('spf-filter-rodada-ate').value) || 999;
 
+    // Obtém campeonatos selecionados
+    const selectedCamps = state.statsMultiFilters['porFase'] || [];
+
     const filteredJogos = state.jogos.filter(j => {
         if (fTemp && j.temporada !== fTemp) return false;
-        if (fCamp && j.campeonato !== fCamp) return false;
+        
+        // Filtro Multi-Seleção
+        if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato)) {
+            if (!selectedCamps.includes('Todos')) return false;
+        } else if (selectedCamps.length === 0) {
+            return false;
+        }
+
         if (fAdv && (j.casa !== fAdv && j.fora !== fAdv)) return false;
         
-        // Tentativa de extrair o número da rodada (ex: "1ª rodada" -> 1)
         const rodNum = parseInt(j.rodada?.replace(/\D/g, '')) || 0;
         if (fRodDe > 0 && rodNum < fRodDe) return false;
         if (fRodAte < 999 && rodNum > fRodAte) return false;
@@ -2951,13 +3075,16 @@ const renderStatsPorFase = (container) => {
         if (galoGols === 0) s.cg++;
     });
 
-    // Populando filtros caso estejam vazios ou mudados
+    // Populando filtros
     populateFilter('spf-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('spf-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
     populateFilter('spf-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
 
+    // Inicializa o Multi-Select de Campeonatos
+    const availableCamps = [...new Set(state.jogos.filter(j => !fTemp || j.temporada === fTemp).map(j => j.campeonato))].sort();
+    initMultiSelect('spf-multi-campeonato', availableCamps, 'porFase', () => renderStatsPorFase(container));
+
     // Vincular eventos se necessário (apenas uma vez)
-    ['spf-filter-temporada', 'spf-filter-campeonato', 'spf-filter-adversario', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
+    ['spf-filter-temporada', 'spf-filter-adversario', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.bound) {
             el.addEventListener('change', () => renderStatsPorFase(container));
@@ -3118,21 +3245,32 @@ const renderStatsPorFaseCharts = (data) => {
 
 const renderStatsColetivas = (container) => {
     const fTemp = document.getElementById('stc-filter-temporada').value;
-    const fCamp = document.getElementById('stc-filter-campeonato').value;
     const fTec  = document.getElementById('stc-filter-tecnico').value;
     const fTipo = document.getElementById('stc-filter-tipo').value;
+
+    // Obtém campeonatos selecionados (do multi-select)
+    const selectedCamps = state.statsMultiFilters['coletivas'] || [];
 
     const filteredJogos = state.jogos.filter(j => {
         const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
         if (fTemp && j.temporada !== fTemp) return false;
-        if (fCamp && j.campeonato !== fCamp) return false;
+        
+        // Filtro Multi-Seleção de Campeonatos
+        if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato)) {
+            // Se "Todos" está na lista, ignora a filtragem individual
+            if (!selectedCamps.includes('Todos')) return false;
+        } else if (selectedCamps.length === 0) {
+            // Se nada estiver selecionado, não mostra nada
+            return false;
+        }
+
         if (fTec && j.tecnicoGalo !== fTec) return false;
         if (fTipo && comp?.tipo !== fTipo) return false;
         return true;
     });
 
-    // Bind listeners (apenas uma vez)
-    ['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
+    // Bind listeners
+    ['stc-filter-temporada', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
         const el = document.getElementById(id);
         if (el && !el.dataset.bound) {
             el.addEventListener('change', () => renderStatsColetivas(container));
@@ -3142,9 +3280,12 @@ const renderStatsColetivas = (container) => {
 
     // Populate Filters
     populateFilter('stc-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('stc-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
     populateFilter('stc-filter-tecnico', [...new Set(state.jogos.map(j => j.tecnicoGalo))]);
     populateFilter('stc-filter-tipo', [...new Set(state.competicoes.map(c => c.tipo))].filter(Boolean));
+
+    // Inicializa o Multi-Select de Campeonatos
+    const availableCamps = [...new Set(state.jogos.filter(j => !fTemp || j.temporada === fTemp).map(j => j.campeonato))].sort();
+    initMultiSelect('stc-multi-campeonato', availableCamps, 'coletivas', () => renderStatsColetivas(container));
 
     const stats = {};
     filteredJogos.forEach(j => {
@@ -3317,12 +3458,20 @@ const renderStatsIndividuais = (container) => {
     const fTemp = document.getElementById('sti-filter-temporada').value;
     const fJog = document.getElementById('sti-filter-jogador').value;
     const fPos = document.getElementById('sti-filter-posicao').value;
-    const fCamp = document.getElementById('sti-filter-campeonato').value;
+
+    // Obtém campeonatos selecionados
+    const selectedCamps = state.statsMultiFilters['individuais'] || [];
 
     const stats = {};
     state.jogos.forEach(j => {
         if (fTemp && j.temporada !== fTemp) return;
-        if (fCamp && j.campeonato !== fCamp) return;
+        
+        // Filtro Multi-Seleção
+        if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato)) {
+            if (!selectedCamps.includes('Todos')) return;
+        } else if (selectedCamps.length === 0) {
+            return;
+        }
 
         j.lineupGalo?.forEach(l => {
             const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === j.temporada);
@@ -3366,7 +3515,9 @@ const renderStatsIndividuais = (container) => {
 
     populateFilter('sti-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
     populateFilter('sti-filter-posicao', availablePosicoes);
-    populateFilter('sti-filter-campeonato', availableCampeonatos);
+
+    // Inicializa o Multi-Select de Campeonatos
+    initMultiSelect('sti-multi-campeonato', availableCampeonatos, 'individuais', () => renderStatsIndividuais(container));
 
     // Setup Autocomplete for Player
     state.jogadoresStatsIndividuais = availableJogadores;
@@ -3669,13 +3820,13 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArtilheiros));
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
 ['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
-['stc-filter-temporada', 'stc-filter-campeonato', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
+['stc-filter-temporada', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', () => {
         if (state.isUpdating) return;
         renderEstatisticas();
     });
 });
-['stt-filter-temporada', 'stt-filter-campeonato'].forEach(id => {
+['stt-filter-temporada'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', () => {
         if (state.isUpdating) return;
         renderEstatisticas();
@@ -3686,7 +3837,7 @@ document.getElementById('stt-filter-tecnico')?.addEventListener('input', debounc
     renderEstatisticas();
 }, 300));
 
-['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao', 'sti-filter-campeonato'].forEach(id => {
+['sti-filter-temporada', 'sti-filter-jogador', 'sti-filter-posicao'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', () => {
         if (state.isUpdating) return;
         renderEstatisticas();
