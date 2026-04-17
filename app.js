@@ -255,16 +255,23 @@ const renderTableLegend = (siglas = []) => {
 };
 
 // --- Multi-Select Logic ---
+window._msCallbacks = window._msCallbacks || {};
+
 const initMultiSelect = (containerId, options, tabKey, callback) => {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    // Registra o callback
+    if (callback) {
+        window._msCallbacks[containerId] = callback;
+    }
 
     // Inicializa o estado se vazio (Todos marcados por padrão)
     if (!state.statsMultiFilters[tabKey] || state.statsMultiFilters[tabKey].length === 0) {
         state.statsMultiFilters[tabKey] = ['Todos', ...options];
     }
 
-    renderMultiSelect(containerId, options, tabKey, callback);
+    renderMultiSelect(containerId, options, tabKey);
     
     // Fechar dropdown ao clicar fora
     const clickHandler = (e) => {
@@ -279,7 +286,7 @@ const initMultiSelect = (containerId, options, tabKey, callback) => {
     document.addEventListener('click', clickHandler);
 };
 
-const renderMultiSelect = (containerId, options, tabKey, callback) => {
+const renderMultiSelect = (containerId, options, tabKey) => {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -295,18 +302,21 @@ const renderMultiSelect = (containerId, options, tabKey, callback) => {
         summaryText = selected.length === 1 ? selected[0] : `${selected.length} selecionados`;
     }
 
+    // Usando escape seguro para as opções em JSON
+    const safeOptions = JSON.stringify(options).replace(/"/g, '&quot;');
+
     container.innerHTML = `
         <div class="multi-select-trigger" onclick="this.parentElement.classList.toggle('open')">
             <span class="multi-select-summary">${summaryText}</span>
             <i class="fas fa-chevron-down"></i>
         </div>
         <div class="multi-select-dropdown">
-            <div class="multi-select-option all-option" onclick="toggleMultiSelectAll('${tabKey}', '${containerId}', ${JSON.stringify(options).replace(/"/g, '&quot;')}, ${callback.name})">
+            <div class="multi-select-option all-option" onclick="toggleMultiSelectAll('${tabKey}', '${containerId}', ${safeOptions})">
                 <input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="event.preventDefault()">
                 <span>Todos</span>
             </div>
             ${options.map(opt => `
-                <div class="multi-select-option" onclick="toggleMultiSelectOption('${tabKey}', '${opt.replace(/'/g, "\\'")}', '${containerId}', ${JSON.stringify(options).replace(/"/g, '&quot;')}, ${callback.name})">
+                <div class="multi-select-option" onclick="toggleMultiSelectOption('${tabKey}', '${opt.replace(/'/g, "\\'")}', '${containerId}', ${safeOptions})">
                     <input type="checkbox" ${selected.includes(opt) ? 'checked' : ''} onchange="event.preventDefault()">
                     <span>${opt}</span>
                 </div>
@@ -315,18 +325,19 @@ const renderMultiSelect = (containerId, options, tabKey, callback) => {
     `;
 };
 
-window.toggleMultiSelectAll = (tabKey, containerId, allOptions, callback) => {
+window.toggleMultiSelectAll = (tabKey, containerId, allOptions) => {
     const current = state.statsMultiFilters[tabKey] || [];
     if (current.includes('Todos')) {
         state.statsMultiFilters[tabKey] = [];
     } else {
         state.statsMultiFilters[tabKey] = ['Todos', ...allOptions];
     }
-    renderMultiSelect(containerId, allOptions, tabKey, callback);
-    if (callback) callback();
+    renderMultiSelect(containerId, allOptions, tabKey);
+    const cb = window._msCallbacks[containerId];
+    if (cb) cb();
 };
 
-window.toggleMultiSelectOption = (tabKey, option, containerId, allOptions, callback) => {
+window.toggleMultiSelectOption = (tabKey, option, containerId, allOptions) => {
     let current = state.statsMultiFilters[tabKey] || [];
     
     // Se "Todos" estava marcado, ao desmarcar um item, "Todos" sai fora
@@ -346,8 +357,9 @@ window.toggleMultiSelectOption = (tabKey, option, containerId, allOptions, callb
     }
 
     state.statsMultiFilters[tabKey] = current;
-    renderMultiSelect(containerId, allOptions, tabKey, callback);
-    if (callback) callback();
+    renderMultiSelect(containerId, allOptions, tabKey);
+    const cb = window._msCallbacks[containerId];
+    if (cb) cb();
 };
 
 
