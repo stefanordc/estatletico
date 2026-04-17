@@ -196,15 +196,19 @@ const formatCurrency = (val) => {
 
 const formatPublico = (val) => {
     if (val === 'N/I' || val === null || val === undefined || val === '') return 'N/I';
-    const num = parseInt(String(val).replace(/\D/g, '')) || 0;
+    let num;
+    if (typeof val === 'number') {
+        num = Math.floor(val);
+    } else {
+        const clean = String(val).replace(/\./g, '').replace(',', '.').replace(/[^\d]/g, '');
+        num = parseInt(clean) || 0;
+    }
     return num.toLocaleString('pt-BR');
 };
 
 const formatRenda = (val) => {
     if (val === 'N/I' || val === null || val === undefined || val === '') return 'N/I';
-    // Se já for string formatada, tenta extrair o número
-    let cleanVal = String(val).replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
-    const num = parseFloat(cleanVal);
+    const num = parseCurrency(val);
     if (isNaN(num)) return 'N/I';
     return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
