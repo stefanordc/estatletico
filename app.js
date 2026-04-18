@@ -2537,8 +2537,8 @@ const saveNewJogo = () => {
     });
 
     const titularesCount = jogo.lineupGalo.filter(l => l.titular).length;
-    if (titularesCount > 11) {
-        alert(`Erro de Validação: Você marcou ${titularesCount} jogadores como titulares. O máximo permitido é 11.`);
+    if (titularesCount !== 11) {
+        alert(`Erro de Validação: O número de jogadores titulares deve ser exatamente 11. Você marcou ${titularesCount}.`);
         return;
     }
 
