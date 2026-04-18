@@ -681,24 +681,18 @@
             </div>
 
             <div id="stats-filters-coletivas" class="filters-card">
-                <div class="form-grid">
-                    <div class="form-group"><label>Temporada</label><select id="stc-filter-temporada"><option value="">Todas</option></select></div>
-                    <div class="form-group"><label>Campeonato</label><div id="stc-multi-campeonato" class="multi-select-container"></div></div>
+                <div class="form-grid form-grid-responsive">
                     <div class="form-group">
-                        <label>Técnico</label>
-                        <div class="autocomplete-container">
-                            <input type="text" id="stc-filter-tecnico" placeholder="Selecione...">
+                        <label>Temporada</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="number" id="stc-filter-temporada-de" placeholder="De (Ano)" maxlength="4" style="flex: 1;">
+                            <span style="color: var(--text-muted); font-size: 0.85rem; flex-shrink: 0;">até</span>
+                            <input type="number" id="stc-filter-temporada-ate" placeholder="Até (Ano)" maxlength="4" style="flex: 1;">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Tipo</label>
-                        <select id="stc-filter-tipo">
-                            <option value="">Selecione...</option>
-                            <option value="Regional">Regional</option>
-                            <option value="Nacional">Nacional</option>
-                            <option value="Internacional">Internacional</option>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>Campeonato</label><div id="stc-multi-campeonato" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Técnico</label><div id="stc-multi-tecnico" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Tipo</label><div id="stc-multi-tipo" class="multi-select-container"></div></div>
                 </div>
                 
                 <div id="stats-charts-container" class="form-grid" style="margin-top: 2rem; grid-template-columns: 1fr 1fr;">
@@ -712,7 +706,7 @@
             </div>
 
             <div id="stats-filters-por-fase" class="filters-card hidden">
-                <div class="form-grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1.5fr;">
+                <div class="form-grid form-grid-responsive">
                     <div class="form-group">
                         <label>Intervalo de Rodadas</label>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -730,12 +724,8 @@
                         </div>
                     </div>
                     <div class="form-group"><label>Campeonato</label><div id="spf-multi-campeonato" class="multi-select-container"></div></div>
-                    <div class="form-group">
-                        <label>Adversário</label>
-                        <div class="autocomplete-container">
-                            <input type="text" id="spf-filter-adversario" placeholder="Selecione...">
-                        </div>
-                    </div>
+                    <div class="form-group"><label>Adversário</label><div id="spf-multi-adversario" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Tipo</label><div id="spf-multi-tipo" class="multi-select-container"></div></div>
                 </div>
                 
                 <div id="spf-charts-container" class="form-grid" style="margin-top: 2rem; grid-template-columns: 1fr; gap: 2rem;">
@@ -743,21 +733,25 @@
                         <h4 style="text-align: center; margin-bottom: 1rem;">Aproveitamento por Ano (%)</h4>
                         <canvas id="chart-spf-aproveitamento" style="max-height: 250px;"></canvas>
                     </div>
-                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="chart-box" style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
+                    <div class="form-grid chart-responsive-grid" style="gap: 1rem;">
+                        <div class="chart-box" style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee; overflow-x: auto; max-width: 100%;">
                             <h4 style="text-align: center; margin-bottom: 1rem;">Gols Marcados</h4>
-                            <canvas id="chart-spf-gols-marcados" style="max-height: 250px;"></canvas>
+                            <div style="min-width: 300px;">
+                                <canvas id="chart-spf-gols-marcados" style="max-height: 250px;"></canvas>
+                            </div>
                         </div>
-                        <div class="chart-box" style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee;">
+                        <div class="chart-box" style="background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid #eee; overflow-x: auto; max-width: 100%;">
                             <h4 style="text-align: center; margin-bottom: 1rem;">Gols Sofridos</h4>
-                            <canvas id="chart-spf-gols-sofridos" style="max-height: 250px;"></canvas>
+                            <div style="min-width: 300px;">
+                                <canvas id="chart-spf-gols-sofridos" style="max-height: 250px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="stats-filters-individuais" class="filters-card hidden">
-                <div class="form-grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1.5fr;">
+                <div class="form-grid form-grid-responsive">
                     <div class="form-group">
                         <label>Temporada</label>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -766,37 +760,16 @@
                             <input type="number" id="sti-filter-temporada-ate" placeholder="Ano Até" maxlength="4" style="flex: 1;">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Jogador</label>
-                        <div class="autocomplete-container">
-                            <input type="text" id="sti-filter-jogador" placeholder="Nome do jogador...">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Posição</label>
-                        <select id="sti-filter-posicao">
-                            <option value="">Selecione...</option>
-                            <option value="Goleiro">Goleiro</option>
-                            <option value="Zagueiro">Zagueiro</option>
-                            <option value="Lateral Direito">Lateral Direito</option>
-                            <option value="Lateral Esquerdo">Lateral Esquerdo</option>
-                            <option value="Volante">Volante</option>
-                            <option value="Meia">Meia</option>
-                            <option value="Atacante">Atacante</option>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>Jogador</label><div id="sti-multi-jogador" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Posição</label><div id="sti-multi-posicao" class="multi-select-container"></div></div>
                     <div class="form-group"><label>Campeonato</label><div id="sti-multi-campeonato" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Tipo</label><div id="sti-multi-tipo" class="multi-select-container"></div></div>
                 </div>
             </div>
 
             <div id="stats-filters-tecnicos" class="filters-card hidden">
-                <div class="form-grid" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr;">
-                    <div class="form-group">
-                        <label>Técnico</label>
-                        <div class="autocomplete-container">
-                            <input type="text" id="stt-filter-tecnico" placeholder="Selecione...">
-                        </div>
-                    </div>
+                <div class="form-grid form-grid-responsive">
+                    <div class="form-group"><label>Técnico</label><div id="stt-multi-tecnico" class="multi-select-container"></div></div>
                     <div class="form-group">
                         <label>Temporada</label>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -806,6 +779,7 @@
                         </div>
                     </div>
                     <div class="form-group"><label>Campeonato</label><div id="stt-multi-campeonato" class="multi-select-container"></div></div>
+                    <div class="form-group"><label>Tipo</label><div id="stt-multi-tipo" class="multi-select-container"></div></div>
                     <div class="form-group" style="display:flex; align-items:flex-end;">
                         <p style="font-size:0.75rem; color:var(--text-muted); margin:0; padding-bottom:10px;">
                             <i class="fas fa-info-circle"></i> As estatísticas abaixo são exibidas sob a ótica do Atlético.

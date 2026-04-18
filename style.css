@@ -1933,3 +1933,19 @@ input[type=number] {
     min-width: 60px;
 }
 
+/* Responsividade de novos grids e gráficos */
+.form-grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+.chart-responsive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+@media (max-width: 768px) {
+    .chart-responsive-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
