@@ -340,6 +340,38 @@ window.filterMultiSelect = (inputEl) => {
     });
 };
 
+window.updateMultiSelectUI = (containerId, tabKey) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const selected = state.statsMultiFilters[tabKey] || [];
+    const isAllSelected = selected.includes('Todos');
+    
+    let summaryText = "";
+    if (isAllSelected) {
+        summaryText = "Todos selecionados";
+    } else if (selected.length === 0) {
+        summaryText = "Nenhum selecionado";
+    } else {
+        summaryText = selected.length === 1 ? selected[0] : `${selected.length} selecionados`;
+    }
+    
+    const summarySpan = container.querySelector('.multi-select-summary');
+    if (summarySpan) summarySpan.textContent = summaryText;
+    
+    const allCheckbox = container.querySelector('.all-option input[type="checkbox"]');
+    if (allCheckbox) allCheckbox.checked = isAllSelected;
+    
+    const optionDivs = container.querySelectorAll('.multi-select-option:not(.all-option)');
+    optionDivs.forEach(div => {
+        const span = div.querySelector('span');
+        const checkbox = div.querySelector('input[type="checkbox"]');
+        if (span && checkbox) {
+            checkbox.checked = selected.includes(span.textContent);
+        }
+    });
+};
+
 window.toggleMultiSelectAll = (tabKey, containerId, allOptions) => {
     const current = state.statsMultiFilters[tabKey] || [];
     if (current.includes('Todos')) {
@@ -347,7 +379,7 @@ window.toggleMultiSelectAll = (tabKey, containerId, allOptions) => {
     } else {
         state.statsMultiFilters[tabKey] = ['Todos', ...allOptions];
     }
-    renderMultiSelect(containerId, allOptions, tabKey);
+    window.updateMultiSelectUI(containerId, tabKey);
     const cb = window._msCallbacks[containerId];
     if (cb) cb();
 };
@@ -355,24 +387,24 @@ window.toggleMultiSelectAll = (tabKey, containerId, allOptions) => {
 window.toggleMultiSelectOption = (tabKey, option, containerId, allOptions) => {
     let current = state.statsMultiFilters[tabKey] || [];
     
-    // Se "Todos" estava marcado, ao desmarcar um item, "Todos" sai fora
     if (current.includes('Todos')) {
-        current = current.filter(item => item !== 'Todos');
-    }
-
-    if (current.includes(option)) {
-        current = current.filter(item => item !== option);
+        // Se tinha 'Todos', significa que todos estavam selecionados,
+        // então agora teremos todos EXCETO o que a pessoa acabou de clicar para desmarcar.
+        current = allOptions.filter(item => item !== option);
     } else {
-        current.push(option);
+        if (current.includes(option)) {
+            current = current.filter(item => item !== option);
+        } else {
+            current.push(option);
+        }
     }
 
-    // Se agora todos os itens individuais estão marcados, marca o "Todos" também
-    if (allOptions.every(opt => current.includes(opt))) {
+    if (allOptions.length > 0 && allOptions.every(opt => current.includes(opt))) {
         current = ['Todos', ...allOptions];
     }
 
     state.statsMultiFilters[tabKey] = current;
-    renderMultiSelect(containerId, allOptions, tabKey);
+    window.updateMultiSelectUI(containerId, tabKey);
     const cb = window._msCallbacks[containerId];
     if (cb) cb();
 };
