@@ -2903,6 +2903,7 @@ const renderAtleticoTecnicos = (container) => {
                 saldo: s.gm - s.gc
             }));
         }
+    }
 
     // Aplicar Ordenação
     const sorted = sortInternal(tecnicos, 'table-atletico-tecnicos');
