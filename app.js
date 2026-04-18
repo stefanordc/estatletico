@@ -2345,7 +2345,11 @@ const addCardRow = (team, data = null) => {
         inp.id = id; 
         setTimeout(() => { 
             setupAutocomplete(id, 'jogadores', 'nome_guerra', 
-                p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico',
+                p => {
+                    const gS = document.getElementById('game-temporada')?.value?.trim();
+                    const pS = String(p.temporada || '').trim();
+                    return (!gS || pS === gS) && p.posicao !== 'Técnico';
+                },
                 (res) => {
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
@@ -2419,7 +2423,11 @@ const addLineupRow = (team, data = null) => {
         inp.id = id; 
         setTimeout(() => { 
             setupAutocomplete(id, 'jogadores', 'nome_guerra', 
-                p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico',
+                p => {
+                    const gS = document.getElementById('game-temporada')?.value?.trim();
+                    const pS = String(p.temporada || '').trim();
+                    return (!gS || pS === gS) && p.posicao !== 'Técnico';
+                },
                 (res) => {
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
