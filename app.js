@@ -256,6 +256,7 @@ const renderTableLegend = (siglas = []) => {
 
 // --- Multi-Select Logic ---
 window._msCallbacks = window._msCallbacks || {};
+window._msInitialized = window._msInitialized || {};
 
 const initMultiSelect = (containerId, options, tabKey, callback) => {
     const container = document.getElementById(containerId);
@@ -266,9 +267,12 @@ const initMultiSelect = (containerId, options, tabKey, callback) => {
         window._msCallbacks[containerId] = callback;
     }
 
-    // Inicializa o estado se vazio (Todos marcados por padrão)
-    if (!state.statsMultiFilters[tabKey] || state.statsMultiFilters[tabKey].length === 0) {
-        state.statsMultiFilters[tabKey] = ['Todos', ...options];
+    // Inicializa o estado se vazio (Todos marcados por padrão), MAS SÓ UMA VEZ!
+    if (!window._msInitialized[tabKey]) {
+        if (!state.statsMultiFilters[tabKey] || state.statsMultiFilters[tabKey].length === 0) {
+            state.statsMultiFilters[tabKey] = ['Todos', ...options];
+        }
+        window._msInitialized[tabKey] = true;
     }
 
     // Só re-renderiza o DOM inteiro caso as opções disponíveis tenham mudado (ex: mudança de ano)
@@ -309,7 +313,6 @@ const renderMultiSelect = (containerId, options, tabKey) => {
         summaryText = selected.length === 1 ? selected[0] : `${selected.length} selecionados`;
     }
 
-    // Usando escape seguro para as opções em JSON
     const safeOptions = JSON.stringify(options).replace(/"/g, '&quot;');
 
     container.innerHTML = `
@@ -324,12 +327,12 @@ const renderMultiSelect = (containerId, options, tabKey) => {
             </div>
             ` : ''}
             <div class="multi-select-option all-option" onclick="event.stopPropagation(); toggleMultiSelectAll('${tabKey}', '${containerId}', ${safeOptions})">
-                <input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="event.preventDefault()">
+                <input type="checkbox" ${isAllSelected ? 'checked' : ''} onclick="event.preventDefault()">
                 <span>Todos</span>
             </div>
             ${options.map(opt => `
                 <div class="multi-select-option" onclick="event.stopPropagation(); toggleMultiSelectOption('${tabKey}', '${opt.replace(/'/g, "\\'")}', '${containerId}', ${safeOptions})">
-                    <input type="checkbox" ${selected.includes(opt) ? 'checked' : ''} onchange="event.preventDefault()">
+                    <input type="checkbox" ${selected.includes(opt) ? 'checked' : ''} onclick="event.preventDefault()">
                     <span>${opt}</span>
                 </div>
             `).join('')}
@@ -2341,7 +2344,16 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico'); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', 
+                p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico',
+                (res) => {
+                    const nextTr = row.nextElementSibling;
+                    if (nextTr) {
+                        const nextInp = nextTr.querySelector('.card-player-inp');
+                        if (nextInp) nextInp.focus();
+                    }
+                }
+            ); 
             
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
@@ -2406,7 +2418,16 @@ const addLineupRow = (team, data = null) => {
         const id = 'lq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            setupAutocomplete(id, 'jogadores', 'nome_guerra', p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico'); 
+            setupAutocomplete(id, 'jogadores', 'nome_guerra', 
+                p => String(p.temporada) === String(document.getElementById('game-temporada').value) && p.posicao !== 'Técnico',
+                (res) => {
+                    const nextTr = row.nextElementSibling;
+                    if (nextTr) {
+                        const nextInp = nextTr.querySelector('.line-player-inp');
+                        if (nextInp) nextInp.focus();
+                    }
+                }
+            ); 
             
             // Vertical Tab Navigation Logic for all inputs in the row
             const inputs = row.querySelectorAll('input, select');
