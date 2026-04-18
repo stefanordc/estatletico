@@ -271,7 +271,14 @@ const initMultiSelect = (containerId, options, tabKey, callback) => {
         state.statsMultiFilters[tabKey] = ['Todos', ...options];
     }
 
-    renderMultiSelect(containerId, options, tabKey);
+    // Só re-renderiza o DOM inteiro caso as opções disponíveis tenham mudado (ex: mudança de ano)
+    const newOptionsStr = JSON.stringify(options);
+    if (container.dataset.renderedOptions === newOptionsStr && container.querySelector('.multi-select-dropdown')) {
+        if (window.updateMultiSelectUI) window.updateMultiSelectUI(containerId, tabKey);
+    } else {
+        container.dataset.renderedOptions = newOptionsStr;
+        renderMultiSelect(containerId, options, tabKey);
+    }
     
     // Fechar dropdown ao clicar fora
     const clickHandler = (e) => {
