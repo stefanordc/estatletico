@@ -3153,6 +3153,7 @@ const renderStatsPorFase = (container) => {
         if (fTempAte < 9999 && anoJogo > fTempAte) return false;
         
         // Filtro Campeonato
+        const isCampSpecific = selectedCamps.length > 0 && !selectedCamps.includes('Todos');
         if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato) && !selectedCamps.includes('Todos')) return false;
         if (selectedCamps.length === 0) return false;
 
@@ -3162,10 +3163,12 @@ const renderStatsPorFase = (container) => {
         }
         if (selectedAdvs.length === 0) return false;
 
-        // Filtro Tipo
-        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
-        if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return false;
-        if (selectedTipos.length === 0) return false;
+        // Filtro Tipo (Só aplica se não houver um campeonato específico selecionado)
+        if (!isCampSpecific) {
+            const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+            if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return false;
+            if (selectedTipos.length === 0) return false;
+        }
         
         const rodNum = parseInt(j.rodada?.replace(/\D/g, '')) || 0;
         if (fRodDe > 0 && rodNum < fRodDe) return false;
@@ -3251,7 +3254,7 @@ const renderStatsPorFase = (container) => {
         const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        const style = isTotal ? 'style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
+        const style = isTotal ? 'class="total-row" style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
         
         return `<tr ${style}>
             <td style="text-align:left;"><strong>${s.nome}</strong></td>
@@ -3389,6 +3392,7 @@ const renderStatsColetivas = (container) => {
         if (fTempAte < 9999 && anoJogo > fTempAte) return false;
         
         // Filtro Campeonato
+        const isCampSpecific = selectedCamps.length > 0 && !selectedCamps.includes('Todos');
         if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato) && !selectedCamps.includes('Todos')) return false;
         if (selectedCamps.length === 0) return false;
 
@@ -3396,10 +3400,12 @@ const renderStatsColetivas = (container) => {
         if (selectedTecnicos.length > 0 && !selectedTecnicos.includes(j.tecnicoGalo) && !selectedTecnicos.includes('Todos')) return false;
         if (selectedTecnicos.length === 0) return false;
 
-        // Filtro Tipo
-        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
-        if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return false;
-        if (selectedTipos.length === 0) return false;
+        // Filtro Tipo (Só aplica se não houver um campeonato específico selecionado)
+        if (!isCampSpecific) {
+            const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+            if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return false;
+            if (selectedTipos.length === 0) return false;
+        }
         return true;
     });
 
@@ -3484,7 +3490,7 @@ const renderStatsColetivas = (container) => {
         const sg = s.gp - s.gc;
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        const style = isTotal ? 'style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
+        const style = isTotal ? 'class="total-row" style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
         return `<tr ${style}><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${s.aproveitamento}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
@@ -3609,13 +3615,16 @@ const renderStatsIndividuais = (container) => {
         if (fTempAte < 9999 && anoJogo > fTempAte) return;
         
         // Filtro Campeonato
+        const isCampSpecific = selectedCamps.length > 0 && !selectedCamps.includes('Todos');
         if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato) && !selectedCamps.includes('Todos')) return;
         if (selectedCamps.length === 0) return;
 
-        // Filtro Tipo
-        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
-        if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return;
-        if (selectedTipos.length === 0) return;
+        // Filtro Tipo (Só aplica se não houver um campeonato específico selecionado)
+        if (!isCampSpecific) {
+            const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+            if (selectedTipos.length > 0 && !selectedTipos.includes(comp?.tipo) && !selectedTipos.includes('Todos')) return;
+            if (selectedTipos.length === 0) return;
+        }
 
         j.lineupGalo?.forEach(l => {
             const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === j.temporada);

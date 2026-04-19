@@ -27,7 +27,7 @@
     --border-color: #333333;
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     --secondary-color: #000000;
-    --bg-highlight: #1c1c1c;
+    --bg-highlight: #222222;
 }
 
 [data-theme="dark"] .tabs-container {
@@ -2000,4 +2000,28 @@ input[type=number] {
 [data-theme="dark"] .dash-select {
     background: #1e1e1e;
     border-color: #333;
+}
+
+/* Linha de Total em Tabelas */
+.total-row {
+    background: var(--bg-highlight) !important;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+}
+
+[data-theme="dark"] .total-row {
+    background: #2a2a2a !important;
+    color: var(--primary-color) !important;
+    border-top: 2px solid var(--primary-color) !important;
+}
+
+.total-row td {
+    border-top: 2px solid var(--border-color) !important;
+    font-weight: 800 !important;
+}
+
+[data-theme="dark"] .total-row td {
+    border-top-color: var(--primary-color) !important;
 }
