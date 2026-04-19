@@ -134,9 +134,9 @@
                     <div class="dash-filter-item">
                         <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Temporada</span>
                         <div class="dash-select-wrapper">
-                            <select id="dash-filter-temp-de" class="dash-select" onchange="renderDashboard()"></select>
+                            <input type="number" id="dash-filter-temp-de" class="dash-select" placeholder="De" oninput="renderDashboard()">
                             <span style="font-size: 0.85rem; color: var(--text-muted);">até</span>
-                            <select id="dash-filter-temp-ate" class="dash-select" onchange="renderDashboard()"></select>
+                            <input type="number" id="dash-filter-temp-ate" class="dash-select" placeholder="Até" oninput="renderDashboard()">
                         </div>
                     </div>
                 </div>

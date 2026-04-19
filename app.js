@@ -5276,26 +5276,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.populateDashboardFilters = () => {
-    const years = [...new Set(state.jogos.map(j => j.temporada || j.data?.substring(0, 4)))].filter(Boolean).sort((a,b) => b-a);
-    const deSelect = document.getElementById('dash-filter-temp-de');
-    const ateSelect = document.getElementById('dash-filter-temp-ate');
+    const years = [...new Set(state.jogos.map(j => parseInt(j.temporada || j.data?.substring(0, 4))))].filter(Boolean).sort((a,b) => a - b);
+    const deInput = document.getElementById('dash-filter-temp-de');
+    const ateInput = document.getElementById('dash-filter-temp-ate');
     
-    if (!deSelect || !ateSelect) return;
-    if (deSelect.options.length > 0) return; // Já populado
+    if (!deInput || !ateInput) return;
     
-    years.forEach(y => {
-        deSelect.add(new Option(y, y));
-        ateSelect.add(new Option(y, y));
-    });
-    
-    // Valor inicial (Range completo por padrão se o checkbox estiver desmarcado, ou ano atual se tiver dados)
-    const currentYear = new Date().getFullYear().toString();
-    if (years.includes(currentYear)) {
-        deSelect.value = currentYear;
-        ateSelect.value = currentYear;
-    } else if (years.length > 0) {
-        deSelect.value = years[years.length - 1]; // O mais antigo
-        ateSelect.value = years[0]; // O mais recente
+    // Define valores iniciais apenas se os campos estiverem vazios
+    if (!deInput.value && years.length > 0) {
+        deInput.value = years[0]; // O mais antigo
+    }
+    if (!ateInput.value && years.length > 0) {
+        ateInput.value = years[years.length - 1]; // O mais recente
     }
 };
 
@@ -5306,12 +5298,8 @@ window.toggleDashCurrentSeason = () => {
         const de = document.getElementById('dash-filter-temp-de');
         const ate = document.getElementById('dash-filter-temp-ate');
         if (de && ate) {
-            // Se o ano atual existir nas opções, seleciona
-            const exists = Array.from(de.options).some(opt => opt.value === currentYear);
-            if (exists) {
-                de.value = currentYear;
-                ate.value = currentYear;
-            }
+            de.value = currentYear;
+            ate.value = currentYear;
         }
     }
     renderDashboard();
