@@ -126,9 +126,19 @@
             <div class="page-header">
                 <h2>Dashboard - Estatlético</h2>
                 <p>Resumo completo do Clube Atlético Mineiro</p>
-                <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="dash-filtro-ano" onchange="renderDashboard()">
-                    <label for="dash-filtro-ano" id="dash-filtro-ano-label" style="font-size: 0.9rem; color: var(--text-muted);">Apenas temporada atual</label>
+                <div class="dash-filter-container">
+                    <div class="dash-filter-item">
+                        <input type="checkbox" id="dash-filtro-ano" onchange="window.toggleDashCurrentSeason()">
+                        <label for="dash-filtro-ano" style="font-size: 0.9rem; color: var(--text-muted); cursor: pointer;">Apenas temporada atual</label>
+                    </div>
+                    <div class="dash-filter-item">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Temporada</span>
+                        <div class="dash-select-wrapper">
+                            <select id="dash-filter-temp-de" class="dash-select" onchange="renderDashboard()"></select>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">até</span>
+                            <select id="dash-filter-temp-ate" class="dash-select" onchange="renderDashboard()"></select>
+                        </div>
+                    </div>
                 </div>
             </div>
 

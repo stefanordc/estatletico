@@ -1949,3 +1949,55 @@ input[type=number] {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* Dashboard Specific Filters (Premium select) */
+.dash-filter-container {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 1.2rem;
+    padding: 0.5rem 0;
+}
+
+.dash-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.dash-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dash-select {
+    background: var(--bg-color);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 90px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.dash-select:hover {
+    border-color: var(--primary-color);
+}
+
+.dash-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+[data-theme="dark"] .dash-select {
+    background: #1e1e1e;
+    border-color: #333;
+}
