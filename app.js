@@ -4025,6 +4025,7 @@ const renderDashboard = () => {
     let publicoTotal = 0, jogosComPublico = 0;
     let rendaTotal = 0, jogosComRenda = 0;
     let gm = 0, gs = 0;
+    let cs = 0, cg = 0;
     
     let artilheirosMap = {};
     let amarelosMap = {};
@@ -4045,6 +4046,9 @@ const renderDashboard = () => {
         if(golsGalo > golsAdv) v++;
         else if(golsGalo === golsAdv) e++;
         else d++;
+        
+        if (golsAdv === 0) cs++;
+        if (golsGalo === 0) cg++;
         
         // Público e Renda (Apenas Mandante)
         const casaLower = (j.casa || '').toLowerCase();
@@ -4113,6 +4117,8 @@ const renderDashboard = () => {
     document.getElementById('dash-vitorias').innerText = v;
     document.getElementById('dash-empates').innerText = e;
     document.getElementById('dash-derrotas').innerText = d;
+    document.getElementById('dash-cs').innerText = cs;
+    document.getElementById('dash-cg').innerText = cg;
     
     document.getElementById('dash-gm').innerText = gm;
     document.getElementById('dash-gs').innerText = gs;
@@ -4126,7 +4132,7 @@ const renderDashboard = () => {
 
     // Helper for Rankings
     const renderRank = (mapHash, containerId, colorCount) => {
-        const sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]).slice(0, 10);
         const container = document.getElementById(containerId);
         if(!container) return;
         container.innerHTML = '';
