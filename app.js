@@ -3251,7 +3251,7 @@ const renderStatsPorFase = (container) => {
         const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        const style = isTotal ? 'style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;"' : '';
+        const style = isTotal ? 'style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
         
         return `<tr ${style}>
             <td style="text-align:left;"><strong>${s.nome}</strong></td>
@@ -3484,7 +3484,7 @@ const renderStatsColetivas = (container) => {
         const sg = s.gp - s.gc;
         const mgm = s.jogos > 0 ? (s.gp / s.jogos).toFixed(2) : "0.00";
         const mgs = s.jogos > 0 ? (s.gc / s.jogos).toFixed(2) : "0.00";
-        const style = isTotal ? 'style="background:#f9f9f9; font-weight:bold; border-top:2px solid #ddd;"' : '';
+        const style = isTotal ? 'style="background:var(--bg-highlight); color:var(--text-main); font-weight:bold; border-top:2px solid var(--border-color);"' : '';
         return `<tr ${style}><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${s.aproveitamento}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
