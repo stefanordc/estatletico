@@ -430,6 +430,27 @@
                 </div>
             </div>
 
+            <div class="tabs-container" style="margin-bottom: 2rem;">
+                <button class="tab-btn active" onclick="window.changeArtTab('geral')">
+                    <i class="fas fa-soccer-ball"></i> Artilheiros
+                </button>
+                <button class="tab-btn" onclick="window.changeArtTab('dobletes')">
+                    <i class="fas fa-bolt"></i> Dobletes
+                </button>
+                <button class="tab-btn" onclick="window.changeArtTab('hat-tricks')">
+                    <i class="fas fa-hat-wizard"></i> Hat-tricks
+                </button>
+                <button class="tab-btn" onclick="window.changeArtTab('poker-tricks')">
+                    <i class="fas fa-fire"></i> Poker-tricks
+                </button>
+                <button class="tab-btn" onclick="window.changeArtTab('manitas')">
+                    <i class="fas fa-hand-paper"></i> Manitas
+                </button>
+                <button class="tab-btn" onclick="window.changeArtTab('six-plus')">
+                    <i class="fas fa-star"></i> 6 ou mais gols
+                </button>
+            </div>
+
             <div class="filters-card">
                 <div class="form-grid">
                     <div class="form-group">
@@ -494,25 +515,10 @@
                 </div>
             </div>
 
-            <div class="list-container" style="overflow-x:auto;">
-                <table class="data-table" id="artilheiros-table">
-                    <thead>
-                        <tr>
-                            <th>Foto</th>
-                            <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Jogador <i class="fas fa-sort"></i></th>
-                            <th style="cursor:pointer;" onclick="sortTable(event, 'jogos', 'number')">Jogos <i class="fas fa-sort"></i></th>
-                            <th style="cursor:pointer;" onclick="sortTable(event, 'goals', 'number')">Gols <i class="fas fa-sort"></i></th>
-                            <th style="cursor:pointer;" onclick="sortTable(event, 'media', 'number')">Média <i class="fas fa-sort"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Artilheiros renderizados aqui -->
-                    </tbody>
-                </table>
+            <div id="artilheiros-content" class="list-container" style="overflow-x:auto;">
+                <!-- Conteúdo das abas (tabelas) renderizado via JS -->
             </div>
-
-            <!-- Detalhes do Artilheiro (Hidden by default) -->
-            <div id="artilheiro-detail-container" class="hidden" style="margin-top: 2rem;"></div>
+        </section>
         </section>
 
         <section id="arbitragem-section" class="page-section hidden">

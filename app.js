@@ -940,10 +940,30 @@ const showPlayerDetail = (playerId, event) => {
 };
 
 // ARTILHEIROS FUNCTIONS
-const renderArtilheiros = () => {
-    const detail = document.getElementById('artilheiro-detail-container');
-    if (detail) detail.classList.add('hidden');
+window.changeArtTab = (tab) => {
+    state.artTab = tab;
+    const section = document.getElementById('artilheiros-section');
+    section.querySelectorAll('.tabs-container .tab-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase().includes(tab.replace('-', ' '))) btn.classList.add('active');
+        else if (tab === 'geral' && btn.innerText.toLowerCase().includes('artilheiros')) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
 
+    renderCurrentArtTab();
+};
+
+const renderCurrentArtTab = () => {
+    const tab = state.artTab || 'geral';
+    if (tab === 'geral') renderArtilheiros();
+    else if (tab === 'six-plus') renderSixPlusTab();
+    else {
+        const goalMap = { 'dobletes': 2, 'hat-tricks': 3, 'poker-tricks': 4, 'manitas': 5 };
+        renderMultiGolsTab(goalMap[tab]);
+    }
+};
+
+
+const renderArtilheiros = () => {
     const fTemp = document.getElementById('art-filter-temporada').value;
     const fJog = document.getElementById('art-filter-jogador').value;
     const fPos = document.getElementById('art-filter-posicao').value;
@@ -954,7 +974,6 @@ const renderArtilheiros = () => {
     const fNac = document.getElementById('art-filter-nacionalidade').value;
 
     const stats = {};
-    // Aggregate goals and games
     state.jogos.forEach(jogo => {
         const comp = state.competicoes.find(c => c.campeonato === jogo.campeonato);
         const matchMatchesFilter = (!fTemp || jogo.temporada === fTemp) &&
@@ -976,24 +995,14 @@ const renderArtilheiros = () => {
         return { ...s, player: p };
     });
 
-    // Apply Player-specific filters
+    // Exibir somente jogadores com gols >= 1
+    artList = artList.filter(a => a.goals >= 1);
+
     if (fJog) artList = artList.filter(a => a.nome === fJog);
     if (fPos) artList = artList.filter(a => a.player?.posicao === fPos);
     if (fNac) artList = artList.filter(a => a.player?.nacionalidade === fNac);
 
-    // Sorting: Gols (desc), Games (asc)
     artList.sort((a,b) => b.goals - a.goals || a.games - b.games);
-
-    // Filter Top 10 (But if filtered, just show top 10 of result)
-    const top10 = artList.slice(0, 10);
-
-    // Populate Filters
-    populateFilter('art-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('art-filter-jogador', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
-    populateFilter('art-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
-    populateFilter('art-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
-    const tbody = document.querySelector('#artilheiros-table tbody');
-    if (!tbody) return;
 
     const data = artList.map(a => ({
         ...a,
@@ -1002,18 +1011,45 @@ const renderArtilheiros = () => {
 
     const sortedData = sortInternal(data, 'artilheiros-table');
 
-    tbody.innerHTML = sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum artilheiro encontrado.</td></tr>' : 
-        sortedData.map((a, idx) => `
-            <tr onclick="showArtilheiroDetail('${a.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
-                <td><img src="${a.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
-                <td style="font-weight:bold;">${a.nome}</td>
-                <td>${a.games}</td>
-                <td style="color:var(--primary-color); font-weight:bold;">${a.goals}</td>
-                <td>${a.media}</td>
-            </tr>
-        `).join('');
+    const content = document.getElementById('artilheiros-content');
+    content.innerHTML = `
+        <table class="data-table" id="artilheiros-table">
+            <thead>
+                <tr>
+                    <th>Foto</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Jogador <i class="fas fa-sort"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'games', 'number')">Jogos <i class="fas fa-sort"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'goals', 'number')">Gols <i class="fas fa-sort"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'media', 'number')">Média <i class="fas fa-sort"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum artilheiro encontrado.</td></tr>' : 
+                    sortedData.map(a => `
+                        <tr onclick="showArtilheiroDetail('${a.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
+                            <td><img src="${a.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
+                            <td style="font-weight:bold;">${a.nome}</td>
+                            <td>${a.games}</td>
+                            <td style="color:var(--primary-color); font-weight:bold;">${a.goals}</td>
+                            <td>${a.media}</td>
+                        </tr>
+                    `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    populateFilter('art-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
+    populateFilter('art-filter-jogador', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
+    populateFilter('art-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
+    populateFilter('art-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
 };
+
 const showArtilheiroDetail = (playerName, event) => {
+    const row = event.currentTarget.closest('tr');
+    const existing = document.getElementById(`art-detail-${playerName.replace(/\s+/g, '-')}`);
+    document.querySelectorAll('.art-detail-row').forEach(r => r.remove());
+    if (existing) return;
+
     const campStats = {};
     const advStats = {};
     state.jogos.forEach(j => {
@@ -1033,36 +1069,288 @@ const showArtilheiroDetail = (playerName, event) => {
         }
     });
 
-    const container = document.getElementById('artilheiro-detail-container');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="detail-inline-container" style="display:block; margin-top:0;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                <h3>Histórico de Gols: ${playerName}</h3>
-                <button class="btn-icon" onclick="document.getElementById('artilheiro-detail-container').classList.add('hidden')"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="form-grid" style="gap:2rem;">
-                <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
-                    <div class="stats-section-title">Por Campeonato</div>
-                    <table class="stats-table">
-                        <thead><tr><th>Campeonato</th><th>Jogos</th><th>Gols</th></tr></thead>
-                        <tbody>${Object.values(campStats).sort((a,b)=>b.goals-a.goals).map(c => `<tr><td>${c.nome}</td><td>${c.games}</td><td><strong>${c.goals}</strong></td></tr>`).join('')}</tbody>
-                    </table>
+    const html = `
+        <tr id="art-detail-${playerName.replace(/\s+/g, '-')}" class="art-detail-row">
+            <td colspan="5">
+                <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                        <h4 style="margin:0;">Histórico de Gols: ${playerName}</h4>
+                        <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="form-grid" style="gap:2rem;">
+                        <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none; padding:0;">
+                            <div class="stats-section-title" style="font-size:0.85rem;">Por Campeonato</div>
+                            <table class="stats-table">
+                                <thead><tr><th>Campeonato</th><th>Jogos</th><th>Gols</th></tr></thead>
+                                <tbody>${Object.values(campStats).sort((a,b)=>b.goals-a.goals).map(c => `<tr><td>${c.nome}</td><td>${c.games}</td><td><strong>${c.goals}</strong></td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                        <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none; padding:0;">
+                            <div class="stats-section-title" style="font-size:0.85rem;">Contra Adversários</div>
+                            <table class="stats-table">
+                                <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
+                                <tbody>${Object.values(advStats).sort((a,b)=>b.goals-a.goals).map(a => `<tr><td>${a.nome}</td><td><strong>${a.goals}</strong></td></tr>`).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
-                    <div class="stats-section-title">Contra Adversários</div>
-                    <table class="stats-table">
-                        <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
-                        <tbody>${Object.values(advStats).sort((a,b)=>b.goals-a.goals).map(a => `<tr><td>${a.nome}</td><td><strong>${a.goals}</strong></td></tr>`).join('')}</tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+            </td>
+        </tr>
     `;
-    container.classList.remove('hidden');
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    row.insertAdjacentHTML('afterend', html);
 };
+
+const renderMultiGolsTab = (nGols) => {
+    const fTemp = document.getElementById('art-filter-temporada').value;
+    const fJog = document.getElementById('art-filter-jogador').value;
+    const fPos = document.getElementById('art-filter-posicao').value;
+    const fAdv = document.getElementById('art-filter-adversario').value;
+    const fEst = document.getElementById('art-filter-estadio').value;
+    const fCamp = document.getElementById('art-filter-campeonato').value;
+    const fTipo = document.getElementById('art-filter-tipo').value;
+    const fNac = document.getElementById('art-filter-nacionalidade').value;
+
+    const stats = {};
+    state.jogos.forEach(jogo => {
+        const comp = state.competicoes.find(c => c.campeonato === jogo.campeonato);
+        const matchMatchesFilter = (!fTemp || jogo.temporada === fTemp) &&
+                                   (!fAdv || jogo.casa === fAdv || jogo.fora === fAdv) &&
+                                   (!fEst || jogo.estadio === fEst) &&
+                                   (!fCamp || jogo.campeonato === fCamp) &&
+                                   (!fTipo || comp?.tipo === fTipo);
+        if (!matchMatchesFilter) return;
+
+        jogo.lineupGalo?.forEach(l => {
+            const g = parseInt(l.golsCount || 0);
+            if (g === nGols) {
+                if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, count: 0, totalGames: 0 };
+                stats[l.jogador].count++;
+            }
+        });
+        
+        // Contar jogos totais para os jogadores que alcançaram a marca (dentro dos filtros aplicados)
+        jogo.lineupGalo?.forEach(l => {
+            if (stats[l.jogador]) stats[l.jogador].totalGames++;
+        });
+    });
+
+    let list = Object.values(stats).filter(s => s.count > 0).map(s => {
+        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
+        return { ...s, player: p };
+    });
+
+    if (fJog) list = list.filter(a => a.nome === fJog);
+    if (fPos) list = list.filter(a => a.player?.posicao === fPos);
+    if (fNac) list = list.filter(a => a.player?.nacionalidade === fNac);
+
+    const sortedData = sortInternal(list, 'multigols-table');
+    sortedData.sort((a,b) => b.count - a.count || b.totalGames - a.totalGames);
+
+
+    const content = document.getElementById('artilheiros-content');
+    content.innerHTML = `
+        <table class="data-table" id="multigols-table">
+            <thead>
+                <tr>
+                    <th>Foto</th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'nome', 'string')">Jogador <i class="fas fa-sort"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'totalGames', 'number')">Jogos <i class="fas fa-sort"></i></th>
+                    <th style="cursor:pointer;" onclick="sortTable(event, 'count', 'number')">Quantidade <i class="fas fa-sort"></i></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${list.length === 0 ? `<tr><td colspan="4" style="text-align:center;">Nenhum registro de ${nGols} gols em um único jogo.</td></tr>` : 
+                    list.map(s => `
+                        <tr onclick="showMultiGolsGames('${s.nome}', ${nGols}, event)" style="cursor:pointer;" title="Clique para ver os jogos">
+                            <td><img src="${s.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
+                            <td style="font-weight:bold;">${s.nome}</td>
+                            <td>${s.totalGames}</td>
+                            <td style="color:var(--primary-color); font-weight:bold;">${s.count}</td>
+                        </tr>
+                    `).join('')}
+            </tbody>
+        </table>
+    `;
+};
+
+const showMultiGolsGames = (playerName, nGols, event) => {
+    const row = event.currentTarget.closest('tr');
+    const existing = document.getElementById(`multigols-detail-${playerName.replace(/\s+/g, '-')}`);
+    document.querySelectorAll('.multigols-detail-row').forEach(r => r.remove());
+    if (existing) return;
+
+    const games = state.jogos.filter(j => {
+        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
+        return lp && parseInt(lp.golsCount) === nGols;
+    }).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    const html = `
+        <tr id="multigols-detail-${playerName.replace(/\s+/g, '-')}" class="multigols-detail-row">
+            <td colspan="4">
+                <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                        <h4 style="margin:0;">Jogos com ${nGols} gols: ${playerName}</h4>
+                        <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Campeonato</th>
+                                <th>Casa</th>
+                                <th>Placar</th>
+                                <th>Fora</th>
+                                <th>Estádio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${games.map(j => `
+                                <tr>
+                                    <td>${j.data.split('-').reverse().join('/')}</td>
+                                    <td>${j.campeonato}</td>
+                                    <td style="text-align:right;">${j.casa}</td>
+                                    <td style="text-align:center; font-weight:bold;">${j.golsCasa} x ${j.golsFora}</td>
+                                    <td>${j.fora}</td>
+                                    <td>${j.estadio || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    `;
+    row.insertAdjacentHTML('afterend', html);
+};
+
+const renderSixPlusTab = () => {
+    const fTemp = document.getElementById('art-filter-temporada').value;
+    const fJog = document.getElementById('art-filter-jogador').value;
+    const fPos = document.getElementById('art-filter-posicao').value;
+    const fAdv = document.getElementById('art-filter-adversario').value;
+    const fEst = document.getElementById('art-filter-estadio').value;
+    const fCamp = document.getElementById('art-filter-campeonato').value;
+    const fTipo = document.getElementById('art-filter-tipo').value;
+    const fNac = document.getElementById('art-filter-nacionalidade').value;
+
+    const stats = {};
+    state.jogos.forEach(jogo => {
+        const comp = state.competicoes.find(c => c.campeonato === jogo.campeonato);
+        const matchMatchesFilter = (!fTemp || jogo.temporada === fTemp) &&
+                                   (!fAdv || jogo.casa === fAdv || jogo.fora === fAdv) &&
+                                   (!fEst || jogo.estadio === fEst) &&
+                                   (!fCamp || jogo.campeonato === fCamp) &&
+                                   (!fTipo || comp?.tipo === fTipo);
+        if (!matchMatchesFilter) return;
+
+        jogo.lineupGalo?.forEach(l => {
+            const g = parseInt(l.golsCount || 0);
+            if (g >= 6 && g <= 10) {
+                if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, total: 0, 6:0, 7:0, 8:0, 9:0, 10:0 };
+                stats[l.jogador][g]++;
+                stats[l.jogador].total++;
+            }
+        });
+    });
+
+    let list = Object.values(stats).map(s => {
+        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
+        return { ...s, player: p };
+    });
+
+    if (fJog) list = list.filter(a => a.nome === fJog);
+    if (fPos) list = list.filter(a => a.player?.posicao === fPos);
+    if (fNac) list = list.filter(a => a.player?.nacionalidade === fNac);
+
+    const sortedData = sortInternal(list, 'sixplus-table');
+    sortedData.sort((a,b) => b.total - a.total);
+
+
+    const content = document.getElementById('artilheiros-content');
+    content.innerHTML = `
+        <table class="data-table" id="sixplus-table">
+            <thead>
+                <tr>
+                    <th>Foto</th>
+                    <th>Jogador</th>
+                    <th>6 Gols</th>
+                    <th>7 Gols</th>
+                    <th>8 Gols</th>
+                    <th>9 Gols</th>
+                    <th>10 Gols</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${list.length === 0 ? '<tr><td colspan="7" style="text-align:center;">Nenhum registro de 6 ou mais gols em um único jogo.</td></tr>' : 
+                    list.map(s => `
+                        <tr onclick="showSixPlusGames('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos">
+                            <td><img src="${s.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
+                            <td style="font-weight:bold;">${s.nome}</td>
+                            <td>${s[6]}</td>
+                            <td>${s[7]}</td>
+                            <td>${s[8]}</td>
+                            <td>${s[9]}</td>
+                            <td>${s[10]}</td>
+                        </tr>
+                    `).join('')}
+
+            </tbody>
+        </table>
+    `;
+};const showSixPlusGames = (playerName, event) => {
+    const row = event.currentTarget.closest('tr');
+    const existing = document.getElementById(`sixplus-detail-${playerName.replace(/\s+/g, '-')}`);
+    document.querySelectorAll('.sixplus-detail-row').forEach(r => r.remove());
+    if (existing) return;
+
+    const games = state.jogos.filter(j => {
+        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
+        const g = parseInt(lp?.golsCount || 0);
+        return lp && g >= 6 && g <= 10;
+    }).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+    const html = `
+        <tr id="sixplus-detail-${playerName.replace(/\s+/g, '-')}" class="sixplus-detail-row">
+            <td colspan="7">
+                <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                        <h4 style="margin:0;">Jogos com 6 ou mais gols: ${playerName}</h4>
+                        <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Campeonato</th>
+                                <th>Casa</th>
+                                <th>Placar</th>
+                                <th>Fora</th>
+                                <th>Gols</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${games.map(j => {
+                                const lp = j.lineupGalo.find(p => p.jogador === playerName);
+                                return `
+                                    <tr>
+                                        <td>${j.data.split('-').reverse().join('/')}</td>
+                                        <td>${j.campeonato}</td>
+                                        <td style="text-align:right;">${j.casa}</td>
+                                        <td style="text-align:center; font-weight:bold;">${j.golsCasa} x ${j.golsFora}</td>
+                                        <td>${j.fora}</td>
+                                        <td style="font-weight:bold; color:var(--primary-color);">${lp.golsCount}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    `;
+    row.insertAdjacentHTML('afterend', html);
+};
+
 
 // CARTÕES FUNCTIONS
 const renderCartoes = () => {
@@ -3964,8 +4252,9 @@ document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('cl
         renderElenco();
     } else if (page === 'artilheiros') {
         showSection('artilheiros');
-        renderArtilheiros();
+        renderCurrentArtTab();
     } else if (page === 'cartoes') {
+
         showSection('cartoes');
         renderCartoes();
     } else if (page === 'arbitragem') {
@@ -3986,7 +4275,7 @@ document.getElementById('btn-novo-jogo')?.addEventListener('click', () => render
 ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-publico-min', 'filter-publico-max'].forEach(id => { document.getElementById(id)?.addEventListener('change', renderJogos); if(id.includes('publico')) document.getElementById(id)?.addEventListener('input', renderJogos); });
 ['elenco-filter-temporada', 'elenco-filter-posicao', 'elenco-filter-status', 'elenco-filter-nome', 'elenco-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderElenco));
 ['elenco-filter-idade-min', 'elenco-filter-idade-max'].forEach(id => document.getElementById(id)?.addEventListener('input', renderElenco));
-['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArtilheiros));
+['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCurrentArtTab));
 ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id)?.addEventListener('change', renderCartoes));
 ['arb-filter-temporada', 'arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => document.getElementById(id)?.addEventListener('change', renderArbitragem));
 ['stc-filter-temporada', 'stc-filter-tecnico', 'stc-filter-tipo'].forEach(id => {
