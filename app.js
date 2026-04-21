@@ -4321,7 +4321,7 @@ document.getElementById('export-artilheiros-csv')?.addEventListener('click', () 
 
 // JOGADORES STATISTICS PAGE
 const renderJogadoresPage = () => {
-    const container = document.getElementById('jogadores-grid');
+    const container = document.getElementById('jogadores-grid-container');
     if (!container) return;
 
     // Listeners para as abas de posição (se ainda não vinculados)
@@ -5695,7 +5695,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const parts = hash.split('/');
         const page = parts[0];
         const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
+        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
         const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
         
         if (page && validPages.includes(page)) {
