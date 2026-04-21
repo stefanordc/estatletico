@@ -4502,11 +4502,16 @@ const renderPlayerCareerDetail = (playerName) => {
     const pInfo = state.jogadores.find(p => p.nome_guerra === playerName);
     const isGoleiro = pInfo?.posicao === 'Goleiro';
     
+    // Coleta de jogos para estreia e último jogo
+    let playerGames = [];
+    
     // Agregação por temporada
     const seasonsMap = {};
     state.jogos.forEach(j => {
         const line = j.lineupGalo?.find(l => l.jogador === playerName);
         if (!line) return;
+        
+        playerGames.push(j);
         
         const temp = j.temporada;
         if (!seasonsMap[temp]) seasonsMap[temp] = { temporada: temp, j: 0, v: 0, e: 0, d: 0, gols: 0, cs: 0, gs: 0, jssg: 0, jsmg: 0 };
@@ -4533,12 +4538,24 @@ const renderPlayerCareerDetail = (playerName) => {
         if (golsAdv === 0) s.cs++;
     });
 
+    // Ordenação cronológica para Estreia e Último Jogo
+    playerGames.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+    const formatFullMatchInfo = (j) => {
+        if (!j) return 'N/I';
+        const dateStr = j.data.split('-').reverse().join('/');
+        return `${dateStr} - ${j.casa} ${j.golsCasa}x${j.golsFora} ${j.fora} - ${j.campeonato}`;
+    };
+
+    const debutInfo = formatFullMatchInfo(playerGames[0]);
+    const lastInfo = formatFullMatchInfo(playerGames[playerGames.length - 1]);
+
     const seasons = Object.values(seasonsMap).sort((a, b) => b.temporada - a.temporada);
     const foto = pInfo?.foto || DEFAULT_PLAYER_PHOTO;
 
     overlay.innerHTML = `
         <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 900px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
                 <div style="display:flex; align-items:center; gap:1.5rem;">
                     <img src="${foto}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid var(--primary-color);">
                     <div>
@@ -4548,6 +4565,17 @@ const renderPlayerCareerDetail = (playerName) => {
                     </div>
                 </div>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
+            </div>
+
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-highlight); border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                <div style="margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    <strong style="color: var(--text-muted);">Estreia:</strong> 
+                    <span style="margin-left: 0.5rem; font-weight: 500;">${debutInfo}</span>
+                </div>
+                <div style="font-size: 0.95rem;">
+                    <strong style="color: var(--text-muted);">Último Jogo:</strong> 
+                    <span style="margin-left: 0.5rem; font-weight: 500;">${lastInfo}</span>
+                </div>
             </div>
 
             <div class="stats-section">
