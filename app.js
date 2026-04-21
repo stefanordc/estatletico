@@ -4327,24 +4327,14 @@ const renderJogadoresPage = () => {
     const container = document.getElementById('jogadores-grid-container');
     if (!container) return;
 
-    // Inicialização de Filtros (Temporadas)
-    const years = [...new Set(state.jogos.map(j => parseInt(j.temporada)))].filter(Boolean).sort((a,b) => a - b);
     const deInp = document.getElementById('jogadores-filter-temp-de');
     const ateInp = document.getElementById('jogadores-filter-temp-ate');
     const nomeInp = document.getElementById('jogadores-filter-nome');
 
-    if (deInp && deInp.options.length <= 1) {
-        years.forEach(y => {
-            deInp.add(new Option(y, y));
-            ateInp.add(new Option(y, y));
-        });
-        deInp.value = state.jogadoresFilterDe;
-        ateInp.value = state.jogadoresFilterAte;
-    }
-
     if (deInp && !deInp.dataset.bound) {
-        deInp.addEventListener('change', () => { state.jogadoresFilterDe = deInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
-        ateInp.addEventListener('change', () => { state.jogadoresFilterAte = ateInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
+        // Agora usamos 'input' para filtros digitáveis para resposta imediata
+        deInp.addEventListener('input', () => { state.jogadoresFilterDe = deInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
+        ateInp.addEventListener('input', () => { state.jogadoresFilterAte = ateInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
         nomeInp.addEventListener('input', () => { state.jogadoresFilterNome = nomeInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
         deInp.dataset.bound = 'true';
     }
@@ -4375,7 +4365,6 @@ const renderJogadoresPage = () => {
 
         const isMandante = (j.casa || '').toLowerCase().includes('atlético');
         const golsAdv = parseInt(isMandante ? j.golsFora : j.golsCasa) || 0;
-        const cleanSheet = golsAdv === 0;
 
         if (Array.isArray(j.lineupGalo)) {
             j.lineupGalo.forEach(l => {
@@ -4391,6 +4380,7 @@ const renderJogadoresPage = () => {
                         jogos: 0,
                         v: 0, e: 0, d: 0,
                         gols: 0,
+                        gs: 0, // Gols Sofridos
                         cs: 0
                     };
                 }
@@ -4403,7 +4393,13 @@ const renderJogadoresPage = () => {
                 else s.d++;
 
                 s.gols += parseInt(l.golsCount) || 0;
-                if (cleanSheet) s.cs++;
+                
+                // Se for goleiro, computa gols sofridos
+                if (s.posicao === 'Goleiro') {
+                    s.gs += golsAdv;
+                }
+
+                if (golsAdv === 0) s.cs++;
             });
         }
     });
@@ -4436,7 +4432,7 @@ const renderJogadoresPage = () => {
     list.sort((a, b) => b.jogos - a.jogos || b.gols - a.gols);
 
     // Paginação
-    const rowsPerPage = 20; // Grid pede menos por página para performance visual
+    const rowsPerPage = 20; 
     const totalPages = Math.ceil(list.length / rowsPerPage);
     if (state.jogadoresCurrentPage > totalPages) state.jogadoresCurrentPage = 1;
     const page = state.jogadoresCurrentPage;
@@ -4446,6 +4442,8 @@ const renderJogadoresPage = () => {
     container.innerHTML = paginated.length === 0 ? '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Nenhum jogador encontrado para estes filtros.</div>' : 
         paginated.map((p, i) => {
             const rank = ((page - 1) * rowsPerPage) + i + 1;
+            const isGoleiro = p.posicao === 'Goleiro';
+            
             return `
                 <div class="player-card" onclick="renderPlayerCareerDetail('${p.nome.replace(/'/g, "\\'")}')" style="cursor:pointer; animation: fadeIn 0.4s ease-out both; animation-delay: ${i * 0.05}s;">
                     <div class="player-rank">#${rank}</div>
@@ -4453,15 +4451,26 @@ const renderJogadoresPage = () => {
                     <div class="player-info">
                         <h3 class="player-name">${p.nome}</h3>
                         <div class="player-pos-badge">${p.posicao}</div>
-                        <div class="player-stats-summary">
+                        <div class="player-stats-summary" style="grid-template-columns: ${isGoleiro ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)'};">
                             <div class="stat-item">
                                 <span class="stat-value">${p.jogos}</span>
                                 <span class="stat-label">Jogos</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-value" style="color:var(--success-color);">${p.gols}</span>
-                                <span class="stat-label">Gols</span>
-                            </div>
+                            ${isGoleiro ? `
+                                <div class="stat-item">
+                                    <span class="stat-value" style="color:var(--danger-color);">${p.gs}</span>
+                                    <span class="stat-label">GS</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" style="color:var(--success-color);">${p.gols}</span>
+                                    <span class="stat-label">Gols</span>
+                                </div>
+                            ` : `
+                                <div class="stat-item">
+                                    <span class="stat-value" style="color:var(--success-color);">${p.gols}</span>
+                                    <span class="stat-label">Gols</span>
+                                </div>
+                            `}
                         </div>
                     </div>
                 </div>

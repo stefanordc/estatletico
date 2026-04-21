@@ -2067,8 +2067,8 @@ input[type=number] {
 
 .player-photo {
     width: 100px;
-    height: 100px;
-    border-radius: 50%;
+    height: 140px;
+    border-radius: 50% / 40%;
     object-fit: cover;
     border: 3px solid var(--primary-color);
     background: #f0f0f0;
