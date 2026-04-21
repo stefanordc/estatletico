@@ -78,7 +78,8 @@ const state = {
         porFase: [],
         individuais: [],
         tecnicos: []
-    }
+    },
+    isFormActive: false // Flag de segurança para bloquear exclusões durante edição
 };
 
 // Cache para estatísticas pesadas para evitar travamentos
@@ -2273,6 +2274,7 @@ const updateRefereeInfo = () => {
 };
 
 const renderNovoJogoPage = (jogoToEdit = null) => {
+    state.isFormActive = true; // Ativa trava de segurança
     state.editingJogoId = jogoToEdit ? jogoToEdit.id : null;
     showSection('novo-jogo');
     novoJogoContainer.innerHTML = `
@@ -2472,6 +2474,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         if (blockNum > 1) {
             nextBlock(blockNum - 1);
         } else {
+            state.isFormActive = false; // Desativa trava ao cancelar/voltar
             showSection('jogos');
         }
     };
@@ -2619,7 +2622,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
     const yellowVal = data ? data.amarelo : 1;
-    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
     
     // TAB behavior for cards
     const inputsOnRow = row.querySelectorAll('input, select');
@@ -2691,7 +2694,7 @@ const addLineupRow = (team, data = null) => {
         <td class="tempo-gs-td col-small"></td>
         <td class="col-mini"><input type="checkbox" class="titular-ck" ${(data ? data.titular : true) ? 'checked' : ''}></td>
         <td class="col-mini"><input type="checkbox" class="sub-ck" ${(data ? data.substituido : false) ? 'checked' : ''}></td>
-        <td class="col-mini"><button type="button" class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-trash-alt" style="color:#dc3545;"></i></button></td>
+        <td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-user-minus" style="color:#7f8c8d;"></i></button></td>
     `;
     
     const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
@@ -2774,6 +2777,12 @@ const addLineupRow = (team, data = null) => {
         }, 10); 
     }
     tbody.appendChild(row);
+};
+
+const removeLineupRow = (btn) => {
+    if (confirm('Deseja remover este jogador da lista? (Esta ação NÃO exclui o cadastro global do jogador)')) {
+        btn.closest('tr').remove();
+    }
 };
 
 const saveNewJogo = () => {
@@ -2889,6 +2898,7 @@ const saveNewJogo = () => {
         
         try {
             await saveData('jogos', [jogoParaSalvar]);
+            state.isFormActive = false; // Desativa trava ao salvar com sucesso
             renderJogos();
             showSection('jogos');
             showToast('Jogo salvo com sucesso!', 'success');
@@ -3251,7 +3261,7 @@ const renderAtleticoTecnicos = (container) => {
     // Recalcular com base nos filtros de jogos
     const tempStats = {};
     state.jogos.forEach(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         if (fTempDe > 0 && anoJogo < fTempDe) return;
         if (fTempAte < 9999 && anoJogo > fTempAte) return;
         
@@ -3357,7 +3367,7 @@ const renderAtleticoTecnicos = (container) => {
 
     // Inicia Filtros
     const availableCamps = [...new Set(state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         return (fTempDe === 0 || anoJogo >= fTempDe) && (fTempAte === 9999 || anoJogo <= fTempAte);
     }).map(j => j.campeonato))].sort();
     initMultiSelect('stt-multi-campeonato', availableCamps, 'tec-campeonato', () => renderAtleticoTecnicos(container));
@@ -3449,7 +3459,7 @@ const renderStatsPorFase = (container) => {
     const selectedTipos = state.statsMultiFilters['fas-tipo'] || [];
 
     const filteredJogos = state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         if (fTempDe > 0 && anoJogo < fTempDe) return false;
         if (fTempAte < 9999 && anoJogo > fTempAte) return false;
         
@@ -3505,7 +3515,7 @@ const renderStatsPorFase = (container) => {
 
     // Setup Autocomplete e Filtros
     const availableCamps = [...new Set(state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         return (fTempDe === 0 || anoJogo >= fTempDe) && (fTempAte === 9999 || anoJogo <= fTempAte);
     }).map(j => j.campeonato))].sort();
     initMultiSelect('spf-multi-campeonato', availableCamps, 'fas-campeonato', () => renderStatsPorFase(container));
@@ -3688,7 +3698,7 @@ const renderStatsColetivas = (container) => {
     const selectedTipos = state.statsMultiFilters['col-tipo'] || [];
 
     const filteredJogos = state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         if (fTempDe > 0 && anoJogo < fTempDe) return false;
         if (fTempAte < 9999 && anoJogo > fTempAte) return false;
         
@@ -3721,7 +3731,7 @@ const renderStatsColetivas = (container) => {
 
     // Inicializa Filtros
     const availableCamps = [...new Set(state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         return (fTempDe === 0 || anoJogo >= fTempDe) && (fTempAte === 9999 || anoJogo <= fTempAte);
     }).map(j => j.campeonato))].sort();
     initMultiSelect('stc-multi-campeonato', availableCamps, 'col-campeonato', () => renderStatsColetivas(container));
@@ -3911,7 +3921,7 @@ const renderStatsIndividuais = (container) => {
 
     const stats = {};
     state.jogos.forEach(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         if (fTempDe > 0 && anoJogo < fTempDe) return;
         if (fTempAte < 9999 && anoJogo > fTempAte) return;
         
@@ -3976,7 +3986,7 @@ const renderStatsIndividuais = (container) => {
         : state.jogadores;
         
     const filteredForCamps = state.jogos.filter(j => {
-        const anoJogo = parseInt(j.data.substring(0, 4)) || 0;
+        const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         return (fTempDe === 0 || anoJogo >= fTempDe) && (fTempAte === 9999 || anoJogo <= fTempAte);
     });
     
@@ -4098,6 +4108,10 @@ const nextBlock = (n) => {
 
 // CADASTROS COMMON
 const deleteItem = async (tab, id) => {
+    if (state.isFormActive) {
+        showToast('Não é permitido excluir registros enquanto um formulário de jogo está aberto. Salve ou cancele o jogo primeiro.', 'error');
+        return;
+    }
     if (confirm('Excluir registro?')) {
         try {
             if (supabaseClient) {
