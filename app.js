@@ -4499,6 +4499,9 @@ const renderPlayerCareerDetail = (playerName) => {
     overlay.style.display = 'flex';
     overlay.style.zIndex = '5000';
     
+    const pInfo = state.jogadores.find(p => p.nome_guerra === playerName);
+    const isGoleiro = pInfo?.posicao === 'Goleiro';
+    
     // Agregação por temporada
     const seasonsMap = {};
     state.jogos.forEach(j => {
@@ -4506,7 +4509,7 @@ const renderPlayerCareerDetail = (playerName) => {
         if (!line) return;
         
         const temp = j.temporada;
-        if (!seasonsMap[temp]) seasonsMap[temp] = { temporada: temp, j: 0, v: 0, e: 0, d: 0, gols: 0, cs: 0 };
+        if (!seasonsMap[temp]) seasonsMap[temp] = { temporada: temp, j: 0, v: 0, e: 0, d: 0, gols: 0, cs: 0, gs: 0, jssg: 0, jsmg: 0 };
         
         const isMandante = (j.casa || '').toLowerCase().includes('atlético');
         const golsGalo = parseInt(isMandante ? j.golsCasa : j.golsFora) || 0;
@@ -4518,12 +4521,19 @@ const renderPlayerCareerDetail = (playerName) => {
         else if (golsGalo === golsAdv) s.e++;
         else s.d++;
         
-        s.gols += parseInt(line.golsCount) || 0;
+        const gCount = parseInt(line.golsCount) || 0;
+        s.gols += gCount;
+        
+        if (isGoleiro) {
+            s.gs += golsAdv;
+            if (golsAdv === 0) s.jssg++;
+        }
+        if (gCount === 0) s.jsmg++;
+        
         if (golsAdv === 0) s.cs++;
     });
 
     const seasons = Object.values(seasonsMap).sort((a, b) => b.temporada - a.temporada);
-    const pInfo = state.jogadores.find(p => p.nome_guerra === playerName);
     const foto = pInfo?.foto || DEFAULT_PLAYER_PHOTO;
 
     overlay.innerHTML = `
@@ -4551,13 +4561,18 @@ const renderPlayerCareerDetail = (playerName) => {
                             <th style="color:var(--warning-color);">E</th>
                             <th style="color:var(--danger-color);">D</th>
                             <th>Gols</th>
-                            <th title="Clean Sheets">CS</th>
+                            ${isGoleiro ? `
+                                <th style="color:var(--danger-color);" title="Gols Sofridos">GS</th>
+                                <th title="Jogos Sem Sofrer Gol">JSSG</th>
+                            ` : `
+                                <th title="Jogos Sem Marcar Gol">JSMG</th>
+                            `}
                             <th>Aprov</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${seasons.map(s => {
-                            const aprov = (((s.v * 3) + s.e) / (s.j * 3) * 100).toFixed(1);
+                            const aprov = s.j > 0 ? (((s.v * 3) + s.e) / (s.j * 3) * 100).toFixed(1) : 0;
                             return `
                                 <tr>
                                     <td style="font-weight:bold; color:var(--primary-color);">${s.temporada}</td>
@@ -4566,7 +4581,12 @@ const renderPlayerCareerDetail = (playerName) => {
                                     <td>${s.e}</td>
                                     <td style="color:var(--danger-color);">${s.d}</td>
                                     <td style="font-weight:bold;">${s.gols}</td>
-                                    <td style="color:#27ae60;">${s.cs || '-'}</td>
+                                    ${isGoleiro ? `
+                                        <td style="color:var(--danger-color);">${s.gs}</td>
+                                        <td style="color:#27ae60;">${s.jssg}</td>
+                                    ` : `
+                                        <td style="color:var(--text-muted);">${s.jsmg}</td>
+                                    `}
                                     <td style="font-weight:600;">${aprov}%</td>
                                 </tr>
                             `;
