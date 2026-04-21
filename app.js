@@ -67,6 +67,9 @@ const state = {
     atleTecPage: 1, // Página para a nova aba de técnicos do Atlético
     jogadoresCurrentPos: 'Geral',
     jogadoresCurrentPage: 1,
+    jogadoresFilterDe: '',
+    jogadoresFilterAte: '',
+    jogadoresFilterNome: '',
     isUpdating: false, // Flag para evitar loops de renderização
     
     // Novo estado para filtros multi-seleção
@@ -4324,7 +4327,29 @@ const renderJogadoresPage = () => {
     const container = document.getElementById('jogadores-grid-container');
     if (!container) return;
 
-    // Listeners para as abas de posição (se ainda não vinculados)
+    // Inicialização de Filtros (Temporadas)
+    const years = [...new Set(state.jogos.map(j => parseInt(j.temporada)))].filter(Boolean).sort((a,b) => a - b);
+    const deInp = document.getElementById('jogadores-filter-temp-de');
+    const ateInp = document.getElementById('jogadores-filter-temp-ate');
+    const nomeInp = document.getElementById('jogadores-filter-nome');
+
+    if (deInp && deInp.options.length <= 1) {
+        years.forEach(y => {
+            deInp.add(new Option(y, y));
+            ateInp.add(new Option(y, y));
+        });
+        deInp.value = state.jogadoresFilterDe;
+        ateInp.value = state.jogadoresFilterAte;
+    }
+
+    if (deInp && !deInp.dataset.bound) {
+        deInp.addEventListener('change', () => { state.jogadoresFilterDe = deInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
+        ateInp.addEventListener('change', () => { state.jogadoresFilterAte = ateInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
+        nomeInp.addEventListener('input', () => { state.jogadoresFilterNome = nomeInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
+        deInp.dataset.bound = 'true';
+    }
+
+    // Listeners para as abas de posição
     const posTabs = document.querySelectorAll('#jogadores-pos-tabs .tab-btn');
     posTabs.forEach(btn => {
         if (!btn.dataset.bound) {
@@ -4339,15 +4364,17 @@ const renderJogadoresPage = () => {
         }
     });
 
-    // Agregação de dados
+    // Agregação de dados com filtros de temporada
     const statsMap = {};
-    
+    const fDe = parseInt(state.jogadoresFilterDe) || 0;
+    const fAte = parseInt(state.jogadoresFilterAte) || 9999;
+
     state.jogos.forEach(j => {
+        const temp = parseInt(j.temporada);
+        if (temp < fDe || temp > fAte) return;
+
         const isMandante = (j.casa || '').toLowerCase().includes('atlético');
-        const golsGalo = parseInt(isMandante ? j.golsCasa : j.golsFora) || 0;
         const golsAdv = parseInt(isMandante ? j.golsFora : j.golsCasa) || 0;
-        
-        const result = golsGalo > golsAdv ? 'v' : (golsGalo === golsAdv ? 'e' : 'd');
         const cleanSheet = golsAdv === 0;
 
         if (Array.isArray(j.lineupGalo)) {
@@ -4356,7 +4383,6 @@ const renderJogadoresPage = () => {
                 if (!name || name === 'Adversário') return;
                 
                 if (!statsMap[name]) {
-                    // Tenta encontrar o jogador no cadastro para pegar a foto e posição real
                     const pInfo = state.jogadores.find(p => p.nome_guerra === name);
                     statsMap[name] = {
                         nome: name,
@@ -4365,32 +4391,43 @@ const renderJogadoresPage = () => {
                         jogos: 0,
                         v: 0, e: 0, d: 0,
                         gols: 0,
-                        cs: 0,
-                        lastSeason: j.temporada
+                        cs: 0
                     };
                 }
                 
                 const s = statsMap[name];
                 s.jogos++;
-                s[result]++;
+                const golsGalo = parseInt(isMandante ? j.golsCasa : j.golsFora) || 0;
+                if (golsGalo > golsAdv) s.v++;
+                else if (golsGalo === golsAdv) s.e++;
+                else s.d++;
+
                 s.gols += parseInt(l.golsCount) || 0;
                 if (cleanSheet) s.cs++;
-                if (parseInt(j.temporada) > parseInt(s.lastSeason)) {
-                    s.lastSeason = j.temporada;
-                }
             });
         }
     });
 
     let list = Object.values(statsMap);
 
+    // Filtro por Nome
+    if (state.jogadoresFilterNome) {
+        const term = normalizeString(state.jogadoresFilterNome);
+        list = list.filter(p => normalizeString(p.nome).includes(term));
+    }
+
     // Filtro por posição
     if (state.jogadoresCurrentPos !== 'Geral') {
+        const pos = state.jogadoresCurrentPos;
         list = list.filter(p => {
-            if (state.jogadoresCurrentPos === 'Goleiro') return p.posicao === 'Goleiro';
-            if (state.jogadoresCurrentPos === 'Defesa') return ['Lateral-Direito', 'Lateral-Esquerdo', 'Zagueiro'].includes(p.posicao);
-            if (state.jogadoresCurrentPos === 'Meio') return ['Volante', 'Meia'].includes(p.posicao);
-            if (state.jogadoresCurrentPos === 'Ataque') return p.posicao === 'Atacante';
+            if (pos === 'Goleiro') return p.posicao === 'Goleiro';
+            if (pos === 'Lateral-Direito') return p.posicao === 'Lateral-Direito';
+            if (pos === 'Lateral-Esquerdo') return p.posicao === 'Lateral-Esquerdo';
+            if (pos === 'Zagueiro') return p.posicao === 'Zagueiro';
+            if (pos === 'Volante') return p.posicao === 'Volante';
+            if (pos === 'Meia') return p.posicao === 'Meia';
+            if (pos === 'Atacante') return p.posicao === 'Atacante';
+            if (pos === 'Técnico') return p.posicao === 'Técnico';
             return true;
         });
     }
@@ -4399,54 +4436,37 @@ const renderJogadoresPage = () => {
     list.sort((a, b) => b.jogos - a.jogos || b.gols - a.gols);
 
     // Paginação
-    const rowsPerPage = 50;
+    const rowsPerPage = 20; // Grid pede menos por página para performance visual
     const totalPages = Math.ceil(list.length / rowsPerPage);
     if (state.jogadoresCurrentPage > totalPages) state.jogadoresCurrentPage = 1;
     const page = state.jogadoresCurrentPage;
     const paginated = list.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
-    // Renderização
-    container.innerHTML = `
-        <table class="premium-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Foto</th>
-                    <th>Nome</th>
-                    <th>Posição</th>
-                    <th style="text-align:center;">J</th>
-                    <th style="text-align:center; color:var(--success-color);">V</th>
-                    <th style="text-align:center; color:var(--warning-color);">E</th>
-                    <th style="text-align:center; color:var(--danger-color);">D</th>
-                    <th style="text-align:center;">Gols</th>
-                    <th style="text-align:center; color:#27ae60;" title="Clean Sheets">CS</th>
-                    <th style="text-align:center;">Aprov</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${paginated.map((p, i) => {
-                    const rank = ((page - 1) * rowsPerPage) + i + 1;
-                    const aprov = (((p.v * 3) + p.e) / (p.jogos * 3) * 100).toFixed(1);
-                    return `
-                        <tr onclick="renderPlayerCareerDetail('${p.nome.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-                            <td><span class="rank-badge ${rank <= 3 ? 'rank-' + rank : 'rank-other'}">${rank}</span></td>
-                            <td><img src="${p.foto}" class="mini-foto" style="width:35px; height:35px; border-radius:50%; object-fit:cover;"></td>
-                            <td><strong>${p.nome}</strong></td>
-                            <td><span class="badge position-badge">${p.posicao}</span></td>
-                            <td style="text-align:center; font-weight:600;">${p.jogos}</td>
-                            <td style="text-align:center; color:var(--success-color); font-weight:500;">${p.v}</td>
-                            <td style="text-align:center; color:var(--warning-color); font-weight:500;">${p.e}</td>
-                            <td style="text-align:center; color:var(--danger-color); font-weight:500;">${p.d}</td>
-                            <td style="text-align:center; font-weight:bold;">${p.gols}</td>
-                            <td style="text-align:center; color:#27ae60;">${p.cs || '-'}</td>
-                            <td style="text-align:center; font-weight:600;">${aprov}%</td>
-                        </tr>
-                    `;
-                }).join('')}
-            </tbody>
-        </table>
-        ${renderTableLegend(['J', 'V', 'E', 'D', 'CS', 'Aprov'])}
-    `;
+    // Renderização em Cards
+    container.innerHTML = paginated.length === 0 ? '<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Nenhum jogador encontrado para estes filtros.</div>' : 
+        paginated.map((p, i) => {
+            const rank = ((page - 1) * rowsPerPage) + i + 1;
+            return `
+                <div class="player-card" onclick="renderPlayerCareerDetail('${p.nome.replace(/'/g, "\\'")}')" style="cursor:pointer; animation: fadeIn 0.4s ease-out both; animation-delay: ${i * 0.05}s;">
+                    <div class="player-rank">#${rank}</div>
+                    <img src="${p.foto}" class="player-photo" onerror="this.src='${DEFAULT_PLAYER_PHOTO}'">
+                    <div class="player-info">
+                        <h3 class="player-name">${p.nome}</h3>
+                        <div class="player-pos-badge">${p.posicao}</div>
+                        <div class="player-stats-summary">
+                            <div class="stat-item">
+                                <span class="stat-value">${p.jogos}</span>
+                                <span class="stat-label">Jogos</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" style="color:var(--success-color);">${p.gols}</span>
+                                <span class="stat-label">Gols</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
     // Atualizar Paginação
     const paginDiv = document.getElementById('jogadores-pagination');

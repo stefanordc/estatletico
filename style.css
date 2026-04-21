@@ -2025,3 +2025,111 @@ input[type=number] {
 [data-theme="dark"] .total-row td {
     border-top-color: var(--primary-color) !important;
 }
+
+/* Player Card Redesign (Jogadores Page) */
+.player-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.player-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    border-color: var(--primary-color);
+}
+
+.player-rank {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    background: var(--bg-highlight);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+[data-theme="dark"] .player-rank {
+    background: #333;
+}
+
+.player-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--primary-color);
+    background: #f0f0f0;
+    transition: transform 0.3s ease;
+}
+
+.player-card:hover .player-photo {
+    transform: scale(1.05);
+}
+
+.player-info {
+    width: 100%;
+}
+
+.player-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+}
+
+.player-pos-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: rgba(212, 175, 55, 0.1);
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.player-stats-summary {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
