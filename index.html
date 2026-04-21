@@ -72,6 +72,10 @@
                 <i class="fas fa-users"></i>
                 <span>Elenco</span>
             </li>
+            <li class="nav-item" data-page="jogadores-page">
+                <i class="fas fa-portrait"></i>
+                <span>Jogadores</span>
+            </li>
             <li class="nav-item" data-page="artilheiros">
                 <i class="fas fa-soccer-ball"></i>
                 <span>Artilheiros</span>
@@ -327,6 +331,35 @@
             <!-- Detalhes do Jogador (Hidden by default) -->
             <div id="player-detail-container" class="hidden" style="margin-top: 2rem;"></div>
         </section>
+
+        <section id="jogadores-page-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <i class="fas fa-portrait" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    <div>
+                        <h2 style="margin:0;">Jogadores</h2>
+                        <p style="margin:0;">Estatísticas históricas e detalhadas dos jogadores</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tabs-container" id="jogadores-pos-tabs" style="margin-bottom: 2rem;">
+                <button class="tab-btn active" data-pos="Geral">Geral</button>
+                <button class="tab-btn" data-pos="Goleiro">Goleiro</button>
+                <button class="tab-btn" data-pos="Lateral-Direito">Lateral-Direito</button>
+                <button class="tab-btn" data-pos="Lateral-Esquerdo">Lateral-Esquerdo</button>
+                <button class="tab-btn" data-pos="Zagueiro">Zagueiro</button>
+                <button class="tab-btn" data-pos="Volante">Volante</button>
+                <button class="tab-btn" data-pos="Meia">Meia</button>
+                <button class="tab-btn" data-pos="Atacante">Atacante</button>
+                <button class="tab-btn" data-pos="Técnico">Técnico</button>
+            </div>
+
+            <div id="jogadores-grid-container" class="elenco-grid">
+                <!-- Jogadores serão renderizados aqui -->
+            </div>
+
+            <div id="jogadores-pagination" class="pagination-container" style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem;"></div>
 
         <!-- Jogos Section -->
         <section id="jogos-section" class="page-section hidden">
