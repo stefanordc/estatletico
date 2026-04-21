@@ -518,7 +518,7 @@ const renderAdversarios = () => {
         const item = { id: state.editingId || Date.now(), clube: clubeNome, estado: fd.get('estado'), pais: fd.get('pais'), escudo: fd.get('escudo') || 'https://via.placeholder.com/32' };
         if (state.editingId) { state.adversarios[state.adversarios.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.adversarios.push(item);
-        saveData('adversarios', state.adversarios); renderTab('adversarios');
+        saveData('adversarios', [item]); renderTab('adversarios');
     });
     handleSearch('adversarios');
 };
@@ -554,7 +554,7 @@ const renderEstadios = () => {
         const item = { id: state.editingId || Date.now(), nome: fd.get('nome'), estado: fd.get('estado'), pais: fd.get('pais'), mandante: fd.get('mandante'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
         if (state.editingId) { state.estadios[state.estadios.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.estadios.push(item);
-        saveData('estadios', state.estadios); renderTab('estadios');
+        saveData('estadios', [item]); renderTab('estadios');
     });
     handleSearch('estadios');
 };
@@ -581,7 +581,7 @@ const renderCompeticoes = () => {
         const item = { id: state.editingId || Date.now(), campeonato: fd.get('campeonato'), tipo: fd.get('tipo') };
         if (state.editingId) { state.competicoes[state.competicoes.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.competicoes.push(item);
-        saveData('competicoes', state.competicoes); renderTab('competicoes');
+        saveData('competicoes', [item]); renderTab('competicoes');
     });
     handleSearch('competicoes');
 };
@@ -622,7 +622,7 @@ const renderArbitros = () => {
         const item = { id: state.editingId || Date.now(), nome: novoNome, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
         if (state.editingId) { state.arbitros[state.arbitros.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.arbitros.push(item);
-        saveData('arbitros', state.arbitros); renderTab('arbitros');
+        saveData('arbitros', [item]); renderTab('arbitros');
     });
     handleSearch('arbitros');
 };
@@ -680,18 +680,13 @@ const renderJogadores = () => {
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
 
-        const syncProps = ['foraDoElenco', 'nacionalidade', 'nascimento', 'nome_guerra', 'posicao', 'observacao'];
-        state.jogadores.forEach(j => {
-            if (j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase()) {
-                syncProps.forEach(prop => {
-                    if (item[prop] !== undefined && item[prop] !== '' && item[prop] !== 'https://via.placeholder.com/40') {
-                        j[prop] = item[prop];
-                    }
-                });
-            }
-        });
+        // Coleta apenas os itens que foram realmente modificados para enviar ao Supabase
+        const itemsToSave = state.jogadores.filter(j => j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase());
+        
+        // Se por algum motivo o item atual não estiver no filtro, garante que ele seja incluído
+        if (!itemsToSave.find(i => i.id === item.id)) itemsToSave.push(item);
 
-        saveData('jogadores', state.jogadores); renderTab('jogadores');
+        saveData('jogadores', itemsToSave); renderTab('jogadores');
     });
     handleSearch('jogadores');
 };
@@ -2224,7 +2219,7 @@ window.saveQuickAdd = (type, targetInputId) => {
         item.foraDoElenco = document.getElementById('qa-fora-do-elenco').checked; 
         item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; 
     }
-    state[type].push(item); saveData(type, state[type]);
+    state[type].push(item); saveData(type, [item]);
     const inp = document.getElementById(targetInputId); 
     if(inp) { 
         inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
