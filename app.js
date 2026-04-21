@@ -4593,6 +4593,14 @@ const renderPlayerCareerDetail = (playerName) => {
                         }).join('')}
                     </tbody>
                 </table>
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
+                    ${isGoleiro ? `
+                        <span><strong>GS:</strong> Gols Sofridos</span>
+                        <span><strong>JSSG:</strong> Jogos Sem Sofrer Gol</span>
+                    ` : `
+                        <span><strong>JSMG:</strong> Jogos Sem Marcar Gol</span>
+                    `}
+                </div>
             </div>
         </div>
     `;
