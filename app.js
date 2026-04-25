@@ -475,6 +475,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     }
     if (sectionId === 'comparativo') renderComparativo();
     if (sectionId === 'jogadores-page') renderJogadoresPage();
+    if (sectionId === 'curiosidades') renderCuriosidades();
 };
 
 // RENDERING CADASTROS
@@ -5127,10 +5128,14 @@ const renderCuriosidades = () => {
     const fCamp = document.getElementById('cur-filter-campeonato').value;
     const fTipo = document.getElementById('cur-filter-tipo').value;
     const fAdv = document.getElementById('cur-filter-adversario').value;
+    const fAnoDe = document.getElementById('cur-filter-ano-de').value;
+    const fAnoAte = document.getElementById('cur-filter-ano-ate').value;
 
     let filtered = [...state.jogos];
     if (fCamp) filtered = filtered.filter(j => j.campeonato === fCamp);
     if (fAdv) filtered = filtered.filter(j => j.casa === fAdv || j.fora === fAdv);
+    if (fAnoDe) filtered = filtered.filter(j => parseInt(j.data.substring(0,4)) >= parseInt(fAnoDe));
+    if (fAnoAte) filtered = filtered.filter(j => parseInt(j.data.substring(0,4)) <= parseInt(fAnoAte));
     if (fTipo) {
         filtered = filtered.filter(jg => {
             const comp = state.competicoes.find(c => c.campeonato === jg.campeonato);
@@ -5145,6 +5150,9 @@ const renderCuriosidades = () => {
         
         ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario'].forEach(id => {
             document.getElementById(id).addEventListener('change', renderCuriosidades);
+        });
+        ['cur-filter-ano-de', 'cur-filter-ano-ate'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderCuriosidades);
         });
     }
 
@@ -5320,6 +5328,14 @@ const renderCuriosidades = () => {
     `;
 };
 
+
+window.clearCurFilters = () => {
+    ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario', 'cur-filter-ano-de', 'cur-filter-ano-ate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderCuriosidades();
+};
 
 window.clearAdvFilters = () => {
     const ids = ['adv-filter-temporada', 'adv-filter-campeonato', 'adv-filter-adversario', 'adv-filter-estadio'];
@@ -6016,7 +6032,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const parts = hash.split('/');
         const page = parts[0];
         const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo'];
+        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo', 'curiosidades'];
         const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
         
         if (page && validPages.includes(page)) {
