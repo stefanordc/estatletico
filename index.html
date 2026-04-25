@@ -104,6 +104,10 @@
                 <i class="fas fa-chart-bar"></i>
                 <span>Estatísticas</span>
             </li>
+            <li class="nav-item" data-page="curiosidades">
+                <i class="fas fa-lightbulb"></i>
+                <span>Curiosidades</span>
+            </li>
             <li class="nav-item" data-page="comparativo">
                 <i class="fas fa-balance-scale"></i>
                 <span>Comparativo</span>
@@ -599,6 +603,7 @@
             <div class="filters-card">
                 <div class="form-grid">
                     <div class="form-group"><label>Temporada</label><select id="arb-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Nacionalidade</label><select id="arb-filter-nacionalidade"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Árbitro</label><select id="arb-filter-arbitro"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Adversário</label><select id="arb-filter-adversario"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Estádio</label><select id="arb-filter-estadio"><option value="">Todos</option></select></div>
@@ -652,6 +657,7 @@
                     <div class="form-group"><label>Temporada</label><select id="ea-filter-temporada"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Campeonato</label><select id="ea-filter-campeonato"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Adversário</label><select id="ea-filter-adversario"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Nacionalidade</label><select id="ea-filter-nacionalidade"><option value="">Todas</option></select></div>
                 </div>
                 <div class="form-grid" style="margin-top:1rem;">
                     <div class="form-group"><label>Árbitro</label><select id="ea-filter-arbitro"><option value="">Todos</option></select></div>
@@ -865,6 +871,44 @@
 
             <div class="list-container table-responsive" id="stats-content-container">
                 <!-- Tabelas renderizadas via JS -->
+            </div>
+        </section>
+
+        <section id="curiosidades-section" class="page-section hidden">
+            <div class="page-header">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <i class="fas fa-lightbulb" style="font-size: 2rem; color: #f1c40f;"></i>
+                    <div>
+                        <h2 style="margin:0;">Curiosidades</h2>
+                        <p style="margin:0;">Recordes e marcas históricas do Galo</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-card" style="margin-bottom: 2rem;">
+                <div class="form-grid form-grid-responsive">
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="cur-filter-campeonato"><option value="">Todos</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="cur-filter-tipo">
+                            <option value="">Todos</option>
+                            <option value="Regional">Regional</option>
+                            <option value="Nacional">Nacional</option>
+                            <option value="Internacional">Internacional</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Adversário</label>
+                        <select id="cur-filter-adversario"><option value="">Todos</option></select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="curiosidades-grid" class="grid-responsive-2" style="gap: 2rem;">
+                <!-- Tabelas Top 5 serão renderizadas aqui -->
             </div>
         </section>
 

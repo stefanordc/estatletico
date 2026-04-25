@@ -1501,6 +1501,7 @@ const renderArbitragem = () => {
     if (!tbody) return;
 
     const fTemp = document.getElementById('arb-filter-temporada').value;
+    const fNac = document.getElementById('arb-filter-nacionalidade').value;
     const fArb = document.getElementById('arb-filter-arbitro').value;
     const fAdv = document.getElementById('arb-filter-adversario').value;
     const fEst = document.getElementById('arb-filter-estadio').value;
@@ -1509,7 +1510,8 @@ const renderArbitragem = () => {
     const fAnoDe = document.getElementById('arb-filter-ano-de').value;
     const fAnoAte = document.getElementById('arb-filter-ano-ate').value;
 
-    const statsArr = state.arbitros.map(arb => {
+    const statsArr = state.arbitros.filter(a => a.nome !== 'Sem VAR').map(arb => {
+        if (fNac && arb.federacao !== fNac) return null;
         let arbGames = [];
         
         if (state.arbTab === 'arbitro') {
@@ -1574,7 +1576,8 @@ const renderArbitragem = () => {
 
     // Populate Filters
     populateFilter('arb-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('arb-filter-arbitro', [...new Set(state.arbitros.map(a => a.nome))]);
+    populateFilter('arb-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
+    populateFilter('arb-filter-arbitro', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR').map(a => a.nome))]);
     populateFilter('arb-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
     populateFilter('arb-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
     populateFilter('arb-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
@@ -1582,6 +1585,13 @@ const renderArbitragem = () => {
     const allYears = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
     populateFilter('arb-filter-ano-de', allYears);
     populateFilter('arb-filter-ano-ate', allYears);
+
+    // Bind new filter
+    const nacFilter = document.getElementById('arb-filter-nacionalidade');
+    if (nacFilter && !nacFilter.dataset.bound) {
+        nacFilter.addEventListener('change', renderArbitragem);
+        nacFilter.dataset.bound = 'true';
+    }
 
     // Ordenação Dinâmica
     let sortedStats = statsArr;
@@ -1672,6 +1682,7 @@ const renderEquipeArbitragem = () => {
     const fTemp = document.getElementById('ea-filter-temporada').value;
     const fCamp = document.getElementById('ea-filter-campeonato').value;
     const fAdv = document.getElementById('ea-filter-adversario').value;
+    const fNac = document.getElementById('ea-filter-nacionalidade').value;
     const fArb = document.getElementById('ea-filter-arbitro').value;
     const fAss = document.getElementById('ea-filter-assistente').value;
     const fVar = document.getElementById('ea-filter-var').value;
@@ -1689,8 +1700,17 @@ const renderEquipeArbitragem = () => {
         if (fVar && j.varArbitro !== fVar) return;
 
         const p = (name, role) => {
-            if (!name || name === 'N/I' || name === '-') return;
-            if (!profissionais[name]) profissionais[name] = { nome: name, jogos: [], roles: { 'Árbitro': 0, 'Assistente': 0, 'VAR': 0 }, foto: state.arbitros.find(a => a.nome === name)?.foto || 'https://via.placeholder.com/100' };
+            if (!name || name === 'N/I' || name === '-' || name === 'Sem VAR') return;
+            const arbInfo = state.arbitros.find(a => a.nome === name);
+            if (fNac && arbInfo?.federacao !== fNac) return;
+            
+            if (!profissionais[name]) profissionais[name] = { 
+                nome: name, 
+                jogos: [], 
+                roles: { 'Árbitro': 0, 'Assistente': 0, 'VAR': 0 }, 
+                foto: arbInfo?.foto || 'https://via.placeholder.com/100',
+                nacionalidade: arbInfo?.federacao || ''
+            };
             profissionais[name].roles[role]++;
             profissionais[name].jogos.push(j);
         };
@@ -1706,22 +1726,23 @@ const renderEquipeArbitragem = () => {
         populateFilter('ea-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
         populateFilter('ea-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
         populateFilter('ea-filter-adversario', [...new Set(state.jogos.map(j => j.casa === 'Atlético' ? j.fora : j.casa))]);
+        populateFilter('ea-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
         
         let arbNames = new Set();
         let assNames = new Set();
         let varNames = new Set();
         state.jogos.forEach(j => {
-            if (j.arbitro && j.arbitro !== 'N/I' && j.arbitro !== '-') arbNames.add(j.arbitro);
-            if (j.assistente1 && j.assistente1 !== 'N/I' && j.assistente1 !== '-') assNames.add(j.assistente1);
-            if (j.assistente2 && j.assistente2 !== 'N/I' && j.assistente2 !== '-') assNames.add(j.assistente2);
-            if (j.varArbitro && j.varArbitro !== 'N/I' && j.varArbitro !== '-') varNames.add(j.varArbitro);
+            if (j.arbitro && j.arbitro !== 'N/I' && j.arbitro !== '-' && j.arbitro !== 'Sem VAR') arbNames.add(j.arbitro);
+            if (j.assistente1 && j.assistente1 !== 'N/I' && j.assistente1 !== '-' && j.assistente1 !== 'Sem VAR') assNames.add(j.assistente1);
+            if (j.assistente2 && j.assistente2 !== 'N/I' && j.assistente2 !== '-' && j.assistente2 !== 'Sem VAR') assNames.add(j.assistente2);
+            if (j.varArbitro && j.varArbitro !== 'N/I' && j.varArbitro !== '-' && j.varArbitro !== 'Sem VAR') varNames.add(j.varArbitro);
         });
         populateFilter('ea-filter-arbitro', [...arbNames].sort());
         populateFilter('ea-filter-assistente', [...assNames].sort());
         populateFilter('ea-filter-var', [...varNames].sort());
         
         const attachUpdate = (id) => document.getElementById(id).addEventListener('change', renderEquipeArbitragem);
-        ['temporada','campeonato','adversario','arbitro','assistente','var'].forEach(t => attachUpdate(`ea-filter-${t}`));
+        ['temporada','campeonato','adversario','nacionalidade','arbitro','assistente','var'].forEach(t => attachUpdate(`ea-filter-${t}`));
     }
 
     const cards = Object.values(profissionais).sort((a,b) => b.jogos.length - a.jogos.length);
@@ -1736,7 +1757,7 @@ const renderEquipeArbitragem = () => {
             <div class="artilheiro-card" onclick="showEquipeArbitragemDetail('${c.nome}', event)">
                 <img src="${c.foto}">
                 <h3>${c.nome}</h3>
-                <div class="pos-nac">${primaryRole}</div>
+                <div class="pos-nac">${primaryRole} ${c.nacionalidade ? `| ${c.nacionalidade}` : ''}</div>
                 <div class="artilheiro-main-stat" style="color:var(--primary-color);">
                    <i class="fas fa-whistle"></i> ${c.jogos.length} <span>jogos</span>
                 </div>
@@ -5099,6 +5120,207 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
     }
 };
 
+const renderCuriosidades = () => {
+    const grid = document.getElementById('curiosidades-grid');
+    if (!grid) return;
+
+    const fCamp = document.getElementById('cur-filter-campeonato').value;
+    const fTipo = document.getElementById('cur-filter-tipo').value;
+    const fAdv = document.getElementById('cur-filter-adversario').value;
+
+    let filtered = [...state.jogos];
+    if (fCamp) filtered = filtered.filter(j => j.campeonato === fCamp);
+    if (fAdv) filtered = filtered.filter(j => j.casa === fAdv || j.fora === fAdv);
+    if (fTipo) {
+        filtered = filtered.filter(jg => {
+            const comp = state.competicoes.find(c => c.campeonato === jg.campeonato);
+            return comp?.tipo === fTipo;
+        });
+    }
+
+    // Populando filtros na primeira vez
+    if (document.getElementById('cur-filter-campeonato').options.length === 1) {
+        populateFilter('cur-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
+        populateFilter('cur-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
+        
+        ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario'].forEach(id => {
+            document.getElementById(id).addEventListener('change', renderCuriosidades);
+        });
+    }
+
+    const formatVal = (val, type) => {
+        if (type === 'money') return formatCurrency(val);
+        if (type === 'number') return val.toLocaleString('pt-BR');
+        return val;
+    };
+
+    const createTable = (title, data, valueKey, type = 'number', extraLabel = '') => {
+        return `
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm);">
+                <div class="stats-section-title" style="display:flex; justify-content:space-between;">
+                    <span>${title}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" style="font-size:0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Adversário</th>
+                                <th>Camp.</th>
+                                <th style="text-align:right;">${extraLabel || 'Valor'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.slice(0, 5).map(j => `
+                                <tr>
+                                    <td>${j.data.split('-').reverse().join('/')}</td>
+                                    <td><strong>${j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa}</strong></td>
+                                    <td>${j.campeonato}</td>
+                                    <td style="text-align:right; font-weight:bold; color:var(--primary-color);">${formatVal(j[valueKey], type)}</td>
+                                </tr>
+                            `).join('')}
+                            ${data.length === 0 ? '<tr><td colspan="4" style="text-align:center; padding:1rem;">Nenhum registro.</td></tr>' : ''}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    };
+
+    // 1. Maiores Públicos
+    const maioresPublicos = [...filtered]
+        .map(j => ({ ...j, sortVal: parseInt(j.publico) || 0 }))
+        .filter(j => j.sortVal > 0)
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 2. Maiores Rendas
+    const maioresRendas = [...filtered]
+        .map(j => ({ ...j, sortVal: parseCurrency(j.renda) }))
+        .filter(j => j.sortVal > 0)
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 3. Jogadores com mais gols (Recorde Individual)
+    const recordeGolsIndiv = [];
+    filtered.forEach(j => {
+        (j.lineupGalo || []).forEach(p => {
+            if (p.golsCount > 0) {
+                recordeGolsIndiv.push({
+                    data: j.data,
+                    casa: j.casa,
+                    fora: j.fora,
+                    campeonato: j.campeonato,
+                    jogador: p.jogador,
+                    sortVal: p.golsCount
+                });
+            }
+        });
+    });
+    recordeGolsIndiv.sort((a, b) => b.sortVal - a.sortVal || new Date(b.data) - new Date(a.data));
+
+    const createTableIndiv = (title, data) => {
+        return `
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm);">
+                <div class="stats-section-title">${title}</div>
+                <div class="table-responsive">
+                    <table class="data-table" style="font-size:0.8rem;">
+                        <thead>
+                            <tr>
+                                <th>Jogador</th>
+                                <th>Data</th>
+                                <th>Adversário</th>
+                                <th style="text-align:right;">Gols</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.slice(0, 5).map(j => `
+                                <tr>
+                                    <td><strong>${j.jogador}</strong></td>
+                                    <td>${j.data.split('-').reverse().join('/')}</td>
+                                    <td>${j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa}</td>
+                                    <td style="text-align:right; font-weight:bold; color:var(--primary-color);">${j.sortVal}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    };
+
+    // 4. Maiores Vitórias (Saldo)
+    const maioresVitorias = [...filtered]
+        .map(j => {
+            const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+            const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
+            const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
+            return { ...j, sortVal: gGalo - gAdv, placar: `${j.golsCasa}x${j.golsFora}` };
+        })
+        .filter(j => j.sortVal > 0)
+        .sort((a, b) => b.sortVal - a.sortVal || b.gGalo - a.gGalo);
+
+    // 5. Maiores Derrotas (Saldo Negativo)
+    const maioresDerrotas = [...filtered]
+        .map(j => {
+            const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+            const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
+            const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
+            return { ...j, sortVal: gAdv - gGalo, placar: `${j.golsCasa}x${j.golsFora}` };
+        })
+        .filter(j => j.sortVal > 0)
+        .sort((a, b) => b.sortVal - a.sortVal || b.gAdv - a.gAdv);
+
+    // 6. Mais Gols Marcados (em um jogo)
+    const maisGolsMarcados = [...filtered]
+        .map(j => {
+            const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+            return { ...j, sortVal: parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0 };
+        })
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 7. Mais Gols Sofridos (em um jogo)
+    const maisGolsSofridos = [...filtered]
+        .map(j => {
+            const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
+            return { ...j, sortVal: parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0 };
+        })
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 8. Mais Amarelos Recebidos
+    const maisAmarelosGalo = [...filtered]
+        .map(j => ({ ...j, sortVal: (j.cartoesGalo || []).reduce((acc, c) => acc + (parseInt(c.amarelo) || 0), 0) }))
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 9. Mais Vermelhos Recebidos
+    const maisVermelhosGalo = [...filtered]
+        .map(j => ({ ...j, sortVal: (j.cartoesGalo || []).reduce((acc, c) => acc + (parseInt(c.red) || 0), 0) }))
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 10. Mais Amarelos do Adversário
+    const maisAmarelosAdv = [...filtered]
+        .map(j => ({ ...j, sortVal: (j.cartoesAdv || []).reduce((acc, c) => acc + (parseInt(c.amarelo) || 0), 0) }))
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    // 11. Mais Vermelhos do Adversário
+    const maisVermelhosAdv = [...filtered]
+        .map(j => ({ ...j, sortVal: (j.cartoesAdv || []).reduce((acc, c) => acc + (parseInt(c.red) || 0), 0) }))
+        .sort((a, b) => b.sortVal - a.sortVal);
+
+    grid.innerHTML = `
+        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público')}
+        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda')}
+        ${createTableIndiv('Gols em um único jogo', recordeGolsIndiv)}
+        ${createTable('Maiores Vitórias', maioresVitorias, 'placar', 'string', 'Placar')}
+        ${createTable('Maiores Derrotas', maioresDerrotas, 'placar', 'string', 'Placar')}
+        ${createTable('Mais Gols Marcados', maisGolsMarcados, 'sortVal', 'number', 'Gols')}
+        ${createTable('Mais Gols Sofridos', maisGolsSofridos, 'sortVal', 'number', 'Gols')}
+        ${createTable('Mais Amarelos Recebidos', maisAmarelosGalo, 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Vermelhos Recebidos', maisVermelhosGalo, 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Amarelos do Adversário', maisAmarelosAdv, 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Vermelhos do Adversário', maisVermelhosAdv, 'sortVal', 'number', 'Cartões')}
+    `;
+};
+
+
 window.clearAdvFilters = () => {
     const ids = ['adv-filter-temporada', 'adv-filter-campeonato', 'adv-filter-adversario', 'adv-filter-estadio'];
     ids.forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ''; });
@@ -5805,6 +6027,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                 renderTab('adversarios');
             } else if (page === 'estatisticas' && tab) {
                 switchStatsTab(tab);
+            } else if (page === 'curiosidades') {
+                renderCuriosidades();
             }
         } else {
             showSection('dashboard');
