@@ -5175,10 +5175,10 @@ const renderCuriosidades = () => {
                     <table class="data-table" style="font-size:0.85rem; width:100%;">
                         <thead>
                             <tr>
-                                <th>Data</th>
-                                <th>Campeonato</th>
-                                <th>Adversário</th>
-                                ${extraCols.map(c => `<th>${c}</th>`).join('')}
+                                <th style="text-align:center;">Data</th>
+                                <th style="text-align:center;">Campeonato</th>
+                                <th style="text-align:center;">Adversário</th>
+                                ${extraCols.map(c => `<th style="text-align:center;">${c}</th>`).join('')}
                                 <th style="text-align:right;">${extraLabel || 'Valor'}</th>
                             </tr>
                         </thead>
@@ -5197,6 +5197,7 @@ const renderCuriosidades = () => {
                                             if (label === 'estádio') key = 'estadio';
                                             else if (label === 'jogador') key = 'jogador';
                                             else if (label === 'placar') key = 'placar';
+                                            else if (label === 'fase') key = 'fase';
                                             
                                             const cellVal = j[key] || '-';
                                             return `<td>${cellVal}</td>`;
@@ -5213,21 +5214,31 @@ const renderCuriosidades = () => {
         `;
     };
 
-    // 1. Maiores e Menores Públicos
-    const publicosBase = filtered.filter(j => j.publico && j.publico !== 'N/I' && !j.portoesFechados);
+    // 1. Maiores e Menores Públicos (Apenas mandante)
+    const publicosBase = filtered.filter(j => (j.casa === 'Atlético' || j.casa === 'Atlético-MG') && j.publico && j.publico !== 'N/I' && !j.portoesFechados);
+    
     const maioresPublicos = [...publicosBase]
         .map(j => ({ ...j, sortVal: parseInt(j.publico) || 0 }))
+        .filter(j => j.sortVal > 0)
         .sort((a, b) => b.sortVal - a.sortVal);
 
     const menoresPublicos = [...publicosBase]
         .map(j => ({ ...j, sortVal: parseInt(j.publico) || 0 }))
+        .filter(j => j.sortVal > 0)
         .sort((a, b) => a.sortVal - b.sortVal);
 
-    // 2. Maiores Rendas
-    const maioresRendas = filtered
-        .filter(j => j.renda && j.renda !== 'N/I' && !j.portoesFechados)
+    // 2. Maiores e Menores Rendas (Apenas mandante)
+    const rendasBase = filtered.filter(j => (j.casa === 'Atlético' || j.casa === 'Atlético-MG') && j.renda && j.renda !== 'N/I' && !j.portoesFechados);
+    
+    const maioresRendas = [...rendasBase]
         .map(j => ({ ...j, sortVal: parseCurrency(j.renda) }))
+        .filter(j => j.sortVal > 0)
         .sort((a, b) => b.sortVal - a.sortVal);
+
+    const menoresRendas = [...rendasBase]
+        .map(j => ({ ...j, sortVal: parseCurrency(j.renda) }))
+        .filter(j => j.sortVal > 0)
+        .sort((a, b) => a.sortVal - b.sortVal);
 
     // 3. Jogadores com mais gols (Recorde Individual)
     const recordeGolsIndiv = [];
@@ -5254,10 +5265,10 @@ const renderCuriosidades = () => {
             const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
             const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
             const saldo = gGalo - gAdv;
-            return { ...j, sortVal: saldo, placar: `${gGalo} x ${gAdv}` };
+            return { ...j, sortVal: saldo, gGalo, placar: `${gGalo} x ${gAdv}` };
         })
         .filter(j => j.sortVal > 0)
-        .sort((a, b) => b.sortVal - a.sortVal);
+        .sort((a, b) => b.sortVal - a.sortVal || b.gGalo - a.gGalo);
 
     const maioresDerrotas = [...filtered]
         .map(j => {
@@ -5265,10 +5276,10 @@ const renderCuriosidades = () => {
             const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
             const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
             const saldo = gAdv - gGalo;
-            return { ...j, sortVal: saldo, placar: `${gGalo} x ${gAdv}` };
+            return { ...j, sortVal: saldo, gAdv, placar: `${gGalo} x ${gAdv}` };
         })
         .filter(j => j.sortVal > 0)
-        .sort((a, b) => b.sortVal - a.sortVal);
+        .sort((a, b) => b.sortVal - a.sortVal || b.gAdv - a.gAdv);
 
     // 5. Mais Gols Marcados e Sofridos
     const maisGolsMarcados = [...filtered]
@@ -5297,9 +5308,10 @@ const renderCuriosidades = () => {
     };
 
     grid.innerHTML = `
-        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
-        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
-        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
+        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Fase', 'Estádio'])}
+        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Fase', 'Estádio'])}
+        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Fase', 'Estádio'])}
+        ${createTable('Menores Rendas', menoresRendas, 'sortVal', 'money', 'Renda', ['Fase', 'Estádio'])}
         ${createTable('Jogadores com mais gols em um único jogo', recordeGolsIndiv, 'sortVal', 'number', 'Gols', ['Jogador'])}
         ${createTable('Maiores Vitórias', maioresVitorias, 'placar', 'string', 'Placar')}
         ${createTable('Maiores Derrotas', maioresDerrotas, 'placar', 'string', 'Placar')}
@@ -5311,6 +5323,7 @@ const renderCuriosidades = () => {
         ${createTable('Mais Vermelhos do Adversário', cartoesStats('red', 'adv'), 'sortVal', 'number', 'Cartões')}
     `;
 };
+
 
 
 window.clearCurFilters = () => {
