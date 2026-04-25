@@ -688,13 +688,7 @@ const renderJogadores = () => {
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
 
-        // Coleta apenas os itens que foram realmente modificados para enviar ao Supabase
-        const itemsToSave = state.jogadores.filter(j => j.nome_completo.toLowerCase() === novoNomeCompleto.toLowerCase());
-        
-        // Se por algum motivo o item atual não estiver no filtro, garante que ele seja incluído
-        if (!itemsToSave.find(i => i.id === item.id)) itemsToSave.push(item);
-
-        saveData('jogadores', itemsToSave); renderTab('jogadores');
+        saveData('jogadores', [item]); renderTab('jogadores');
     });
     handleSearch('jogadores');
 };
@@ -1511,7 +1505,7 @@ const renderArbitragem = () => {
     const fAnoDe = document.getElementById('arb-filter-ano-de').value;
     const fAnoAte = document.getElementById('arb-filter-ano-ate').value;
 
-    const statsArr = state.arbitros.filter(a => a.nome !== 'Sem VAR').map(arb => {
+    const statsArr = state.arbitros.filter(a => a.nome && a.nome !== 'Sem VAR').map(arb => {
         if (fNac && arb.federacao !== fNac) return null;
         let arbGames = [];
         
@@ -1701,7 +1695,7 @@ const renderEquipeArbitragem = () => {
         if (fVar && j.varArbitro !== fVar) return;
 
         const p = (name, role) => {
-            if (!name || name === 'N/I' || name === '-' || name === 'Sem VAR') return;
+            if (!name || name === 'N/I' || name === '-' || name === 'Sem VAR' || name.trim() === '') return;
             const arbInfo = state.arbitros.find(a => a.nome === name);
             if (fNac && arbInfo?.federacao !== fNac) return;
             
@@ -4256,7 +4250,7 @@ const setupAutofillHandler = () => {
         if (elNascimento) elNascimento.value = getBestValue('nascimento');
 
         const elNumero = document.getElementById('input-numero');
-        if (elNumero) elNumero.value = src.numero !== undefined && src.numero !== null ? src.numero : '';
+        if (elNumero && !elNumero.value) elNumero.value = src.numero !== undefined && src.numero !== null ? src.numero : '';
 
         const elObs = document.getElementById('input-observacao');
         if (elObs) elObs.value = src.observacao || '';
@@ -5128,14 +5122,22 @@ const renderCuriosidades = () => {
     const fCamp = document.getElementById('cur-filter-campeonato').value;
     const fTipo = document.getElementById('cur-filter-tipo').value;
     const fAdv = document.getElementById('cur-filter-adversario').value;
+    const fEst = document.getElementById('cur-filter-estadio').value;
     const fAnoDe = document.getElementById('cur-filter-ano-de').value;
     const fAnoAte = document.getElementById('cur-filter-ano-ate').value;
 
     let filtered = [...state.jogos];
     if (fCamp) filtered = filtered.filter(j => j.campeonato === fCamp);
     if (fAdv) filtered = filtered.filter(j => j.casa === fAdv || j.fora === fAdv);
-    if (fAnoDe) filtered = filtered.filter(j => parseInt(j.data.substring(0,4)) >= parseInt(fAnoDe));
-    if (fAnoAte) filtered = filtered.filter(j => parseInt(j.data.substring(0,4)) <= parseInt(fAnoAte));
+    if (fEst) filtered = filtered.filter(j => j.estadio === fEst);
+    if (fAnoDe) filtered = filtered.filter(j => {
+        const ano = parseInt(j.data.substring(0,4));
+        return ano >= parseInt(fAnoDe);
+    });
+    if (fAnoAte) filtered = filtered.filter(j => {
+        const ano = parseInt(j.data.substring(0,4));
+        return ano <= parseInt(fAnoAte);
+    });
     if (fTipo) {
         filtered = filtered.filter(jg => {
             const comp = state.competicoes.find(c => c.campeonato === jg.campeonato);
@@ -5143,15 +5145,18 @@ const renderCuriosidades = () => {
         });
     }
 
-    // Populando filtros na primeira vez
-    if (document.getElementById('cur-filter-campeonato').options.length === 1) {
+    // Populando filtros e autocomplete na primeira vez
+    const campSel = document.getElementById('cur-filter-campeonato');
+    if (campSel && campSel.options.length === 1) {
         populateFilter('cur-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
-        populateFilter('cur-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
         
-        ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario'].forEach(id => {
+        setupAutocomplete('cur-filter-adversario', 'adversarios', 'clube', null, () => renderCuriosidades());
+        setupAutocomplete('cur-filter-estadio', 'estadios', 'nome', null, () => renderCuriosidades());
+
+        ['cur-filter-campeonato', 'cur-filter-tipo'].forEach(id => {
             document.getElementById(id).addEventListener('change', renderCuriosidades);
         });
-        ['cur-filter-ano-de', 'cur-filter-ano-ate'].forEach(id => {
+        ['cur-filter-ano-de', 'cur-filter-ano-ate', 'cur-filter-adversario', 'cur-filter-estadio'].forEach(id => {
             document.getElementById(id).addEventListener('input', renderCuriosidades);
         });
     }
@@ -5162,32 +5167,45 @@ const renderCuriosidades = () => {
         return val;
     };
 
-    const createTable = (title, data, valueKey, type = 'number', extraLabel = '') => {
+    const createTable = (title, data, valueKey, type = 'number', extraLabel = '', extraCols = []) => {
         return `
-            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm);">
-                <div class="stats-section-title" style="display:flex; justify-content:space-between;">
-                    <span>${title}</span>
-                </div>
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm); width:100%;">
+                <div class="stats-section-title">${title}</div>
                 <div class="table-responsive">
-                    <table class="data-table" style="font-size:0.8rem;">
+                    <table class="data-table" style="font-size:0.85rem; width:100%;">
                         <thead>
                             <tr>
                                 <th>Data</th>
+                                <th>Campeonato</th>
                                 <th>Adversário</th>
-                                <th>Camp.</th>
+                                ${extraCols.map(c => `<th>${c}</th>`).join('')}
                                 <th style="text-align:right;">${extraLabel || 'Valor'}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${data.slice(0, 5).map(j => `
-                                <tr>
-                                    <td>${j.data.split('-').reverse().join('/')}</td>
-                                    <td><strong>${j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa}</strong></td>
-                                    <td>${j.campeonato}</td>
-                                    <td style="text-align:right; font-weight:bold; color:var(--primary-color);">${formatVal(j[valueKey], type)}</td>
-                                </tr>
-                            `).join('')}
-                            ${data.length === 0 ? '<tr><td colspan="4" style="text-align:center; padding:1rem;">Nenhum registro.</td></tr>' : ''}
+                            ${data.slice(0, 5).map(j => {
+                                const adv = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa;
+                                const val = j[valueKey] !== undefined ? formatVal(j[valueKey], type) : (j.sortVal !== undefined ? formatVal(j.sortVal, type) : '-');
+                                return `
+                                    <tr>
+                                        <td>${j.data.split('-').reverse().join('/')}</td>
+                                        <td>${j.campeonato}</td>
+                                        <td><strong>${adv}</strong></td>
+                                        ${extraCols.map(c => {
+                                            const label = c.toLowerCase();
+                                            let key = '';
+                                            if (label === 'estádio') key = 'estadio';
+                                            else if (label === 'jogador') key = 'jogador';
+                                            else if (label === 'placar') key = 'placar';
+                                            
+                                            const cellVal = j[key] || '-';
+                                            return `<td>${cellVal}</td>`;
+                                        }).join('')}
+                                        <td style="text-align:right; font-weight:bold; color:var(--primary-color);">${val}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                            ${data.length === 0 ? `<tr><td colspan="${4 + extraCols.length}" style="text-align:center; padding:1.5rem; color:var(--text-muted);">Nenhum registro encontrado com os filtros aplicados.</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
@@ -5195,16 +5213,20 @@ const renderCuriosidades = () => {
         `;
     };
 
-    // 1. Maiores Públicos
-    const maioresPublicos = [...filtered]
+    // 1. Maiores e Menores Públicos
+    const publicosBase = filtered.filter(j => j.publico && j.publico !== 'N/I' && !j.portoesFechados);
+    const maioresPublicos = [...publicosBase]
         .map(j => ({ ...j, sortVal: parseInt(j.publico) || 0 }))
-        .filter(j => j.sortVal > 0)
         .sort((a, b) => b.sortVal - a.sortVal);
 
+    const menoresPublicos = [...publicosBase]
+        .map(j => ({ ...j, sortVal: parseInt(j.publico) || 0 }))
+        .sort((a, b) => a.sortVal - b.sortVal);
+
     // 2. Maiores Rendas
-    const maioresRendas = [...filtered]
+    const maioresRendas = filtered
+        .filter(j => j.renda && j.renda !== 'N/I' && !j.portoesFechados)
         .map(j => ({ ...j, sortVal: parseCurrency(j.renda) }))
-        .filter(j => j.sortVal > 0)
         .sort((a, b) => b.sortVal - a.sortVal);
 
     // 3. Jogadores com mais gols (Recorde Individual)
@@ -5225,59 +5247,30 @@ const renderCuriosidades = () => {
     });
     recordeGolsIndiv.sort((a, b) => b.sortVal - a.sortVal || new Date(b.data) - new Date(a.data));
 
-    const createTableIndiv = (title, data) => {
-        return `
-            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm);">
-                <div class="stats-section-title">${title}</div>
-                <div class="table-responsive">
-                    <table class="data-table" style="font-size:0.8rem;">
-                        <thead>
-                            <tr>
-                                <th>Jogador</th>
-                                <th>Data</th>
-                                <th>Adversário</th>
-                                <th style="text-align:right;">Gols</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.slice(0, 5).map(j => `
-                                <tr>
-                                    <td><strong>${j.jogador}</strong></td>
-                                    <td>${j.data.split('-').reverse().join('/')}</td>
-                                    <td>${j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? j.fora : j.casa}</td>
-                                    <td style="text-align:right; font-weight:bold; color:var(--primary-color);">${j.sortVal}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    };
-
-    // 4. Maiores Vitórias (Saldo)
+    // 4. Maiores Vitórias e Derrotas
     const maioresVitorias = [...filtered]
         .map(j => {
             const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
             const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
             const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
-            return { ...j, sortVal: gGalo - gAdv, placar: `${j.golsCasa}x${j.golsFora}` };
+            const saldo = gGalo - gAdv;
+            return { ...j, sortVal: saldo, placar: `${gGalo} x ${gAdv}` };
         })
         .filter(j => j.sortVal > 0)
-        .sort((a, b) => b.sortVal - a.sortVal || b.gGalo - a.gGalo);
+        .sort((a, b) => b.sortVal - a.sortVal);
 
-    // 5. Maiores Derrotas (Saldo Negativo)
     const maioresDerrotas = [...filtered]
         .map(j => {
             const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
             const gGalo = parseInt(isGaloMandante ? j.golsCasa : j.golsFora) || 0;
             const gAdv = parseInt(isGaloMandante ? j.golsFora : j.golsCasa) || 0;
-            return { ...j, sortVal: gAdv - gGalo, placar: `${j.golsCasa}x${j.golsFora}` };
+            const saldo = gAdv - gGalo;
+            return { ...j, sortVal: saldo, placar: `${gGalo} x ${gAdv}` };
         })
         .filter(j => j.sortVal > 0)
-        .sort((a, b) => b.sortVal - a.sortVal || b.gAdv - a.gAdv);
+        .sort((a, b) => b.sortVal - a.sortVal);
 
-    // 6. Mais Gols Marcados (em um jogo)
+    // 5. Mais Gols Marcados e Sofridos
     const maisGolsMarcados = [...filtered]
         .map(j => {
             const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
@@ -5285,7 +5278,6 @@ const renderCuriosidades = () => {
         })
         .sort((a, b) => b.sortVal - a.sortVal);
 
-    // 7. Mais Gols Sofridos (em um jogo)
     const maisGolsSofridos = [...filtered]
         .map(j => {
             const isGaloMandante = j.casa === 'Atlético' || j.casa === 'Atlético-MG';
@@ -5293,44 +5285,36 @@ const renderCuriosidades = () => {
         })
         .sort((a, b) => b.sortVal - a.sortVal);
 
-    // 8. Mais Amarelos Recebidos
-    const maisAmarelosGalo = [...filtered]
-        .map(j => ({ ...j, sortVal: (j.cartoesGalo || []).reduce((acc, c) => acc + (parseInt(c.amarelo) || 0), 0) }))
-        .sort((a, b) => b.sortVal - a.sortVal);
-
-    // 9. Mais Vermelhos Recebidos
-    const maisVermelhosGalo = [...filtered]
-        .map(j => ({ ...j, sortVal: (j.cartoesGalo || []).reduce((acc, c) => acc + (parseInt(c.red) || 0), 0) }))
-        .sort((a, b) => b.sortVal - a.sortVal);
-
-    // 10. Mais Amarelos do Adversário
-    const maisAmarelosAdv = [...filtered]
-        .map(j => ({ ...j, sortVal: (j.cartoesAdv || []).reduce((acc, c) => acc + (parseInt(c.amarelo) || 0), 0) }))
-        .sort((a, b) => b.sortVal - a.sortVal);
-
-    // 11. Mais Vermelhos do Adversário
-    const maisVermelhosAdv = [...filtered]
-        .map(j => ({ ...j, sortVal: (j.cartoesAdv || []).reduce((acc, c) => acc + (parseInt(c.red) || 0), 0) }))
-        .sort((a, b) => b.sortVal - a.sortVal);
+    // 6. Cartões
+    const cartoesStats = (field, team) => {
+        return [...filtered]
+            .map(j => {
+                const list = team === 'galo' ? (j.cartoesGalo || []) : (j.cartoesAdv || []);
+                const count = list.reduce((acc, c) => acc + (parseInt(c[field]) || 0), 0);
+                return { ...j, sortVal: count };
+            })
+            .sort((a, b) => b.sortVal - a.sortVal);
+    };
 
     grid.innerHTML = `
-        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público')}
-        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda')}
-        ${createTableIndiv('Gols em um único jogo', recordeGolsIndiv)}
+        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
+        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
+        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
+        ${createTable('Jogadores com mais gols em um único jogo', recordeGolsIndiv, 'sortVal', 'number', 'Gols', ['Jogador'])}
         ${createTable('Maiores Vitórias', maioresVitorias, 'placar', 'string', 'Placar')}
         ${createTable('Maiores Derrotas', maioresDerrotas, 'placar', 'string', 'Placar')}
         ${createTable('Mais Gols Marcados', maisGolsMarcados, 'sortVal', 'number', 'Gols')}
         ${createTable('Mais Gols Sofridos', maisGolsSofridos, 'sortVal', 'number', 'Gols')}
-        ${createTable('Mais Amarelos Recebidos', maisAmarelosGalo, 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Vermelhos Recebidos', maisVermelhosGalo, 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Amarelos do Adversário', maisAmarelosAdv, 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Vermelhos do Adversário', maisVermelhosAdv, 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Amarelos Recebidos', cartoesStats('amarelo', 'galo'), 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Vermelhos Recebidos', cartoesStats('red', 'galo'), 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Amarelos do Adversário', cartoesStats('amarelo', 'adv'), 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Vermelhos do Adversário', cartoesStats('red', 'adv'), 'sortVal', 'number', 'Cartões')}
     `;
 };
 
 
 window.clearCurFilters = () => {
-    ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario', 'cur-filter-ano-de', 'cur-filter-ano-ate'].forEach(id => {
+    ['cur-filter-campeonato', 'cur-filter-tipo', 'cur-filter-adversario', 'cur-filter-estadio', 'cur-filter-ano-de', 'cur-filter-ano-ate'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
