@@ -5169,8 +5169,11 @@ const renderCuriosidades = () => {
 
     const createTable = (title, data, valueKey, type = 'number', extraLabel = '', extraCols = []) => {
         return `
-            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm); width:100%;">
-                <div class="stats-section-title">${title}</div>
+            <div class="stats-section detail-section-bg" style="margin:0; box-shadow: var(--shadow-sm); width:100%; border-radius:12px; overflow:hidden;">
+                <div class="stats-section-title" style="padding: 1.2rem 1.5rem; background: rgba(212, 175, 55, 0.05); color: var(--primary-color); font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; border-bottom: 1px solid rgba(212, 175, 55, 0.1); display: flex; align-items: center; gap: 0.8rem; text-transform: uppercase;">
+                    <i class="fas fa-trophy" style="font-size: 1rem;"></i>
+                    ${title}
+                </div>
                 <div class="table-responsive">
                     <table class="data-table" style="font-size:0.85rem; width:100%;">
                         <thead>
@@ -5197,7 +5200,6 @@ const renderCuriosidades = () => {
                                             if (label === 'estádio') key = 'estadio';
                                             else if (label === 'jogador') key = 'jogador';
                                             else if (label === 'placar') key = 'placar';
-                                            else if (label === 'fase') key = 'fase';
                                             
                                             const cellVal = j[key] || '-';
                                             return `<td>${cellVal}</td>`;
@@ -5308,10 +5310,10 @@ const renderCuriosidades = () => {
     };
 
     grid.innerHTML = `
-        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Fase', 'Estádio'])}
-        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Fase', 'Estádio'])}
-        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Fase', 'Estádio'])}
-        ${createTable('Menores Rendas', menoresRendas, 'sortVal', 'money', 'Renda', ['Fase', 'Estádio'])}
+        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
+        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
+        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
+        ${createTable('Menores Rendas', menoresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
         ${createTable('Jogadores com mais gols em um único jogo', recordeGolsIndiv, 'sortVal', 'number', 'Gols', ['Jogador'])}
         ${createTable('Maiores Vitórias', maioresVitorias, 'placar', 'string', 'Placar')}
         ${createTable('Maiores Derrotas', maioresDerrotas, 'placar', 'string', 'Placar')}
