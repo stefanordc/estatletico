@@ -5811,6 +5811,39 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Helper para buscar dados paginados para evitar timeout em tabelas grandes (ex: jogadores com Base64)
+    const fetchTableWithPagination = async (tableName, batchSize = 100) => {
+        let allData = [];
+        let from = 0;
+        let to = batchSize - 1;
+        let finished = false;
+
+        while (!finished) {
+            const { data, error } = await supabaseClient
+                .from(tableName)
+                .select('*')
+                .range(from, to);
+
+            if (error) {
+                console.error(`Erro ao buscar página ${from}-${to} da tabela ${tableName}:`, error);
+                throw error;
+            }
+
+            if (data && data.length > 0) {
+                allData = [...allData, ...data];
+                if (data.length < batchSize) {
+                    finished = true;
+                } else {
+                    from += batchSize;
+                    to += batchSize;
+                }
+            } else {
+                finished = true;
+            }
+        }
+        return { data: allData, error: null };
+    };
+
     // Cache Layer: Tenta carregar dados salvos imediatamente
     const cachedData = localStorage.getItem('estatletico_cache');
     if (cachedData) {
@@ -5834,11 +5867,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        console.log('Estatlético: Buscando tabelas em paralelo...');
+        console.log('Estatlético: Buscando tabelas de forma otimizada...');
 
-        const results = await Promise.all(
-            tables.map(t => supabaseClient.from(t).select('*'))
-        );
+        const results = [];
+        for (const t of tables) {
+            try {
+                // Jogadores e Jogos são mais pesados, usamos paginação. Outros podem ser SELECT * mas padronizamos por segurança.
+                const res = await fetchTableWithPagination(t);
+                results.push(res);
+            } catch (err) {
+                results.push({ data: null, error: err });
+            }
+        }
 
         console.log('Estatlético: Dados recebidos. Processando estado...');
         const freshData = {};
