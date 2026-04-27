@@ -604,9 +604,9 @@
                 <div class="form-grid">
                     <div class="form-group"><label>Temporada</label><select id="arb-filter-temporada"><option value="">Todas</option></select></div>
                     <div class="form-group"><label>Nacionalidade</label><select id="arb-filter-nacionalidade"><option value="">Todas</option></select></div>
-                    <div class="form-group"><label>Árbitro</label><select id="arb-filter-arbitro"><option value="">Todos</option></select></div>
-                    <div class="form-group"><label>Adversário</label><select id="arb-filter-adversario"><option value="">Todos</option></select></div>
-                    <div class="form-group"><label>Estádio</label><select id="arb-filter-estadio"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Árbitro</label><div class="autocomplete-container"><input type="text" id="arb-filter-arbitro" placeholder="Digite o nome..."></div></div>
+                    <div class="form-group"><label>Adversário</label><div class="autocomplete-container"><input type="text" id="arb-filter-adversario" placeholder="Digite o clube..."></div></div>
+                    <div class="form-group"><label>Estádio</label><div class="autocomplete-container"><input type="text" id="arb-filter-estadio" placeholder="Digite o estádio..."></div></div>
                     <div class="form-group"><label>Campeonato</label><select id="arb-filter-campeonato"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Tipo</label><select id="arb-filter-tipo"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>De (Ano)</label><select id="arb-filter-ano-de"><option value="">Mínimo</option></select></div>
@@ -655,14 +655,16 @@
             <div class="filters-card">
                 <div class="form-grid">
                     <div class="form-group"><label>Temporada</label><select id="ea-filter-temporada"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>De (Ano)</label><select id="ea-filter-ano-de"><option value="">Mínimo</option></select></div>
+                    <div class="form-group"><label>Até (Ano)</label><select id="ea-filter-ano-ate"><option value="">Máximo</option></select></div>
                     <div class="form-group"><label>Campeonato</label><select id="ea-filter-campeonato"><option value="">Todos</option></select></div>
-                    <div class="form-group"><label>Adversário</label><select id="ea-filter-adversario"><option value="">Todos</option></select></div>
                     <div class="form-group"><label>Nacionalidade</label><select id="ea-filter-nacionalidade"><option value="">Todas</option></select></div>
+                    <div class="form-group"><label>Adversário</label><div class="autocomplete-container"><input type="text" id="ea-filter-adversario" placeholder="Digite o clube..."></div></div>
                 </div>
                 <div class="form-grid" style="margin-top:1rem;">
-                    <div class="form-group"><label>Árbitro</label><select id="ea-filter-arbitro"><option value="">Todos</option></select></div>
-                    <div class="form-group"><label>Assistente</label><select id="ea-filter-assistente"><option value="">Todos</option></select></div>
-                    <div class="form-group"><label>VAR</label><select id="ea-filter-var"><option value="">Todos</option></select></div>
+                    <div class="form-group"><label>Árbitro</label><div class="autocomplete-container"><input type="text" id="ea-filter-arbitro" placeholder="Digite o nome..."></div></div>
+                    <div class="form-group"><label>Assistente</label><div class="autocomplete-container"><input type="text" id="ea-filter-assistente" placeholder="Digite o nome..."></div></div>
+                    <div class="form-group"><label>VAR</label><div class="autocomplete-container"><input type="text" id="ea-filter-var" placeholder="Digite o nome..."></div></div>
                 </div>
             </div>
 

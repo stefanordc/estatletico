@@ -1532,7 +1532,7 @@ const renderArbitragem = () => {
         if (fAnoAte) arbGames = arbGames.filter(j => parseInt(j.data.substring(0,4)) <= parseInt(fAnoAte));
 
         if (arbGames.length === 0 && fArb && fArb !== arb.nome) return null;
-        if (fArb && arb.nome !== fArb) return null;
+        if (fArb && !normalizeString(arb.nome).includes(normalizeString(fArb))) return null;
         if (arbGames.length === 0 && !fArb) return null;
 
         const res = {
@@ -1572,19 +1572,29 @@ const renderArbitragem = () => {
     // Populate Filters
     populateFilter('arb-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
     populateFilter('arb-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
-    populateFilter('arb-filter-arbitro', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR').map(a => a.nome))]);
-    populateFilter('arb-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
-    populateFilter('arb-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
+    
+    if (!document.getElementById('arb-filter-arbitro').dataset.autocompleteBound) {
+        setupAutocomplete('arb-filter-arbitro', 'arbitros', 'nome', null, () => renderArbitragem());
+        setupAutocomplete('arb-filter-adversario', 'adversarios', 'clube', null, () => renderArbitragem());
+        setupAutocomplete('arb-filter-estadio', 'estadios', 'nome', null, () => renderArbitragem());
+        document.getElementById('arb-filter-arbitro').dataset.autocompleteBound = 'true';
+    }
+
     populateFilter('arb-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
 
-    const allYears = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
-    populateFilter('arb-filter-ano-de', allYears);
-    populateFilter('arb-filter-ano-ate', allYears);
+    const allYearsArb = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
+    populateFilter('arb-filter-ano-de', allYearsArb);
+    populateFilter('arb-filter-ano-ate', allYearsArb);
 
-    // Bind new filter
+    // Bind new filters
     const nacFilter = document.getElementById('arb-filter-nacionalidade');
     if (nacFilter && !nacFilter.dataset.bound) {
-        nacFilter.addEventListener('change', renderArbitragem);
+        ['arb-filter-temporada', 'arb-filter-nacionalidade', 'arb-filter-campeonato', 'arb-filter-tipo', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => {
+            document.getElementById(id).addEventListener('change', renderArbitragem);
+        });
+        ['arb-filter-arbitro', 'arb-filter-adversario', 'arb-filter-estadio'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderArbitragem);
+        });
         nacFilter.dataset.bound = 'true';
     }
 
@@ -1675,6 +1685,8 @@ window.showArbitragemJogos = (arbNome, event) => {
 const renderEquipeArbitragem = () => {
     const grid = document.getElementById('equipe-arbitragem-grid-container');
     const fTemp = document.getElementById('ea-filter-temporada').value;
+    const fAnoDe = document.getElementById('ea-filter-ano-de').value;
+    const fAnoAte = document.getElementById('ea-filter-ano-ate').value;
     const fCamp = document.getElementById('ea-filter-campeonato').value;
     const fAdv = document.getElementById('ea-filter-adversario').value;
     const fNac = document.getElementById('ea-filter-nacionalidade').value;
@@ -1686,13 +1698,15 @@ const renderEquipeArbitragem = () => {
 
     state.jogos.forEach(j => {
         if (fTemp && j.temporada !== fTemp) return;
+        if (fAnoDe && parseInt(j.data.substring(0,4)) < parseInt(fAnoDe)) return;
+        if (fAnoAte && parseInt(j.data.substring(0,4)) > parseInt(fAnoAte)) return;
         if (fCamp && j.campeonato !== fCamp) return;
         const op = j.casa === 'Atlético' ? j.fora : j.casa;
         if (fAdv && op !== fAdv) return;
         
-        if (fArb && j.arbitro !== fArb) return;
-        if (fAss && j.assistente1 !== fAss && j.assistente2 !== fAss) return;
-        if (fVar && j.varArbitro !== fVar) return;
+        if (fArb && !normalizeString(j.arbitro).includes(normalizeString(fArb))) return;
+        if (fAss && !normalizeString(j.assistente1).includes(normalizeString(fAss)) && !normalizeString(j.assistente2).includes(normalizeString(fAss))) return;
+        if (fVar && !normalizeString(j.varArbitro).includes(normalizeString(fVar))) return;
 
         const p = (name, role) => {
             if (!name || name === 'N/I' || name === '-' || name === 'Sem VAR' || name.trim() === '') return;
@@ -1719,25 +1733,25 @@ const renderEquipeArbitragem = () => {
     // Populando dropdowns (apenas 1 vez caso vazio)
     if (document.getElementById('ea-filter-temporada').options.length === 1) {
         populateFilter('ea-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
+        
+        const allYearsEA = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
+        populateFilter('ea-filter-ano-de', allYearsEA);
+        populateFilter('ea-filter-ano-ate', allYearsEA);
+
         populateFilter('ea-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
-        populateFilter('ea-filter-adversario', [...new Set(state.jogos.map(j => j.casa === 'Atlético' ? j.fora : j.casa))]);
         populateFilter('ea-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
         
-        let arbNames = new Set();
-        let assNames = new Set();
-        let varNames = new Set();
-        state.jogos.forEach(j => {
-            if (j.arbitro && j.arbitro !== 'N/I' && j.arbitro !== '-' && j.arbitro !== 'Sem VAR') arbNames.add(j.arbitro);
-            if (j.assistente1 && j.assistente1 !== 'N/I' && j.assistente1 !== '-' && j.assistente1 !== 'Sem VAR') assNames.add(j.assistente1);
-            if (j.assistente2 && j.assistente2 !== 'N/I' && j.assistente2 !== '-' && j.assistente2 !== 'Sem VAR') assNames.add(j.assistente2);
-            if (j.varArbitro && j.varArbitro !== 'N/I' && j.varArbitro !== '-' && j.varArbitro !== 'Sem VAR') varNames.add(j.varArbitro);
-        });
-        populateFilter('ea-filter-arbitro', [...arbNames].sort());
-        populateFilter('ea-filter-assistente', [...assNames].sort());
-        populateFilter('ea-filter-var', [...varNames].sort());
+        setupAutocomplete('ea-filter-adversario', 'adversarios', 'clube', null, () => renderEquipeArbitragem());
+        setupAutocomplete('ea-filter-arbitro', 'arbitros', 'nome', null, () => renderEquipeArbitragem());
+        setupAutocomplete('ea-filter-assistente', 'arbitros', 'nome', null, () => renderEquipeArbitragem());
+        setupAutocomplete('ea-filter-var', 'arbitros', 'nome', null, () => renderEquipeArbitragem());
         
         const attachUpdate = (id) => document.getElementById(id).addEventListener('change', renderEquipeArbitragem);
-        ['temporada','campeonato','adversario','nacionalidade','arbitro','assistente','var'].forEach(t => attachUpdate(`ea-filter-${t}`));
+        ['temporada','campeonato','nacionalidade','ano-de','ano-ate'].forEach(t => attachUpdate(`ea-filter-${t}`));
+        
+        ['ea-filter-adversario','ea-filter-arbitro','ea-filter-assistente','ea-filter-var'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderEquipeArbitragem);
+        });
     }
 
     const cards = Object.values(profissionais).sort((a,b) => b.jogos.length - a.jogos.length);
