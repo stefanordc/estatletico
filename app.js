@@ -4593,8 +4593,30 @@ const renderPlayerCareerDetail = (playerName) => {
 
     const debutInfo = formatFullMatchInfo(playerGames[0]);
     const lastInfo = formatFullMatchInfo(playerGames[playerGames.length - 1]);
+    
+    // Find first goal
+    const gamesWithGoals = playerGames.filter(j => {
+        const line = j.lineupGalo?.find(l => l.jogador === playerName);
+        return line && parseInt(line.golsCount) > 0;
+    });
+    // playerGames is already sorted chronologically, so index 0 is the first goal
+    const firstGoalInfo = gamesWithGoals.length > 0 ? formatFullMatchInfo(gamesWithGoals[0]) : null;
 
-    const seasons = Object.values(seasonsMap).sort((a, b) => b.temporada - a.temporada);
+    // Sorting seasons oldest to newest (ascending)
+    const seasons = Object.values(seasonsMap).sort((a, b) => a.temporada - b.temporada);
+    
+    // Calculate Totals
+    const totals = seasons.reduce((acc, s) => {
+        acc.j += s.j;
+        acc.v += s.v;
+        acc.e += s.e;
+        acc.d += s.d;
+        acc.gols += s.gols;
+        acc.gs += s.gs || 0;
+        acc.jssg += s.jssg || 0;
+        acc.jsmg += s.jsmg || 0;
+        return acc;
+    }, { j: 0, v: 0, e: 0, d: 0, gols: 0, gs: 0, jssg: 0, jsmg: 0 });
     const foto = pInfo?.foto || DEFAULT_PLAYER_PHOTO;
 
     overlay.innerHTML = `
@@ -4616,10 +4638,16 @@ const renderPlayerCareerDetail = (playerName) => {
                     <strong style="color: var(--text-muted);">Estreia:</strong> 
                     <span style="margin-left: 0.5rem; font-weight: 500;">${debutInfo}</span>
                 </div>
-                <div style="font-size: 0.95rem;">
+                <div style="margin-bottom: ${firstGoalInfo ? '0.5rem' : '0'}; font-size: 0.95rem;">
                     <strong style="color: var(--text-muted);">Último Jogo:</strong> 
                     <span style="margin-left: 0.5rem; font-weight: 500;">${lastInfo}</span>
                 </div>
+                ${firstGoalInfo ? `
+                <div style="font-size: 0.95rem;">
+                    <strong style="color: var(--text-muted);">Primeiro gol:</strong> 
+                    <span style="margin-left: 0.5rem; font-weight: 500;">${firstGoalInfo}</span>
+                </div>
+                ` : ''}
             </div>
 
             <div class="stats-section">
@@ -4664,6 +4692,24 @@ const renderPlayerCareerDetail = (playerName) => {
                             `;
                         }).join('')}
                     </tbody>
+                    <tfoot>
+                        <tr style="background: rgba(255, 255, 255, 0.05); font-weight: bold; border-top: 2px solid rgba(255, 255, 255, 0.1);">
+                            <td style="color: var(--text-main);">TOTAL</td>
+                            <td>${totals.j}</td>
+                            <td style="color:var(--success-color);">${totals.v}</td>
+                            <td>${totals.e}</td>
+                            <td style="color:var(--danger-color);">${totals.d}</td>
+                            <td>${totals.gols}</td>
+                            ${isGoleiro ? `
+                                <td style="color:var(--danger-color);">${totals.gs}</td>
+                                <td style="color:#27ae60;">${totals.jssg}</td>
+                            ` : `
+                                <td style="color:var(--text-muted);">${totals.jsmg}</td>
+                            `}
+                            <td>${totals.j > 0 ? (((totals.v * 3) + totals.e) / (totals.j * 3) * 100).toFixed(1) : 0}%</td>
+                        </tr>
+                    </tfoot>
+
                 </table>
                 <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
                     ${isGoleiro ? `
@@ -6119,63 +6165,73 @@ window.addEventListener('DOMContentLoaded', async () => {
         
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
+        // Remove the loader instantly if cache exists, or after a short delay if we're waiting for network
+        if (!cachedData && loader) {
+             loader.style.display = 'none'; // We'll show a non-blocking indicator instead if needed, but for now just hide it.
+        }
+
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        console.log('Estatlético: Buscando tabelas de forma otimizada...');
+        console.log('Estatlético: Buscando tabelas de forma otimizada em background...');
 
-        const results = [];
-        for (const t of tables) {
-            try {
-                // Jogadores e Jogos são mais pesados, usamos paginação. Outros podem ser SELECT * mas padronizamos por segurança.
-                const res = await fetchTableWithPagination(t);
-                results.push(res);
-            } catch (err) {
-                results.push({ data: null, error: err });
-            }
-        }
+        // Fetch tables concurrently in the background
+        Promise.all(tables.map(t => fetchTableWithPagination(t).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
+            .then(results => {
+                console.log('Estatlético: Dados de background recebidos. Atualizando estado...');
+                const freshData = {};
+                let hasChanges = false;
 
-        console.log('Estatlético: Dados recebidos. Processando estado...');
-        const freshData = {};
-        results.forEach((res, i) => {
-            const tableName = tables[i];
-            if (res.error) {
-                console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
-                // Se for a tabela de jogos, avisar o usuário discretamente
-                if (tableName === 'jogos') {
-                    showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
+                results.forEach(res => {
+                    const tableName = res.table;
+                    if (res.error) {
+                        console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
+                        if (tableName === 'jogos') {
+                            showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
+                        }
+                    }
+                    if (res.data) {
+                        state[tableName] = res.data;
+                        freshData[tableName] = res.data;
+                        hasChanges = true;
+                        console.log(`Estatlético: Tabela "${tableName}" atualizada em background com ${res.data.length} registros.`);
+                    } else if (!state[tableName]) {
+                        state[tableName] = []; 
+                    }
+                });
+
+                if (hasChanges) {
+                    // Migração Básica de Árbitros
+                    state.arbitros = (state.arbitros || []).map(a => {
+                        if (a.federacao && a.federacao.trim().length === 2) {
+                            return { ...a, federacao: 'Brasil' };
+                        }
+                        return a;
+                    });
+
+                    // Só salva no cache o que veio com sucesso
+                    if (Object.keys(freshData).length > 0) {
+                        try {
+                            localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
+                        } catch(e) {
+                            console.warn('Cache ignorado: localStorage cheio. Limpando cache antigo...');
+                            localStorage.removeItem('estatletico_cache');
+                        }
+                    }
+
+                    // Se não tínhamos cache, precisamos renderizar a página agora que os dados chegaram
+                    if (!cachedData) {
+                        handleRouting();
+                    } else {
+                        // Se tínhamos cache, renderizamos a rota atual de novo com os dados atualizados
+                        handleRouting();
+                    }
                 }
-            }
-            if (res.data) {
-                state[tableName] = res.data;
-                freshData[tableName] = res.data;
-                console.log(`Estatlético: Tabela "${tableName}" carregada com ${res.data.length} registros.`);
-            } else {
-                state[tableName] = state[tableName] || []; // Garante array vazio se falhar
-            }
-        });
-        
-        // Só salva no cache o que veio com sucesso
-        if (Object.keys(freshData).length > 0) {
-            try {
-                localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
-            } catch(e) {
-                console.warn('Cache ignorado: localStorage cheio. Limpando cache antigo...');
-                localStorage.removeItem('estatletico_cache');
-            }
-        }
+            });
 
-        // Migração Básica de Árbitros
-        state.arbitros = (state.arbitros || []).map(a => {
-            if (a.federacao && a.federacao.trim().length === 2) {
-                return { ...a, federacao: 'Brasil' };
-            }
-            return a;
-        });
-        
     } catch (e) {
         console.error('Estatlético: Falha na inicialização:', e);
     } finally {
         clearTimeout(safetyTimer);
-        console.log('Estatlético: Finalizando carregamento.');
+        console.log('Estatlético: Inicialização principal concluída.');
         if(loader) loader.style.display = 'none';
 
         // Sidebar
