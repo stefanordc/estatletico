@@ -2414,7 +2414,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
                     <div class="flex-end">
                         <button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button>
-                        <button type="button" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
+                        <button type="button" id="btn-salvar-jogo" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
                     </div>
                 </div>
             </form>
@@ -2816,6 +2816,21 @@ const removeLineupRow = (btn) => {
 };
 
 const saveNewJogo = () => {
+    const btnSalvar = document.getElementById('btn-salvar-jogo');
+    if (btnSalvar) {
+        if (btnSalvar.disabled) return;
+        btnSalvar.disabled = true;
+        const originalText = btnSalvar.innerText;
+        btnSalvar.innerText = 'Salvando...';
+        btnSalvar.dataset.originalText = originalText;
+    }
+    const resetBtn = () => {
+        if (btnSalvar) {
+            btnSalvar.disabled = false;
+            btnSalvar.innerText = btnSalvar.dataset.originalText || 'Cadastrar Jogo';
+        }
+    };
+
     const fd = new FormData(document.getElementById('multi-step-form'));
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
@@ -2887,6 +2902,7 @@ const saveNewJogo = () => {
     const titularesCount = jogo.lineupGalo.filter(l => l.titular).length;
     if (titularesCount !== 11) {
         alert(`Erro de Validação: O número de jogadores titulares deve ser exatamente 11. Você marcou ${titularesCount}.`);
+        resetBtn();
         return;
     }
 
@@ -2896,6 +2912,7 @@ const saveNewJogo = () => {
     if (duplicates.length > 0) {
         const dupNames = [...new Set(duplicates)].join(', ');
         showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" está(ão) inserido(s) mais de uma vez na escalação.`, 'error');
+        resetBtn();
         return;
     }
 
@@ -2907,12 +2924,14 @@ const saveNewJogo = () => {
 
     if (gsTotal !== advGols) {
         alert(`Erro de Validação: A quantidade de Gols Sofridos informada na escalação (${gsTotal}) não confere com os gols marcados pelo adversário (${advGols}). Ajuste os valores para salvar o jogo.`);
+        resetBtn();
         return;
     }
 
     const totalGolsCalculado = golsLineup + jogo.gcFavorCount;
     if (totalGolsCalculado !== golsGalo) {
         showToast(`Erro de Validação: A soma de gols dos jogadores (${golsLineup}) + gols contra a favor (${jogo.gcFavorCount}) totaliza ${totalGolsCalculado}, mas o placar do Atlético informado é ${golsGalo}. Ajuste a escalação ou o placar para salvar.`, 'error');
+        resetBtn();
         return;
     }
 
@@ -2939,6 +2958,8 @@ const saveNewJogo = () => {
             } else {
                 showToast(`Erro ao salvar (jogos): ${error.message || 'Erro desconhecido'}`, 'error');
             }
+        } finally {
+            resetBtn();
         }
     };
 
