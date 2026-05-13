@@ -6172,34 +6172,45 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Helper para buscar dados paginados (agora com batchSize de 1000 para ser ~10x mais rápido)
     const fetchTableWithPagination = async (tableName, batchSize = 1000) => {
         let allData = [];
         let from = 0;
         let to = batchSize - 1;
         let finished = false;
 
+        const fetchWithTimeout = (promise, ms = 10000) => {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout da requisição de rede excedido')), ms))
+            ]);
+        };
+
         while (!finished) {
-            const { data, error } = await supabaseClient
-                .from(tableName)
-                .select('*')
-                .range(from, to);
+            try {
+                const { data, error } = await fetchWithTimeout(
+                    supabaseClient.from(tableName).select('*').range(from, to),
+                    10000 // 10s timeout
+                );
 
-            if (error) {
-                console.error(`Erro ao buscar página ${from}-${to} da tabela ${tableName}:`, error);
-                throw error;
-            }
-
-            if (data && data.length > 0) {
-                allData = [...allData, ...data];
-                if (data.length < batchSize) {
-                    finished = true;
-                } else {
-                    from += batchSize;
-                    to += batchSize;
+                if (error) {
+                    console.error(`Erro ao buscar página ${from}-${to} da tabela ${tableName}:`, error);
+                    throw error;
                 }
-            } else {
-                finished = true;
+
+                if (data && data.length > 0) {
+                    allData = [...allData, ...data];
+                    if (data.length < batchSize) {
+                        finished = true;
+                    } else {
+                        from += batchSize;
+                        to += batchSize;
+                    }
+                } else {
+                    finished = true;
+                }
+            } catch (err) {
+                console.error(`Falha fatal ao buscar tabela ${tableName}:`, err);
+                return { data: null, error: err };
             }
         }
         return { data: allData, error: null };
