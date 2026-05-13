@@ -6256,10 +6256,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
+        // Batch sizes por tabela: 'jogadores' usa 50 pois cada linha tem foto em Base64 (pode ser centenas de KB)
+        // Tabelas sem imagens usam 1000 para velocidade máxima
+        const batchSizes = {
+            adversarios: 1000,
+            estadios: 1000,
+            competicoes: 1000,
+            arbitros: 1000,
+            jogadores: 50,   // Base64 fotos = linhas muito grandes
+            jogos: 200       // jogos tem lineups aninhados, usar tamanho médio
+        };
         console.log('Estatlético: Buscando tabelas de forma otimizada em background...');
 
         // Fetch tables concurrently in the background
-        Promise.all(tables.map(t => fetchTableWithPagination(t).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
+        Promise.all(tables.map(t => fetchTableWithPagination(t, batchSizes[t]).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
             .then(async results => {
                 console.log('Estatlético: Dados de background recebidos. Atualizando estado...');
                 const freshData = {};
