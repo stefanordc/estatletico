@@ -762,10 +762,6 @@ const renderElenco = () => {
     grid.innerHTML = filtered.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;border-radius:8px;" class="detail-section-bg">Nenhum jogador encontrado para os filtros selecionados.</div>' : 
         filtered.map(j => {
             let photoUrl = j.foto && j.foto.trim() !== '' ? j.foto : null;
-            if (!photoUrl) {
-                const otherRecords = state.jogadores.filter(p => p.nome_completo === j.nome_completo && p.foto && p.foto.trim() !== '');
-                if (otherRecords.length > 0) photoUrl = otherRecords[0].foto;
-            }
             if (!photoUrl) photoUrl = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
             return `
@@ -4285,19 +4281,12 @@ const setupAutofillHandler = () => {
         if (elNascimento) elNascimento.value = getBestValue('nascimento');
 
         const elNumero = document.getElementById('input-numero');
-        if (elNumero && !elNumero.value) elNumero.value = src.numero !== undefined && src.numero !== null ? src.numero : '';
+        // O número não é autofilled pois é individual por temporada
 
         const elObs = document.getElementById('input-observacao');
         if (elObs) elObs.value = src.observacao || '';
 
-        // Foto: Usa a do registro mais recente como sugestão inicial se não tiver foto atual
-        const bestFoto = src.foto;
-        const fotoInp = document.getElementById('foto-input-jogador');
-        const pasteArea = document.getElementById('paste-area-jogador');
-        if (fotoInp && bestFoto && bestFoto !== 'https://via.placeholder.com/40') {
-            fotoInp.value = bestFoto;
-            pasteArea.innerHTML = `<img src="${bestFoto}" style="max-height:80px;">`;
-        }
+        // A foto não é autofilled pois é individual por temporada
 
         // Checkbox Fora do Elenco
         const foraCheck = document.getElementById('input-fora-do-elenco');
