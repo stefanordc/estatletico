@@ -6089,6 +6089,47 @@ const updateThemeUI = (theme) => {
     }
 };
 
+// --- IndexedDB Cache Wrapper ---
+const idbCache = {
+    dbName: 'EstatleticoDB',
+    storeName: 'cacheStore',
+    init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = e => reject(e.target.error);
+            request.onsuccess = e => resolve(e.target.result);
+            request.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName);
+                }
+            };
+        });
+    },
+    async set(key, value) {
+        try {
+            const db = await this.init();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(this.storeName, 'readwrite');
+                tx.objectStore(this.storeName).put(value, key);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(false);
+            });
+        } catch(e) { return false; }
+    },
+    async get(key) {
+        try {
+            const db = await this.init();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(this.storeName, 'readonly');
+                const req = tx.objectStore(this.storeName).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        } catch(e) { return null; }
+    }
+};
+
 // --- ENTRY POINT ---
 window.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme UI
@@ -6131,8 +6172,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Helper para buscar dados paginados para evitar timeout em tabelas grandes (ex: jogadores com Base64)
-    const fetchTableWithPagination = async (tableName, batchSize = 100) => {
+    // Helper para buscar dados paginados (agora com batchSize de 1000 para ser ~10x mais rápido)
+    const fetchTableWithPagination = async (tableName, batchSize = 1000) => {
         let allData = [];
         let from = 0;
         let to = batchSize - 1;
@@ -6165,12 +6206,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Cache Layer: Tenta carregar dados salvos imediatamente
-    const cachedData = localStorage.getItem('estatletico_cache');
+    let cachedData = await idbCache.get('estatletico_cache');
+    
+    // Fallback migration: if indexedDB is empty but localStorage has it, move it.
+    if (!cachedData) {
+        const lsCache = localStorage.getItem('estatletico_cache');
+        if (lsCache) {
+            try {
+                cachedData = JSON.parse(lsCache);
+                await idbCache.set('estatletico_cache', cachedData);
+                localStorage.removeItem('estatletico_cache');
+            } catch(e) {}
+        }
+    }
+
     if (cachedData) {
         try {
-            console.log('Estatlético: Carregando cache local...');
-            const parsed = JSON.parse(cachedData);
-            Object.keys(parsed).forEach(k => { if(state[k]) state[k] = parsed[k]; });
+            console.log('Estatlético: Carregando cache do IndexedDB...');
+            Object.keys(cachedData).forEach(k => { if(state[k]) state[k] = cachedData[k]; });
             handleRouting(); // Renderiza com dados em cache
             if (loader) loader.style.display = 'none';
         } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
@@ -6196,7 +6249,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         // Fetch tables concurrently in the background
         Promise.all(tables.map(t => fetchTableWithPagination(t).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
-            .then(results => {
+            .then(async results => {
                 console.log('Estatlético: Dados de background recebidos. Atualizando estado...');
                 const freshData = {};
                 let hasChanges = false;
@@ -6206,7 +6259,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (res.error) {
                         console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
                         if (tableName === 'jogos') {
-                            showToast(`Atenção: O banco de dados recusou a tabela de Jogos (Erro ${res.error.code || '500'}).`, 'error');
+                            showToast(`Atenção: O banco de dados recusou a tabela de Jogos. Verifique sua conexão.`, 'error');
                         }
                     }
                     if (res.data) {
@@ -6228,23 +6281,17 @@ window.addEventListener('DOMContentLoaded', async () => {
                         return a;
                     });
 
-                    // Só salva no cache o que veio com sucesso
+                    // Salva no cache IndexedDB
                     if (Object.keys(freshData).length > 0) {
-                        try {
-                            localStorage.setItem('estatletico_cache', JSON.stringify(freshData));
-                        } catch(e) {
-                            console.warn('Cache ignorado: localStorage cheio. Limpando cache antigo...');
-                            localStorage.removeItem('estatletico_cache');
-                        }
+                        await idbCache.set('estatletico_cache', freshData);
                     }
-
-                    // Se não tínhamos cache, precisamos renderizar a página agora que os dados chegaram
-                    if (!cachedData) {
-                        handleRouting();
-                    } else {
-                        // Se tínhamos cache, renderizamos a rota atual de novo com os dados atualizados
-                        handleRouting();
-                    }
+                }
+                
+                // Sempre tenta rotear se não tinha cache (para não deixar a tela preta) ou se houve mudanças
+                if (!cachedData) {
+                    handleRouting();
+                } else if (hasChanges) {
+                    handleRouting();
                 }
             });
 
