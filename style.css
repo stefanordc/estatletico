@@ -853,6 +853,14 @@ td.actions .action-btn {
     background-color: rgba(46, 204, 113, 0.2) !important;
 }
 
+.highlight-error-bg {
+    background-color: rgba(231, 76, 60, 0.1) !important;
+}
+
+[data-theme="dark"] .highlight-error-bg {
+    background-color: rgba(231, 76, 60, 0.2) !important;
+}
+
 .stats-table .col-mini { width: 50px; }
 .stats-table .col-small { width: 80px; }
 .stats-table .col-med { width: 120px; }

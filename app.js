@@ -5,7 +5,7 @@ let supabaseClient = null;
 
 // Foto placeholders
 const DEFAULT_PLAYER_PHOTO = 'https://via.placeholder.com/150';
-const DEFAULT_REF_PHOTO = 'media__1775704256344.png';
+const DEFAULT_REF_PHOTO = 'https://via.placeholder.com/150';
 const DEFAULT_CLUB_PHOTO = 'https://via.placeholder.com/100';
 
 const normalizeString = (str) => {
@@ -35,6 +35,15 @@ const parseCurrency = (val) => {
     const parsed = parseFloat(clean);
     return isNaN(parsed) ? 0 : parsed;
 };
+
+// Previne alteração de inputs do tipo número ao rolar o mouse (scroll) de forma global
+document.addEventListener('wheel', function(event) {
+    if (event.target.tagName === 'INPUT' && event.target.type === 'number') {
+        if (document.activeElement === event.target) {
+            event.preventDefault();
+        }
+    }
+}, { passive: false });
 
 // State Management
 const state = {
@@ -2006,6 +2015,17 @@ window.showJogoDetail = (jogoId, event) => {
                                             <td>-</td>
                                         </tr>
                                     ` : ''}
+                                    ${(j.gcContraList || []).length > 0 ? `
+                                         <tr class="highlight-error-bg">
+                                             <td><strong>Gol Contra (Contra)</strong></td>
+                                             <td>-</td>
+                                             <td>0</td>
+                                             <td>-</td>
+                                             <td style="color:#e74c3c; font-weight:bold;">${j.gcContraList.length}</td>
+                                             <td>${j.gcContraList.map(gc => `${gc.min}' (${gc.tempo}T)`).join(', ')}</td>
+                                             <td>-</td>
+                                         </tr>
+                                     ` : ''}
                                 </tbody>
                             </table>
                         </div>
@@ -2408,6 +2428,19 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         </div>
                     </div>
 
+                    <div class="stats-section" style="margin-top:2rem;">
+                        <div class="stats-section-title">Gols Contra contra o Atlético</div>
+                        <div class="p-4">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Quantidade de Gols Contra</label>
+                                    <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0" style="max-width:200px;">
+                                    <div id="gc-contra-details" style="margin-top:1rem;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex-end">
                         <button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button>
                         <button type="button" id="btn-salvar-jogo" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
@@ -2552,6 +2585,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     };
 
     setupGCFields('game-gc-favor', 'gc-favor-details', jogoToEdit?.gcFavorList);
+    setupGCFields('game-gc-contra', 'gc-contra-details', jogoToEdit?.gcContraList);
 
     const setupNIToggle = (checkId, inputId) => {
         const ck = document.getElementById(checkId); const inp = document.getElementById(inputId);
@@ -2873,6 +2907,12 @@ const saveNewJogo = () => {
         tempo: div.querySelector('.gc-tempo')?.value || '1'
     }));
 
+    jogo.gcContraCount = parseInt(document.getElementById('game-gc-contra')?.value || 0);
+    jogo.gcContraList = Array.from(document.getElementById('gc-contra-details')?.children || []).map(div => ({
+        min: div.querySelector('.gc-min')?.value || '',
+        tempo: div.querySelector('.gc-tempo')?.value || '1'
+    }));
+
     jogo.lineupGalo = [];
     Array.from(document.querySelectorAll('#lineup-galo-body tr')).forEach(r => {
         const l = r.querySelector('.line-player-inp')?.value || r.querySelector('input[placeholder="Jogador"]')?.value;
@@ -2934,10 +2974,9 @@ const saveNewJogo = () => {
     const doSaveJogo = async () => {
         state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
         
-        // Remove campos auxiliares e fotos para economizar espaço e evitar erros de schema imediato
-        const { gcFavorCount, gcContraCount, gcFavorList, gcContraList, ...cleanJogo } = jogo;
+        // Remove fotos para economizar espaço e evitar erros de schema imediato
         const jogoParaSalvar = {
-            ...cleanJogo,
+            ...jogo,
             lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
         };
         
