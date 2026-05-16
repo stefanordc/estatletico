@@ -2079,12 +2079,12 @@ const renderJogos = () => {
     const fMax = document.getElementById('filter-publico-max').value;
 
     let filtered = [...state.jogos];
-    if (fTemp) filtered = filtered.filter(j => j.temporada.toLowerCase().includes(fTemp.toLowerCase()));
-    if (fCamp) filtered = filtered.filter(j => j.campeonato.toLowerCase().includes(fCamp.toLowerCase()));
-    if (fCasa) filtered = filtered.filter(j => j.casa.toLowerCase().includes(fCasa.toLowerCase()));
-    if (fFora) filtered = filtered.filter(j => j.fora.toLowerCase().includes(fFora.toLowerCase()));
-    if (fEst) filtered = filtered.filter(j => j.estadio.toLowerCase().includes(fEst.toLowerCase()));
-    if (fArb) filtered = filtered.filter(j => j.arbitro.toLowerCase().includes(fArb.toLowerCase()));
+    if (fTemp) filtered = filtered.filter(j => (j.temporada || j.data?.substring(0, 4) || '').toString().toLowerCase().includes(fTemp.toLowerCase()));
+    if (fCamp) filtered = filtered.filter(j => (j.campeonato || '').toString().toLowerCase().includes(fCamp.toLowerCase()));
+    if (fCasa) filtered = filtered.filter(j => (j.casa || '').toString().toLowerCase().includes(fCasa.toLowerCase()));
+    if (fFora) filtered = filtered.filter(j => (j.fora || '').toString().toLowerCase().includes(fFora.toLowerCase()));
+    if (fEst) filtered = filtered.filter(j => (j.estadio || '').toString().toLowerCase().includes(fEst.toLowerCase()));
+    if (fArb) filtered = filtered.filter(j => (j.arbitro || '').toString().toLowerCase().includes(fArb.toLowerCase()));
     if (fAsst) filtered = filtered.filter(j => 
         (j.assistente1 || '').toLowerCase().includes(fAsst.toLowerCase()) || 
         (j.assistente2 || '').toLowerCase().includes(fAsst.toLowerCase())
@@ -2114,13 +2114,13 @@ const renderJogos = () => {
         const val = item[field];
         const others = getOtherJogosFilters(id);
         return state.jogos.some(j => {
-            const match = (!others.temporada || j.temporada.toLowerCase().includes(others.temporada.toLowerCase())) &&
-                          (!others.campeonato || j.campeonato.toLowerCase().includes(others.campeonato.toLowerCase())) &&
-                          (!others.casa || j.casa.toLowerCase().includes(others.casa.toLowerCase())) &&
-                          (!others.fora || j.fora.toLowerCase().includes(others.fora.toLowerCase())) &&
-                          (!others.estadio || j.estadio.toLowerCase().includes(others.estadio.toLowerCase())) &&
-                          (!others.arbitro || j.arbitro.toLowerCase().includes(others.arbitro.toLowerCase())) &&
-                          (!others.assistente || (j.assistente1 || '').toLowerCase().includes(others.assistente.toLowerCase()) || (j.assistente2 || '').toLowerCase().includes(others.assistente.toLowerCase())) &&
+            const match = (!others.temporada || (j.temporada || j.data?.substring(0, 4) || '').toString().toLowerCase().includes(others.temporada.toLowerCase())) &&
+                          (!others.campeonato || (j.campeonato || '').toString().toLowerCase().includes(others.campeonato.toLowerCase())) &&
+                          (!others.casa || (j.casa || '').toString().toLowerCase().includes(others.casa.toLowerCase())) &&
+                          (!others.fora || (j.fora || '').toString().toLowerCase().includes(others.fora.toLowerCase())) &&
+                          (!others.estadio || (j.estadio || '').toString().toLowerCase().includes(others.estadio.toLowerCase())) &&
+                          (!others.arbitro || (j.arbitro || '').toString().toLowerCase().includes(others.arbitro.toLowerCase())) &&
+                          (!others.assistente || ((j.assistente1 || '').toLowerCase().includes(others.assistente.toLowerCase()) || (j.assistente2 || '').toLowerCase().includes(others.assistente.toLowerCase()))) &&
                           (!others.var || (j.varArbitro || '').toLowerCase().includes(others.var.toLowerCase()));
             
             if (!match) return false;
@@ -6412,6 +6412,18 @@ const idbCache = {
     }
 };
 
+const enrichJogos = () => {
+    console.log('Estatlético: Enriquecendo lineups dos jogos...');
+    state.jogos = state.jogos.map(jogo => ({
+        ...jogo,
+        lineupGalo: (jogo.lineupGalo || []).map(l => {
+            const player = state.jogadores.find(p => p.nome_guerra === l.jogador && String(p.temporada) === String(jogo.temporada))
+                        || state.jogadores.find(p => p.nome_guerra === l.jogador);
+            return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
+        })
+    }));
+};
+
 // --- ENTRY POINT ---
 window.addEventListener('DOMContentLoaded', async () => {
     // Initialize theme UI
@@ -6588,6 +6600,9 @@ window.addEventListener('DOMContentLoaded', async () => {
                     if (Object.keys(freshData).length > 0) {
                         await idbCache.set('estatletico_cache', freshData);
                     }
+
+                    // Re-enriquece após mudanças no background
+                    enrichJogos();
                 }
                 
                 // Sempre tenta rotear se não tinha cache (para não deixar a tela preta) ou se houve mudanças
@@ -6620,15 +6635,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             sidebarOverlay?.classList.remove('active');
         });
 
-        // Enriquece o lineup com fotos dos jogadores
-        state.jogos = state.jogos.map(jogo => ({
-            ...jogo,
-            lineupGalo: (jogo.lineupGalo || []).map(l => {
-                const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === jogo.temporada)
-                            || state.jogadores.find(p => p.nome_guerra === l.jogador);
-                return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
-            })
-        }));
+        // Enriquece o lineup inicial (cache)
+        enrichJogos();
         
         handleRouting();
         window.addEventListener('hashchange', handleRouting);
@@ -6681,6 +6689,103 @@ window.toggleDashCurrentSeason = () => {
         }
     }
     renderDashboard();
+};
+
+// --- GLOBAL RESET FILTERS ---
+window.clearJogosFilters = () => {
+    ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-assistente', 'filter-var', 'filter-publico-max'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderJogos();
+};
+
+window.clearArtilheirosFilters = () => {
+    ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderCurrentArtTab();
+};
+
+window.clearCartoesFilters = () => {
+    ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderCartoes();
+};
+
+window.clearArbitragemFilters = () => {
+    ['arb-filter-temporada', 'arb-filter-campeonato', 'arb-filter-nacionalidade', 'arb-filter-ano-de', 'arb-filter-ano-ate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    ['arb-filter-arbitro', 'arb-filter-adversario'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderArbitragem();
+};
+
+window.clearEquipeArbitragemFilters = () => {
+    ['ea-filter-temporada', 'ea-filter-campeonato', 'ea-filter-nacionalidade', 'ea-filter-ano-de', 'ea-filter-ano-ate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    ['ea-filter-arbitro', 'ea-filter-assistente', 'ea-filter-var', 'ea-filter-adversario'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderEquipeArbitragem();
+};
+
+window.clearEstatisticasGeraisFilters = () => {
+    // Reset numeric/select inputs
+    ['stc-filter-temporada-de', 'stc-filter-temporada-ate', 'stt-filter-temporada-de', 'stt-filter-temporada-ate', 'spf-filter-temporada-de', 'spf-filter-temporada-ate', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    
+    // Reset multi-filters state
+    Object.keys(state.statsMultiFilters).forEach(key => {
+        state.statsMultiFilters[key] = ['Todos'];
+    });
+
+    renderEstatisticas();
+};
+
+const injectClearButtons = () => {
+    const config = [
+        { sectionId: 'artilheiros-section', fn: 'clearArtilheirosFilters' },
+        { sectionId: 'arbitragem-section', fn: 'clearArbitragemFilters' },
+        { sectionId: 'equipe-arbitragem-section', fn: 'clearEquipeArbitragemFilters' },
+        { sectionId: 'cartoes-section', fn: 'clearCartoesFilters' },
+        { sectionId: 'estatisticas-section', fn: 'clearEstatisticasGeraisFilters' }
+    ];
+
+    config.forEach(c => {
+        const section = document.getElementById(c.sectionId);
+        if (!section) return;
+        const filtersCard = section.querySelector('.filters-card');
+        if (!filtersCard || filtersCard.querySelector('.btn-injected-reset')) return;
+
+        const btnCont = document.createElement('div');
+        btnCont.style.cssText = 'display: flex; justify-content: flex-end; margin-top: 1rem;';
+        btnCont.innerHTML = `
+            <button class="btn-secondary btn-injected-reset" onclick="window.${c.fn}()" style="padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                <i class="fas fa-eraser"></i> Limpar Filtros
+            </button>
+        `;
+        filtersCard.appendChild(btnCont);
+    });
+};
+
+// Hook into routing to ensure buttons are injected when sections are shown
+const originalShowSection = window.showSection;
+window.showSection = (id, skipHash) => {
+    if (typeof originalShowSection === 'function') originalShowSection(id, skipHash);
+    setTimeout(injectClearButtons, 50);
 };
 
 window.sortTable = sortTable;

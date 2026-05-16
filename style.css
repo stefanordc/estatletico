@@ -568,7 +568,7 @@ td.actions .action-btn {
     border: 1px solid rgba(0,0,0,0.08);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    z-index: 2000;
+    z-index: 3100;
     max-height: 250px;
     overflow-y: auto;
     animation: fadeInScale 0.2s ease-out;
