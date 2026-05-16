@@ -45,6 +45,15 @@ document.addEventListener('wheel', function(event) {
     }
 }, { passive: false });
 
+// Previne alteração de inputs do tipo número ao usar as setas do teclado (ArrowUp/Down) de forma global
+document.addEventListener('keydown', function(event) {
+    if (event.target.tagName === 'INPUT' && event.target.type === 'number') {
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault();
+        }
+    }
+});
+
 // State Management
 const state = {
     adversarios: [],
@@ -955,6 +964,7 @@ window.changeArtTab = (tab) => {
 };
 
 const renderCurrentArtTab = () => {
+    updateArtilheirosFilters();
     const tab = state.artTab || 'geral';
     if (tab === 'geral') renderArtilheiros();
     else if (tab === 'six-plus') renderSixPlusTab();
@@ -962,6 +972,79 @@ const renderCurrentArtTab = () => {
         const goalMap = { 'dobletes': 2, 'hat-tricks': 3, 'poker-tricks': 4, 'manitas': 5 };
         renderMultiGolsTab(goalMap[tab]);
     }
+};
+
+const updateArtilheirosFilters = () => {
+    if (state.isUpdating) return;
+
+    const fTemp = document.getElementById('art-filter-temporada').value;
+    const fJog = document.getElementById('art-filter-jogador').value;
+    const fPos = document.getElementById('art-filter-posicao').value;
+    const fAdv = document.getElementById('art-filter-adversario').value;
+    const fEst = document.getElementById('art-filter-estadio').value;
+    const fCamp = document.getElementById('art-filter-campeonato').value;
+    const fTipo = document.getElementById('art-filter-tipo').value;
+    const fNac = document.getElementById('art-filter-nacionalidade').value;
+
+    const getFilteredData = (exclude) => state.jogos.filter(j => {
+        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+        if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
+        if (exclude !== 'adversario' && fAdv && j.casa !== fAdv && j.fora !== fAdv) return false;
+        if (exclude !== 'estadio' && fEst && j.estadio !== fEst) return false;
+        if (exclude !== 'campeonato' && fCamp && j.campeonato !== fCamp) return false;
+        if (exclude !== 'tipo' && fTipo && comp?.tipo !== fTipo) return false;
+        
+        // Para filtros de Jogador, Posicao e Nacionalidade, verificamos se o jogo contém algum artilheiro que bata com o critério
+        if (exclude !== 'jogador' || exclude !== 'posicao' || exclude !== 'nacionalidade') {
+            const hasMatchingScorer = j.lineupGalo?.some(l => {
+                const p = state.jogadores.find(ply => ply.nome_guerra === l.jogador);
+                const matchesJog = exclude === 'jogador' || !fJog || l.jogador === fJog;
+                const matchesPos = exclude === 'posicao' || !fPos || (p?.posicao === fPos || l.posicao === fPos);
+                const matchesNac = exclude === 'nacionalidade' || !fNac || p?.nacionalidade === fNac;
+                return parseInt(l.golsCount || 0) > 0 && matchesJog && matchesPos && matchesNac;
+            });
+            if (!hasMatchingScorer && (fJog || fPos || fNac)) return false;
+        }
+
+        return true;
+    });
+
+    const populate = (id, exclude, mapFn, sourceArr = null) => {
+        const data = (sourceArr || getFilteredData(exclude)).map(mapFn).filter(Boolean);
+        populateFilter(id, [...new Set(data)]);
+    };
+
+    populate('art-filter-temporada', 'temporada', j => j.temporada);
+    populate('art-filter-campeonato', 'campeonato', j => j.campeonato);
+    populate('art-filter-tipo', 'tipo', j => state.competicoes.find(c => c.campeonato === j.campeonato)?.tipo);
+    populate('art-filter-adversario', 'adversario', j => (j.casa === 'Atlético' || j.casa === 'Atlético-MG') ? j.fora : j.casa);
+    populate('art-filter-estadio', 'estadio', j => j.estadio);
+
+    // Jogadores (Artilheiros)
+    const scorers = [];
+    getFilteredData('jogador').forEach(j => {
+        j.lineupGalo?.forEach(l => {
+            if (parseInt(l.golsCount || 0) > 0) {
+                const p = state.jogadores.find(ply => ply.nome_guerra === l.jogador);
+                const matchesPos = !fPos || (p?.posicao === fPos || l.posicao === fPos);
+                const matchesNac = !fNac || p?.nacionalidade === fNac;
+                if (matchesPos && matchesNac) scorers.push(l.jogador);
+            }
+        });
+    });
+    populateFilter('art-filter-jogador', [...new Set(scorers)]);
+
+    // Nacionalidade
+    const nacs = [];
+    getFilteredData('nacionalidade').forEach(j => {
+        j.lineupGalo?.forEach(l => {
+            if (parseInt(l.golsCount || 0) > 0) {
+                const p = state.jogadores.find(ply => ply.nome_guerra === l.jogador);
+                if (p?.nacionalidade) nacs.push(p.nacionalidade);
+            }
+        });
+    });
+    populateFilter('art-filter-nacionalidade', [...new Set(nacs)]);
 };
 
 
@@ -1039,11 +1122,6 @@ const renderArtilheiros = () => {
             </tbody>
         </table>
     `;
-    
-    populateFilter('art-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('art-filter-jogador', [...new Set(state.jogadores.map(j => j.nome_guerra))]);
-    populateFilter('art-filter-adversario', [...new Set(state.adversarios.map(a => a.clube))]);
-    populateFilter('art-filter-estadio', [...new Set(state.estadios.map(e => e.nome))]);
 };
 
 const showArtilheiroDetail = (playerName, event) => {
@@ -1356,6 +1434,7 @@ const renderSixPlusTab = () => {
 
 // CARTÕES FUNCTIONS
 const renderCartoes = () => {
+    updateCartoesFilters();
     const detail = document.getElementById('cartoes-detail-container');
     if (detail) detail.classList.add('hidden');
 
@@ -1370,6 +1449,9 @@ const renderCartoes = () => {
         const list = fTime === 'Atlético' ? (jogo.cartoesGalo || []) : (jogo.cartoesAdv || []);
         list.forEach(c => {
             const name = c.jogador || 'Adversário';
+            const player = state.jogadores.find(j => j.nome_guerra === name);
+            if (fPos && (player?.posicao || c.posicao) !== fPos) return;
+
             if (!stats[name]) stats[name] = { nome: name, yellow: 0, red: 0, games: new Set() };
             stats[name].yellow += parseInt(c.amarelo || 0);
             stats[name].red += parseInt(c.red || 0);
@@ -1382,11 +1464,6 @@ const renderCartoes = () => {
         const p = state.jogadores.find(j => j.nome_guerra === s.nome);
         return { ...s, total: s.yellow + s.red, player: p, gamesCount: s.games.size };
     });
-
-    if (fPos) cardList = cardList.filter(c => (c.player?.posicao || c.posicao) === fPos);
-
-    // Populate Seasons Filter
-    populateFilter('cart-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
 
     const tbody = document.querySelector('#cartoes-table tbody');
     if (!tbody) return;
@@ -1408,6 +1485,27 @@ const renderCartoes = () => {
                 <td><strong>${c.total}</strong></td>
             </tr>
         `).join('');
+};
+
+const updateCartoesFilters = () => {
+    if (state.isUpdating) return;
+    const fTemp = document.getElementById('cart-filter-temporada').value;
+    const fTime = document.getElementById('cart-filter-time').value;
+    const fPos = document.getElementById('cart-filter-posicao').value;
+
+    const getFilteredData = (exclude) => state.jogos.filter(j => {
+        if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
+        
+        // Verifica se há cartões para o time/posição selecionada neste jogo
+        const list = fTime === 'Atlético' ? (j.cartoesGalo || []) : (j.cartoesAdv || []);
+        const hasMatch = list.some(c => {
+            const p = state.jogadores.find(ply => ply.nome_guerra === c.jogador);
+            return !fPos || (p?.posicao === fPos || c.posicao === fPos);
+        });
+        return hasMatch;
+    });
+
+    populateFilter('cart-filter-temporada', [...new Set(getFilteredData('temporada').map(j => j.temporada))]);
 };
 
 const toggleCartoesDetail = (playerName, row) => {
@@ -1496,7 +1594,73 @@ window.changeArbTab = (tab) => {
     renderArbitragem();
 };
 
+const updateArbitragemFilters = () => {
+    if (state.isUpdating) return;
+    const fTemp = document.getElementById('arb-filter-temporada').value;
+    const fNac = document.getElementById('arb-filter-nacionalidade').value;
+    const fArb = document.getElementById('arb-filter-arbitro').value;
+    const fAdv = document.getElementById('arb-filter-adversario').value;
+    const fEst = document.getElementById('arb-filter-estadio').value;
+    const fCamp = document.getElementById('arb-filter-campeonato').value;
+    const fTipo = document.getElementById('arb-filter-tipo').value;
+    const fAnoDe = document.getElementById('arb-filter-ano-de').value;
+    const fAnoAte = document.getElementById('arb-filter-ano-ate').value;
+
+    const getFilteredJogosArb = (exclude) => state.jogos.filter(j => {
+        const comp = state.competicoes.find(c => c.campeonato === j.campeonato);
+        if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
+        if (exclude !== 'adversario' && fAdv && (j.casa !== fAdv && j.fora !== fAdv)) return false;
+        if (exclude !== 'estadio' && fEst && j.estadio !== fEst) return false;
+        if (exclude !== 'campeonato' && fCamp && j.campeonato !== fCamp) return false;
+        if (exclude !== 'tipo' && fTipo && comp?.tipo !== fTipo) return false;
+        
+        const year = parseInt(j.data.substring(0,4));
+        if (exclude !== 'ano-de' && fAnoDe && year < parseInt(fAnoDe)) return false;
+        if (exclude !== 'ano-ate' && fAnoAte && year > parseInt(fAnoAte)) return false;
+        
+        if (exclude !== 'nacionalidade' && fNac) {
+             const arb = state.arbitros.find(a => a.nome === j.arbitro);
+             if (arb?.federacao !== fNac) return false;
+        }
+
+        if (exclude !== 'arbitro' && fArb) {
+            if (state.arbTab === 'arbitro' && j.arbitro !== fArb) return false;
+            if (state.arbTab === 'assistente' && j.assistente1 !== fArb && j.assistente2 !== fArb) return false;
+            if (state.arbTab === 'var' && j.varArbitro !== fArb) return false;
+        }
+
+        return true;
+    });
+
+    populateFilter('arb-filter-temporada', [...new Set(getFilteredJogosArb('temporada').map(j => j.temporada))]);
+    populateFilter('arb-filter-campeonato', [...new Set(getFilteredJogosArb('campeonato').map(j => j.campeonato))]);
+    populateFilter('arb-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
+    
+    const allYears = [...new Set(getFilteredJogosArb().map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
+    populateFilter('arb-filter-ano-de', allYears);
+    populateFilter('arb-filter-ano-ate', allYears);
+    
+    const arbFilterFn = (id, field) => (item) => {
+        const val = item[field];
+        return getFilteredJogosArb(id).some(j => {
+             if (id === 'arb-filter-arbitro') {
+                 if (state.arbTab === 'arbitro') return j.arbitro === val;
+                 if (state.arbTab === 'assistente') return j.assistente1 === val || j.assistente2 === val;
+                 if (state.arbTab === 'var') return j.varArbitro === val;
+             }
+             if (id === 'arb-filter-adversario') return j.casa === val || j.fora === val;
+             if (id === 'arb-filter-estadio') return j.estadio === val;
+             return true;
+        });
+    };
+
+    setupAutocomplete('arb-filter-arbitro', 'arbitros', 'nome', arbFilterFn('arb-filter-arbitro', 'nome'), () => renderArbitragem(), false);
+    setupAutocomplete('arb-filter-adversario', 'adversarios', 'clube', arbFilterFn('arb-filter-adversario', 'clube'), () => renderArbitragem(), false);
+    setupAutocomplete('arb-filter-estadio', 'estadios', 'nome', arbFilterFn('arb-filter-estadio', 'nome'), () => renderArbitragem(), false);
+};
+
 const renderArbitragem = () => {
+    updateArbitragemFilters();
     const tbody = document.getElementById('table-body-arbitragem');
     if (!tbody) return;
 
@@ -1573,23 +1737,6 @@ const renderArbitragem = () => {
 
         return res;
     }).filter(x => x !== null);
-
-    // Populate Filters
-    populateFilter('arb-filter-temporada', [...new Set(state.jogos.map(j => j.temporada))]);
-    populateFilter('arb-filter-nacionalidade', [...new Set(state.arbitros.filter(a => a.nome !== 'Sem VAR' && a.federacao).map(a => a.federacao))]);
-    
-    if (!document.getElementById('arb-filter-arbitro').dataset.autocompleteBound) {
-        setupAutocomplete('arb-filter-arbitro', 'arbitros', 'nome', null, () => renderArbitragem());
-        setupAutocomplete('arb-filter-adversario', 'adversarios', 'clube', null, () => renderArbitragem());
-        setupAutocomplete('arb-filter-estadio', 'estadios', 'nome', null, () => renderArbitragem());
-        document.getElementById('arb-filter-arbitro').dataset.autocompleteBound = 'true';
-    }
-
-    populateFilter('arb-filter-campeonato', [...new Set(state.jogos.map(j => j.campeonato))]);
-
-    const allYearsArb = [...new Set(state.jogos.map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
-    populateFilter('arb-filter-ano-de', allYearsArb);
-    populateFilter('arb-filter-ano-ate', allYearsArb);
 
     // Bind new filters
     const nacFilter = document.getElementById('arb-filter-nacionalidade');
@@ -1687,7 +1834,65 @@ window.showArbitragemJogos = (arbNome, event) => {
 };
 
 // EQUIPE DE ARBITRAGEM FUNCTIONS
+const updateEquipeArbitragemFilters = () => {
+    if (state.isUpdating) return;
+    const fTemp = document.getElementById('ea-filter-temporada').value;
+    const fCamp = document.getElementById('ea-filter-campeonato').value;
+    const fAdv = document.getElementById('ea-filter-adversario').value;
+    const fNac = document.getElementById('ea-filter-nacionalidade').value;
+    const fArb = document.getElementById('ea-filter-arbitro').value;
+    const fAss = document.getElementById('ea-filter-assistente').value;
+    const fVar = document.getElementById('ea-filter-var').value;
+    const fAnoDe = document.getElementById('ea-filter-ano-de').value;
+    const fAnoAte = document.getElementById('ea-filter-ano-ate').value;
+
+    const getFilteredEquipe = (exclude) => state.jogos.filter(j => {
+        if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
+        if (exclude !== 'campeonato' && fCamp && j.campeonato !== fCamp) return false;
+        if (exclude !== 'adversario' && fAdv && (j.casa !== fAdv && j.fora !== fAdv)) return false;
+        
+        const year = parseInt(j.data.substring(0,4));
+        if (exclude !== 'ano-de' && fAnoDe && year < parseInt(fAnoDe)) return false;
+        if (exclude !== 'ano-ate' && fAnoAte && year > parseInt(fAnoAte)) return false;
+        
+        if (exclude !== 'nacionalidade' && fNac) {
+             const arb = state.arbitros.find(a => a.nome === j.arbitro);
+             if (arb?.federacao !== fNac) return false;
+        }
+
+        if (exclude !== 'arbitro' && fArb && !normalizeString(j.arbitro).includes(normalizeString(fArb))) return false;
+        if (exclude !== 'assistente' && fAss && !normalizeString(j.assistente1).includes(normalizeString(fAss)) && !normalizeString(j.assistente2).includes(normalizeString(fAss))) return false;
+        if (exclude !== 'var' && fVar && !normalizeString(j.varArbitro).includes(normalizeString(fVar))) return false;
+
+        return true;
+    });
+
+    populateFilter('ea-filter-temporada', [...new Set(getFilteredEquipe('temporada').map(j => j.temporada))]);
+    populateFilter('ea-filter-campeonato', [...new Set(getFilteredEquipe('campeonato').map(j => j.campeonato))]);
+    
+    const allYears = [...new Set(getFilteredEquipe().map(j => j.data.substring(0,4)))].sort((a,b) => b-a);
+    populateFilter('ea-filter-ano-de', allYears);
+    populateFilter('ea-filter-ano-ate', allYears);
+    
+    const eaFilterFn = (id, field) => (item) => {
+        const val = item[field];
+        return getFilteredEquipe(id).some(j => {
+             if (id === 'ea-filter-arbitro') return j.arbitro === val;
+             if (id === 'ea-filter-assistente') return j.assistente1 === val || j.assistente2 === val;
+             if (id === 'ea-filter-var') return j.varArbitro === val;
+             if (id === 'ea-filter-adversario') return j.casa === val || j.fora === val;
+             return true;
+        });
+    };
+
+    setupAutocomplete('ea-filter-arbitro', 'arbitros', 'nome', eaFilterFn('ea-filter-arbitro', 'nome'), () => renderEquipeArbitragem(), false);
+    setupAutocomplete('ea-filter-assistente', 'arbitros', 'nome', eaFilterFn('ea-filter-assistente', 'nome'), () => renderEquipeArbitragem(), false);
+    setupAutocomplete('ea-filter-var', 'arbitros', 'nome', eaFilterFn('ea-filter-var', 'nome'), () => renderEquipeArbitragem(), false);
+    setupAutocomplete('ea-filter-adversario', 'adversarios', 'clube', eaFilterFn('ea-filter-adversario', 'clube'), () => renderEquipeArbitragem(), false);
+};
+
 const renderEquipeArbitragem = () => {
+    updateEquipeArbitragemFilters();
     const grid = document.getElementById('equipe-arbitragem-grid-container');
     const fTemp = document.getElementById('ea-filter-temporada').value;
     const fAnoDe = document.getElementById('ea-filter-ano-de').value;
@@ -1891,14 +2096,56 @@ const renderJogos = () => {
     const sorted = sortInternal(filtered, 'jogos-table');
     const paginated = sorted.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
-    setupAutocomplete('filter-temporada', 'jogos', 'temporada', null, null, false);
-    setupAutocomplete('filter-campeonato', 'jogos', 'campeonato', null, null, false);
-    setupAutocomplete('filter-casa', 'adversarios', 'clube', null, null, false);
-    setupAutocomplete('filter-fora', 'adversarios', 'clube', null, null, false);
-    setupAutocomplete('filter-estadio', 'estadios', 'nome', null, null, false);
-    setupAutocomplete('filter-arbitro', 'arbitros', 'nome', null, null, false);
-    setupAutocomplete('filter-assistente', 'arbitros', 'nome', null, null, false);
-    setupAutocomplete('filter-var', 'arbitros', 'nome', null, null, false);
+    // Lógica de Filtros Encadeados para Autocomplete
+    const getOtherJogosFilters = (excludeId) => {
+        return {
+            temporada: excludeId === 'filter-temporada' ? '' : document.getElementById('filter-temporada').value,
+            campeonato: excludeId === 'filter-campeonato' ? '' : document.getElementById('filter-campeonato').value,
+            casa: excludeId === 'filter-casa' ? '' : document.getElementById('filter-casa').value,
+            fora: excludeId === 'filter-fora' ? '' : document.getElementById('filter-fora').value,
+            estadio: excludeId === 'filter-estadio' ? '' : document.getElementById('filter-estadio').value,
+            arbitro: excludeId === 'filter-arbitro' ? '' : document.getElementById('filter-arbitro').value,
+            assistente: excludeId === 'filter-assistente' ? '' : document.getElementById('filter-assistente').value,
+            var: excludeId === 'filter-var' ? '' : document.getElementById('filter-var').value,
+        };
+    };
+
+    const cascadingFilter = (id, field) => (item) => {
+        const val = item[field];
+        const others = getOtherJogosFilters(id);
+        return state.jogos.some(j => {
+            const match = (!others.temporada || j.temporada.toLowerCase().includes(others.temporada.toLowerCase())) &&
+                          (!others.campeonato || j.campeonato.toLowerCase().includes(others.campeonato.toLowerCase())) &&
+                          (!others.casa || j.casa.toLowerCase().includes(others.casa.toLowerCase())) &&
+                          (!others.fora || j.fora.toLowerCase().includes(others.fora.toLowerCase())) &&
+                          (!others.estadio || j.estadio.toLowerCase().includes(others.estadio.toLowerCase())) &&
+                          (!others.arbitro || j.arbitro.toLowerCase().includes(others.arbitro.toLowerCase())) &&
+                          (!others.assistente || (j.assistente1 || '').toLowerCase().includes(others.assistente.toLowerCase()) || (j.assistente2 || '').toLowerCase().includes(others.assistente.toLowerCase())) &&
+                          (!others.var || (j.varArbitro || '').toLowerCase().includes(others.var.toLowerCase()));
+            
+            if (!match) return false;
+            
+            // Verifica se o jogo j possui o valor que este autocomplete está sugerindo
+            if (id === 'filter-temporada') return j.temporada === val;
+            if (id === 'filter-campeonato') return j.campeonato === val;
+            if (id === 'filter-casa') return j.casa === val;
+            if (id === 'filter-fora') return j.fora === val;
+            if (id === 'filter-estadio') return j.estadio === val;
+            if (id === 'filter-arbitro') return j.arbitro === val;
+            if (id === 'filter-assistente') return j.assistente1 === val || j.assistente2 === val;
+            if (id === 'filter-var') return j.varArbitro === val;
+            return true;
+        });
+    };
+
+    setupAutocomplete('filter-temporada', 'jogos', 'temporada', cascadingFilter('filter-temporada', 'temporada'), null, false);
+    setupAutocomplete('filter-campeonato', 'jogos', 'campeonato', cascadingFilter('filter-campeonato', 'campeonato'), null, false);
+    setupAutocomplete('filter-casa', 'adversarios', 'clube', cascadingFilter('filter-casa', 'clube'), null, false);
+    setupAutocomplete('filter-fora', 'adversarios', 'clube', cascadingFilter('filter-fora', 'clube'), null, false);
+    setupAutocomplete('filter-estadio', 'estadios', 'nome', cascadingFilter('filter-estadio', 'nome'), null, false);
+    setupAutocomplete('filter-arbitro', 'arbitros', 'nome', cascadingFilter('filter-arbitro', 'nome'), null, false);
+    setupAutocomplete('filter-assistente', 'arbitros', 'nome', cascadingFilter('filter-assistente', 'nome'), null, false);
+    setupAutocomplete('filter-var', 'arbitros', 'nome', cascadingFilter('filter-var', 'nome'), null, false);
 
     // Bind inputs to re-filter
     ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-assistente', 'filter-var', 'filter-publico-max'].forEach(id => {
@@ -2059,9 +2306,14 @@ const populateFilter = (id, values) => {
     setTimeout(() => state.isUpdating = false, 50);
 };
 
+window._autocompleteFilters = window._autocompleteFilters || {};
+
 const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
     const inp = document.getElementById(id); if (!inp) return;
     
+    // Atualiza o filtro no registro global para que o listener o use dinamicamente
+    window._autocompleteFilters[id] = filterFn;
+
     // Se já estiver vinculado, apenas atualiza a fonte de dados e retorna
     if (inp.dataset.autocompleteBound) {
         inp.dataset.sourceKey = sourceKey;
@@ -2094,8 +2346,10 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         const normVal = normalizeString(val);
         const currentSourceKey = inp.dataset.sourceKey || sourceKey;
         const currentField = inp.dataset.field || field;
+        const currentFilterFn = window._autocompleteFilters[id];
+        
         let ds = state[currentSourceKey]; 
-        if (typeof filterFn === 'function') ds = ds.filter(filterFn);
+        if (typeof currentFilterFn === 'function') ds = ds.filter(currentFilterFn);
         const resultsFull = ds.filter(item => normalizeString(item[currentField]).includes(normVal))
                           .sort((a,b) => a[currentField].localeCompare(b[currentField]));
         
@@ -6378,6 +6632,24 @@ window.addEventListener('DOMContentLoaded', async () => {
         
         handleRouting();
         window.addEventListener('hashchange', handleRouting);
+
+        // Vincular Eventos para Filtros de Artilheiros
+        ['art-filter-temporada', 'art-filter-jogador', 'art-filter-posicao', 'art-filter-adversario', 'art-filter-estadio', 'art-filter-campeonato', 'art-filter-tipo', 'art-filter-nacionalidade'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => renderCurrentArtTab());
+        });
+
+        // Vincular Eventos para Filtros de Cartões
+        ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => renderCartoes());
+        });
+
+        // Vincular Eventos para Filtros de Equipe de Arbitragem
+        ['ea-filter-temporada', 'ea-filter-campeonato', 'ea-filter-nacionalidade', 'ea-filter-ano-de', 'ea-filter-ano-ate'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => renderEquipeArbitragem());
+        });
+        ['ea-filter-arbitro', 'ea-filter-assistente', 'ea-filter-var', 'ea-filter-adversario'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', () => renderEquipeArbitragem());
+        });
     }
 });
 
