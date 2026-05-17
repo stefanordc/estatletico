@@ -150,14 +150,6 @@ const saveData = async (key, data) => {
             // Cópia defensiva para remover colunas que podem não existir no Supabase ainda
             const safeData = data.map(item => {
                 const safeItem = { ...item };
-                if (key === 'jogos') {
-                    delete safeItem.portoesFechados;
-                    delete safeItem.gcFavorCount;
-                    delete safeItem.gcFavorList;
-                    delete safeItem.gcContraCount;
-                    delete safeItem.gcContraList;
-                    // Se houver mais colunas novas que dão erro, podem ser removidas aqui
-                }
                 if (key === 'jogadores') {
                     delete safeItem.foraDoElenco;
                 }
