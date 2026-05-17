@@ -147,10 +147,24 @@ const saveData = async (key, data) => {
     try {
         if (!supabaseClient) return;
         if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'].includes(key)) {
-            const { error } = await supabaseClient.from(key).upsert(data);
+            // Cópia defensiva para remover colunas que podem não existir no Supabase ainda
+            const safeData = data.map(item => {
+                const safeItem = { ...item };
+                if (key === 'jogos') {
+                    delete safeItem.portoesFechados;
+                    // Se houver mais colunas novas que dão erro, podem ser removidas aqui
+                }
+                if (key === 'jogadores') {
+                    delete safeItem.foraDoElenco;
+                }
+                return safeItem;
+            });
+
+            const { error } = await supabaseClient.from(key).upsert(safeData);
             if (error) {
                 console.error('Supabase Error:', error);
                 showToast(`Erro ao salvar (${key}): ${error.message || JSON.stringify(error)}`);
+                throw new Error(error.message); // ← Fundamental para que a função chamadora saiba da falha
             } else {
                 invalidateCache(); // Invalida o cache ao salvar no banco
             }
@@ -159,7 +173,10 @@ const saveData = async (key, data) => {
         }
     } catch (e) {
         console.error('Network/Internal Error:', e);
-        showToast('Erro de conexão com o banco de dados.');
+        if (!e.message || !e.message.includes('Supabase Error')) {
+            showToast('Erro de conexão com o banco de dados.');
+        }
+        throw e; // ← Passar erro adiante
     }
 };
 
@@ -3226,8 +3243,6 @@ const saveNewJogo = () => {
     }
 
     const doSaveJogo = async () => {
-        state.jogos.find(j => j.id === jogo.id) ? state.jogos[state.jogos.findIndex(j => j.id === jogo.id)] = jogo : state.jogos.push(jogo);
-        
         // Remove fotos para economizar espaço e evitar erros de schema imediato
         const jogoParaSalvar = {
             ...jogo,
@@ -3236,16 +3251,24 @@ const saveNewJogo = () => {
         
         try {
             await saveData('jogos', [jogoParaSalvar]);
+            
+            // Sucesso! Atualizar estado local
+            const existingIndex = state.jogos.findIndex(j => j.id === jogo.id);
+            if (existingIndex >= 0) {
+                state.jogos[existingIndex] = jogo;
+            } else {
+                state.jogos.push(jogo);
+            }
+            
             state.isFormActive = false; // Desativa trava ao salvar com sucesso
             renderJogos();
             showSection('jogos');
             showToast('Jogo salvo com sucesso!', 'success');
         } catch (error) {
             console.error('Erro detalhado ao salvar:', error);
-            if (error.message?.includes('portoesFechados')) {
-                showToast('Erro de Schema: Coluna "portoesFechados" não encontrada no Supabase. Por favor, execute o comando SQL enviado no chat.', 'error');
-            } else {
-                showToast(`Erro ao salvar (jogos): ${error.message || 'Erro desconhecido'}`, 'error');
+            // A mensagem já foi exibida pelo saveData, mas podemos tratar casos específicos:
+            if (error.message?.includes('schema')) {
+                showToast('Erro de Schema no Supabase. O banco de dados está desatualizado.', 'error');
             }
         } finally {
             resetBtn();
