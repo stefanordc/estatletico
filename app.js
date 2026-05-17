@@ -152,6 +152,10 @@ const saveData = async (key, data) => {
                 const safeItem = { ...item };
                 if (key === 'jogos') {
                     delete safeItem.portoesFechados;
+                    delete safeItem.gcFavorCount;
+                    delete safeItem.gcFavorList;
+                    delete safeItem.gcContraCount;
+                    delete safeItem.gcContraList;
                     // Se houver mais colunas novas que dão erro, podem ser removidas aqui
                 }
                 if (key === 'jogadores') {
