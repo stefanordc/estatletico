@@ -137,7 +137,9 @@
                 <div class="dash-filter-container">
                     <div class="dash-filter-item">
                         <input type="checkbox" id="dash-filtro-ano" onchange="window.toggleDashCurrentSeason()">
-                        <label for="dash-filtro-ano" style="font-size: 0.9rem; color: var(--text-muted); cursor: pointer;">Apenas temporada atual</label>
+                        <label for="dash-filtro-ano" style="font-size: 0.9rem; color: var(--text-muted); cursor: pointer; margin-right: 1rem;">Apenas temporada atual</label>
+                        <input type="checkbox" id="dash-filtro-oficiais" onchange="renderDashboard()">
+                        <label for="dash-filtro-oficiais" style="font-size: 0.9rem; color: var(--text-muted); cursor: pointer;">Somente jogos oficiais</label>
                     </div>
                     <div class="dash-filter-item">
                         <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Temporada</span>

@@ -2695,19 +2695,6 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         </div>
                     </div>
 
-                    <div class="stats-section" style="margin-top:2rem;">
-                        <div class="stats-section-title">Gols Contra contra o Atlético</div>
-                        <div class="p-4">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label>Quantidade de Gols Contra</label>
-                                    <input type="number" id="game-gc-contra" value="${jogoToEdit?.gcContraCount || 0}" min="0" style="max-width:200px;">
-                                    <div id="gc-contra-details" style="margin-top:1rem;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="flex-end">
                         <button type="button" class="btn-secondary" onclick="nextBlock(4)">Voltar</button>
                         <button type="button" id="btn-salvar-jogo" class="btn-primary" onclick="saveNewJogo()">${jogoToEdit ? 'Atualizar' : 'Cadastrar Jogo'}</button>
@@ -2852,7 +2839,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     };
 
     setupGCFields('game-gc-favor', 'gc-favor-details', jogoToEdit?.gcFavorList);
-    setupGCFields('game-gc-contra', 'gc-contra-details', jogoToEdit?.gcContraList);
+
 
     const setupNIToggle = (checkId, inputId) => {
         const ck = document.getElementById(checkId); const inp = document.getElementById(inputId);
@@ -3167,15 +3154,8 @@ const saveNewJogo = () => {
         minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
     }));
     
-    // Collect Gols Contra
     jogo.gcFavorCount = parseInt(document.getElementById('game-gc-favor')?.value || 0);
     jogo.gcFavorList = Array.from(document.getElementById('gc-favor-details')?.children || []).map(div => ({
-        min: div.querySelector('.gc-min')?.value || '',
-        tempo: div.querySelector('.gc-tempo')?.value || '1'
-    }));
-
-    jogo.gcContraCount = parseInt(document.getElementById('game-gc-contra')?.value || 0);
-    jogo.gcContraList = Array.from(document.getElementById('gc-contra-details')?.children || []).map(div => ({
         min: div.querySelector('.gc-min')?.value || '',
         tempo: div.querySelector('.gc-tempo')?.value || '1'
     }));
@@ -3249,7 +3229,7 @@ const saveNewJogo = () => {
             await saveData('jogos', [jogoParaSalvar]);
             
             // Sucesso! Atualizar estado local
-            const existingIndex = state.jogos.findIndex(j => j.id === jogo.id);
+            const existingIndex = state.jogos.findIndex(j => String(j.id) === String(jogo.id));
             if (existingIndex >= 0) {
                 state.jogos[existingIndex] = jogo;
             } else {
@@ -5053,6 +5033,7 @@ const renderDashboard = () => {
     window.populateDashboardFilters();
 
     const isCurrentYearOnly = document.getElementById('dash-filtro-ano')?.checked;
+    const somenteOficiais = document.getElementById('dash-filtro-oficiais')?.checked;
     const deYear = document.getElementById('dash-filter-temp-de')?.value;
     const ateYear = document.getElementById('dash-filter-temp-ate')?.value;
     
@@ -5067,6 +5048,13 @@ const renderDashboard = () => {
         jogos = jogos.filter(j => {
             const y = parseInt(j.temporada || j.data?.substring(0, 4));
             return y >= yStart && y <= yEnd;
+        });
+    }
+
+    if (somenteOficiais) {
+        jogos = jogos.filter(j => {
+            const campLower = (j.campeonato || '').toLowerCase();
+            return !campLower.includes('amistoso');
         });
     }
     
@@ -5158,27 +5146,27 @@ const renderDashboard = () => {
     let mediaP = jogosComPublico > 0 ? Math.round(publicoTotal / jogosComPublico) : 0;
     let mediaR = jogosComRenda > 0 ? rendaTotal / jogosComRenda : 0;
     
-    document.getElementById('dash-jogos-total').innerText = jogosTotal;
+    document.getElementById('dash-jogos-total').innerText = jogosTotal.toLocaleString('pt-BR');
     document.getElementById('dash-aproveitamento').innerText = aproveitamento.toFixed(1) + '%';
     document.getElementById('dash-media-publico').innerText = mediaP.toLocaleString('pt-BR');
     document.getElementById('dash-media-renda').innerText = mediaR.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
     
     // Mid Cards
-    document.getElementById('dash-vitorias').innerText = v;
-    document.getElementById('dash-empates').innerText = e;
-    document.getElementById('dash-derrotas').innerText = d;
-    document.getElementById('dash-cs').innerText = cs;
-    document.getElementById('dash-cg').innerText = cg;
+    document.getElementById('dash-vitorias').innerText = v.toLocaleString('pt-BR');
+    document.getElementById('dash-empates').innerText = e.toLocaleString('pt-BR');
+    document.getElementById('dash-derrotas').innerText = d.toLocaleString('pt-BR');
+    document.getElementById('dash-cs').innerText = cs.toLocaleString('pt-BR');
+    document.getElementById('dash-cg').innerText = cg.toLocaleString('pt-BR');
     
-    document.getElementById('dash-gm').innerText = gm;
-    document.getElementById('dash-gs').innerText = gs;
+    document.getElementById('dash-gm').innerText = gm.toLocaleString('pt-BR');
+    document.getElementById('dash-gs').innerText = gs.toLocaleString('pt-BR');
     document.getElementById('dash-mgm').innerText = jogosTotal > 0 ? (gm / jogosTotal).toFixed(2) : '0.00';
     document.getElementById('dash-mgs').innerText = jogosTotal > 0 ? (gs / jogosTotal).toFixed(2) : '0.00';
     
     const totaisAmarelos = Object.values(amarelosMap).reduce((a, b) => a + b, 0);
     const totaisVermelhos = Object.values(vermelhosMap).reduce((a, b) => a + b, 0);
-    document.getElementById('dash-ca').innerText = totaisAmarelos;
-    document.getElementById('dash-cv').innerText = totaisVermelhos;
+    document.getElementById('dash-ca').innerText = totaisAmarelos.toLocaleString('pt-BR');
+    document.getElementById('dash-cv').innerText = totaisVermelhos.toLocaleString('pt-BR');
 
     // Helper for Rankings
     const renderRank = (mapHash, containerId, colorCount) => {
@@ -5200,7 +5188,7 @@ const renderDashboard = () => {
                         ${photo}
                         <span style="font-weight: 500; color: var(--text-main);">${item[0]}</span>
                     </div>
-                    <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item[1]}</span>
+                    <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item[1].toLocaleString('pt-BR')}</span>
                 </div>
             `;
         });
