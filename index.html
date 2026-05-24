@@ -240,19 +240,29 @@
             </div>
 
             <!-- Ranks Bottom -->
+            <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; align-items: center; padding: 0 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label for="dash-top-limit" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Top:</label>
+                    <input type="number" id="dash-top-limit" value="10" min="1" step="1" oninput="this.value = Math.max(1, Math.floor(this.value)); renderDashboard()" style="width: 70px; background: #222; border: 1px solid #333; color: var(--text-main); padding: 0.3rem; border-radius: 4px; text-align: center;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="dash-filtro-estrangeiros" onchange="renderDashboard()">
+                    <label for="dash-filtro-estrangeiros" style="font-size: 0.9rem; color: var(--text-muted); cursor: pointer;">Apenas jogadores estrangeiros</label>
+                </div>
+            </div>
             <div class="dash-bot-grid grid-responsive-3">
                 <div class="card" style="padding: 0; overflow: hidden;">
-                    <div style="background: var(--primary-color); color: var(--text-main); font-size: 0.9rem; font-weight: 500; padding: 1rem;">Top 10 Artilheiros</div>
+                    <div id="dash-rank-art-title" style="background: var(--primary-color); color: var(--text-main); font-size: 0.9rem; font-weight: 500; padding: 1rem;">Top 10 Artilheiros</div>
                     <div id="dash-rank-artilheiros" style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;"></div>
                 </div>
                 
                 <div class="card" style="padding: 0; overflow: hidden;">
-                    <div style="background: #fff8e1; color: #f39c12; font-size: 0.9rem; font-weight: 500; padding: 1rem; border-bottom: 1px solid #ffecb3;">Top 10 Cartões Amarelos</div>
+                    <div id="dash-rank-ama-title" style="background: #fff8e1; color: #f39c12; font-size: 0.9rem; font-weight: 500; padding: 1rem; border-bottom: 1px solid #ffecb3;">Top 10 Cartões Amarelos</div>
                     <div id="dash-rank-amarelos" style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;"></div>
                 </div>
 
                 <div class="card" style="padding: 0; overflow: hidden;">
-                    <div style="background: #fde8e8; color: #c0392b; font-size: 0.9rem; font-weight: 500; padding: 1rem; border-bottom: 1px solid #fadbd8;">Top 10 Cartões Vermelhos</div>
+                    <div id="dash-rank-ver-title" style="background: #fde8e8; color: #c0392b; font-size: 0.9rem; font-weight: 500; padding: 1rem; border-bottom: 1px solid #fadbd8;">Top 10 Cartões Vermelhos</div>
                     <div id="dash-rank-vermelhos" style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem;"></div>
                 </div>
             </div>

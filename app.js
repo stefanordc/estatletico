@@ -5037,6 +5037,18 @@ const renderDashboard = () => {
     const deYear = document.getElementById('dash-filter-temp-de')?.value;
     const ateYear = document.getElementById('dash-filter-temp-ate')?.value;
     
+    const topLimit = parseInt(document.getElementById('dash-top-limit')?.value) || 10;
+    const apenasEstrangeiros = document.getElementById('dash-filtro-estrangeiros')?.checked;
+
+    const titArt = document.getElementById('dash-rank-art-title');
+    if (titArt) titArt.innerText = `Top ${topLimit} Artilheiros`;
+
+    const titAma = document.getElementById('dash-rank-ama-title');
+    if (titAma) titAma.innerText = `Top ${topLimit} Cartões Amarelos`;
+
+    const titVer = document.getElementById('dash-rank-ver-title');
+    if (titVer) titVer.innerText = `Top ${topLimit} Cartões Vermelhos`;
+    
     let jogos = state.jogos || [];
     
     if (isCurrentYearOnly) {
@@ -5170,7 +5182,17 @@ const renderDashboard = () => {
 
     // Helper for Rankings
     const renderRank = (mapHash, containerId, colorCount) => {
-        const sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        let sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]);
+        
+        if (apenasEstrangeiros) {
+            sorted = sorted.filter(item => {
+                const player = state.jogadores.find(p => p.nome_guerra === item[0]);
+                return player && player.nacionalidade && player.nacionalidade.toLowerCase() !== 'brasil';
+            });
+        }
+        
+        sorted = sorted.slice(0, topLimit);
+
         const container = document.getElementById(containerId);
         if(!container) return;
         container.innerHTML = '';
