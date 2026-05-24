@@ -1,4 +1,4 @@
-﻿// Supabase Initialization
+// Supabase Initialization
 const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
 let supabaseClient = null;
@@ -4596,7 +4596,15 @@ const setupAutofillHandler = () => {
 
         // Checkbox Fora do Elenco
         const foraCheck = document.getElementById('input-fora-do-elenco');
-        if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
+        if (foraCheck) {
+            const anoAtual = new Date().getFullYear().toString();
+            const temporada = document.getElementById('input-temporada')?.value || '';
+            if (temporada !== '' && temporada !== anoAtual) {
+                foraCheck.checked = true;
+            } else {
+                foraCheck.checked = !!src.foraDoElenco;
+            }
+        }
     });
 };
 
