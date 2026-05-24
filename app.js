@@ -5036,8 +5036,9 @@ const renderDashboard = () => {
     const somenteOficiais = document.getElementById('dash-filtro-oficiais')?.checked;
     const deYear = document.getElementById('dash-filter-temp-de')?.value;
     const ateYear = document.getElementById('dash-filter-temp-ate')?.value;
-    
-    const topLimit = parseInt(document.getElementById('dash-top-limit')?.value) || 10;
+    let rawTop = parseInt(document.getElementById('dash-top-limit')?.value);
+    if (isNaN(rawTop)) rawTop = 10;
+    const topLimit = Math.min(150, Math.max(1, rawTop));
     const apenasEstrangeiros = document.getElementById('dash-filtro-estrangeiros')?.checked;
 
     const titArt = document.getElementById('dash-rank-art-title');
@@ -5185,9 +5186,16 @@ const renderDashboard = () => {
         let sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]);
         
         if (apenasEstrangeiros) {
+            const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
             sorted = sorted.filter(item => {
-                const player = state.jogadores.find(p => p.nome_guerra === item[0]);
-                return player && player.nacionalidade && player.nacionalidade.toLowerCase() !== 'brasil';
+                const nomeItem = normalize(item[0]);
+                // Busca com comparação normalizada para tolerar diferenças de acento/capitalização/espaço
+                const player = state.jogadores.find(p => normalize(p.nome_guerra) === nomeItem || normalize(p.nome_completo) === nomeItem);
+                // Se não encontrado no cadastro, inclui (não sabemos a nacionalidade — não deve ser excluído)
+                if (!player) return true;
+                // Exclui apenas se explicitamente cadastrado como brasileiro
+                const nac = normalize(player.nacionalidade || '');
+                return nac !== 'brasil' && nac !== '';
             });
         }
         
@@ -5195,15 +5203,17 @@ const renderDashboard = () => {
 
         const container = document.getElementById(containerId);
         if(!container) return;
-        container.innerHTML = '';
+        
         if(sorted.length === 0) {
             container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Nenhum registro.</span>';
             return;
         }
+        
+        let htmlBuffer = '';
         sorted.forEach((item, index) => {
             const player = state.jogadores.find(p => p.nome_guerra === item[0]);
             const photo = player?.foto ? `<img src="${player.foto}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:0.7rem;"><i class="fas fa-user"></i></div>`;
-            container.innerHTML += `
+            htmlBuffer += `
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <div style="display: flex; align-items: center; gap: 0.8rem;">
                         <span style="color: #bdc3c7; font-weight: bold; width: 20px;">#${index+1}</span>
@@ -5214,6 +5224,7 @@ const renderDashboard = () => {
                 </div>
             `;
         });
+        container.innerHTML = htmlBuffer;
     };
 
     renderRank(artilheirosMap, 'dash-rank-artilheiros', 'var(--text-main)');

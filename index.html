@@ -243,7 +243,7 @@
             <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; align-items: center; padding: 0 0.5rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <label for="dash-top-limit" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Top:</label>
-                    <input type="number" id="dash-top-limit" value="10" min="1" step="1" oninput="this.value = Math.max(1, Math.floor(this.value)); renderDashboard()" style="width: 70px; background: #222; border: 1px solid #333; color: var(--text-main); padding: 0.3rem; border-radius: 4px; text-align: center;">
+                    <input type="number" id="dash-top-limit" value="10" min="1" max="150" step="1" oninput="renderDashboard()" style="width: 70px; background: #222; border: 1px solid #333; color: var(--text-main); padding: 0.3rem; border-radius: 4px; text-align: center;">
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <input type="checkbox" id="dash-filtro-estrangeiros" onchange="renderDashboard()">
