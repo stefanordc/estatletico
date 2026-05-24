@@ -5189,13 +5189,22 @@ const renderDashboard = () => {
             const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
             sorted = sorted.filter(item => {
                 const nomeItem = normalize(item[0]);
-                // Busca com comparação normalizada para tolerar diferenças de acento/capitalização/espaço
-                const player = state.jogadores.find(p => normalize(p.nome_guerra) === nomeItem || normalize(p.nome_completo) === nomeItem);
-                // Se não encontrado no cadastro, inclui (não sabemos a nacionalidade — não deve ser excluído)
-                if (!player) return true;
-                // Exclui apenas se explicitamente cadastrado como brasileiro
-                const nac = normalize(player.nacionalidade || '');
-                return nac !== 'brasil' && nac !== '';
+                // Coleta TODOS os registros do jogador (pode ter um por temporada)
+                const registros = state.jogadores.filter(p =>
+                    normalize(p.nome_guerra) === nomeItem || normalize(p.nome_completo) === nomeItem
+                );
+                // Se não encontrado no cadastro, inclui (não sabemos a nacionalidade)
+                if (registros.length === 0) return true;
+                // Inclui se QUALQUER registro indicar nacionalidade estrangeira (não-Brasil e não vazia)
+                const temEstrangeiro = registros.some(p => {
+                    const nac = normalize(p.nacionalidade || '');
+                    return nac !== '' && nac !== 'brasil';
+                });
+                if (temEstrangeiro) return true;
+                // Verifica se algum registro tem nacionalidade definida
+                const temNacionalidade = registros.some(p => (p.nacionalidade || '').trim() !== '');
+                // Se nenhum registro tem nacionalidade definida, inclui (incerto)
+                return !temNacionalidade;
             });
         }
         
