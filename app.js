@@ -1,4 +1,4 @@
-// Supabase Initialization
+﻿// Supabase Initialization
 const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
 let supabaseClient = null;
@@ -82,7 +82,7 @@ const state = {
     statsTab: 'coletivas', // Nova aba padrão para Estatísticas
     advClubePage: 1,
     advTecPage: 1,
-    atleTecPage: 1, // Página para a nova aba de técnicos do Atlético
+    atleTecPage: 1, // PÃ¡gina para a nova aba de técnicos do Atlético
     jogadoresCurrentPos: 'Geral',
     jogadoresCurrentPage: 1,
     jogadoresFilterDe: '',
@@ -97,7 +97,7 @@ const state = {
         individuais: [],
         tecnicos: []
     },
-    isFormActive: false // Flag de segurança para bloquear exclusões durante edição
+    isFormActive: false // Flag de segurança para bloquear exclusÃµes durante edição
 };
 
 // Cache para estatísticas pesadas para evitar travamentos
@@ -160,7 +160,7 @@ const saveData = async (key, data) => {
             if (error) {
                 console.error('Supabase Error:', error);
                 showToast(`Erro ao salvar (${key}): ${error.message || JSON.stringify(error)}`);
-                throw new Error(error.message); // ← Fundamental para que a função chamadora saiba da falha
+                throw new Error(error.message); // â† Fundamental para que a função chamadora saiba da falha
             } else {
                 invalidateCache(); // Invalida o cache ao salvar no banco
             }
@@ -172,7 +172,7 @@ const saveData = async (key, data) => {
         if (!e.message || !e.message.includes('Supabase Error')) {
             showToast('Erro de conexão com o banco de dados.');
         }
-        throw e; // ← Passar erro adiante
+        throw e; // â† Passar erro adiante
     }
 };
 
@@ -304,7 +304,7 @@ const initMultiSelect = (containerId, options, tabKey, callback) => {
         window._msCallbacks[containerId] = callback;
     }
 
-    // Inicializa o estado se vazio (Todos marcados por padrão), MAS SÓ UMA VEZ!
+    // Inicializa o estado se vazio (Todos marcados por padrão), MAS SÃ“ UMA VEZ!
     if (!window._msInitialized[tabKey]) {
         if (!state.statsMultiFilters[tabKey] || state.statsMultiFilters[tabKey].length === 0) {
             state.statsMultiFilters[tabKey] = ['Todos', ...options];
@@ -312,7 +312,7 @@ const initMultiSelect = (containerId, options, tabKey, callback) => {
         window._msInitialized[tabKey] = true;
     }
 
-    // Só re-renderiza o DOM inteiro caso as opções disponíveis tenham mudado (ex: mudança de ano)
+    // Só re-renderiza o DOM inteiro caso as opçÃµes disponíveis tenham mudado (ex: mudança de ano)
     const newOptionsStr = JSON.stringify(options);
     if (container.dataset.renderedOptions === newOptionsStr && container.querySelector('.multi-select-dropdown')) {
         if (window.updateMultiSelectUI) window.updateMultiSelectUI(containerId, tabKey);
@@ -491,7 +491,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
     if (sectionId === 'adversarios') {
-        // Garante que a aba correta fique visível ao navegar para Adversários
+        // Garante que a aba correta fique visível ao navegar para AdversÃ¡rios
         window.changeAdvTab(state.advTab || 'clubes');
     }
     if (sectionId === 'estatisticas') {
@@ -528,7 +528,7 @@ const renderTab = (tabName) => {
 const renderAdversarios = () => {
     tabContent.innerHTML = `
         <div class="card">
-            <div class="card-title"><i class="fas fa-plus"></i> ${state.editingId ? 'Editar' : 'Cadastrar Novo'} Adversário</div>
+            <div class="card-title"><i class="fas fa-plus"></i> ${state.editingId ? 'Editar' : 'Cadastrar Novo'} AdversÃ¡rio</div>
             <form id="form-adversarios">
                 <div class="form-grid">
                     <div class="form-group"><label>Clube *</label><input type="text" name="clube" required></div>
@@ -540,8 +540,8 @@ const renderAdversarios = () => {
             </form>
         </div>
         <div class="list-container">
-            <div class="list-header"><h3>Adversários (${state.adversarios.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Escudo</th><th>Clube</th><th>Estado</th><th>País</th><th>Ações</th></tr></thead>
+            <div class="list-header"><h3>AdversÃ¡rios (${state.adversarios.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
+            <table class="data-table"><thead><tr><th>Escudo</th><th>Clube</th><th>Estado</th><th>País</th><th>AçÃµes</th></tr></thead>
             <tbody id="table-body-adversarios">${renderTableRows('adversarios')}</tbody></table>
         </div>
     `;
@@ -566,7 +566,7 @@ const renderEstadios = () => {
     const opts = state.adversarios.map(adv => `<option value="${adv.clube}">${adv.clube}</option>`).join('');
     tabContent.innerHTML = `
         <div class="card">
-            <div class="card-title"><i class="fas fa-plus"></i> ${state.editingId ? 'Editar' : 'Cadastrar Novo'} Estádio</div>
+            <div class="card-title"><i class="fas fa-plus"></i> ${state.editingId ? 'Editar' : 'Cadastrar Novo'} EstÃ¡dio</div>
             <form id="form-estadios">
                 <div class="form-grid">
                     <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
@@ -581,8 +581,8 @@ const renderEstadios = () => {
             </form>
         </div>
         <div class="list-container">
-            <div class="list-header"><h3>Estádios (${state.estadios.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Estado</th><th>Mandante</th><th>Ações</th></tr></thead>
+            <div class="list-header"><h3>EstÃ¡dios (${state.estadios.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
+            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Estado</th><th>Mandante</th><th>AçÃµes</th></tr></thead>
             <tbody id="table-body-estadios">${renderTableRows('estadios')}</tbody></table>
         </div>
     `;
@@ -611,8 +611,8 @@ const renderCompeticoes = () => {
             </form>
         </div>
         <div class="list-container">
-            <div class="list-header"><h3>Competições (${state.competicoes.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Campeonato</th><th>Tipo</th><th>Ações</th></tr></thead><tbody id="table-body-competicoes">${renderTableRows('competicoes')}</tbody></table>
+            <div class="list-header"><h3>CompetiçÃµes (${state.competicoes.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
+            <table class="data-table"><thead><tr><th>Campeonato</th><th>Tipo</th><th>AçÃµes</th></tr></thead><tbody id="table-body-competicoes">${renderTableRows('competicoes')}</tbody></table>
         </div>
     `;
     document.getElementById('form-competicoes').addEventListener('submit', (e) => {
@@ -628,7 +628,7 @@ const renderCompeticoes = () => {
 const renderArbitros = () => {
     tabContent.innerHTML = `
         <div class="card">
-            <div class="card-title">${WHISTLE_SVG} ${state.editingId ? 'Editar' : 'Cadastrar'} Árbitro</div>
+            <div class="card-title">${WHISTLE_SVG} ${state.editingId ? 'Editar' : 'Cadastrar'} Ãrbitro</div>
             <form id="form-arbitros">
                 <div class="form-grid">
                     <div class="form-group"><label>Nome *</label><input type="text" name="nome" required></div>
@@ -639,8 +639,8 @@ const renderArbitros = () => {
             </form>
         </div>
         <div class="list-container">
-            <div class="list-header"><h3>Árbitros (${state.arbitros.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>País</th><th>Ações</th></tr></thead><tbody id="table-body-arbitros">${renderTableRows('arbitros')}</tbody></table>
+            <div class="list-header"><h3>Ãrbitros (${state.arbitros.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
+            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>País</th><th>AçÃµes</th></tr></thead><tbody id="table-body-arbitros">${renderTableRows('arbitros')}</tbody></table>
         </div>
     `;
     setupPasteHandler('paste-area-arbitro', 'foto-input-arbitro');
@@ -654,7 +654,7 @@ const renderArbitros = () => {
         );
 
         if (isDuplicate) {
-            showToast('Já existe um árbitro cadastrado com este mesmo nome e data de nascimento.', 'error');
+            showToast('Já existe um Ã¡rbitro cadastrado com este mesmo nome e data de nascimento.', 'error');
             return;
         }
 
@@ -689,12 +689,26 @@ const renderJogadores = () => {
         </div>
         <div class="list-container">
             <div class="list-header"><h3>Jogadores (${state.jogadores.length})</h3><div class="search-container"><i class="fas fa-search"></i><input type="text" id="search-input" placeholder="Buscar..."></div></div>
-            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Posição</th><th>Temporada</th><th>Idade</th><th>Ações</th></tr></thead><tbody id="table-body-jogadores">${renderTableRows('jogadores')}</tbody></table>
+            <table class="data-table"><thead><tr><th>Foto</th><th>Nome</th><th>Posição</th><th>Temporada</th><th>Idade</th><th>AçÃµes</th></tr></thead><tbody id="table-body-jogadores">${renderTableRows('jogadores')}</tbody></table>
         </div>
     `;
     setupPasteHandler('paste-area-jogador', 'foto-input-jogador');
     setupAutofillHandler();
     document.getElementById('fix-season').addEventListener('change', (e) => { state.isSeasonFixed = e.target.checked; state.fixedSeason = document.getElementById('input-temporada').value; localStorage.setItem('isSeasonFixed', state.isSeasonFixed); localStorage.setItem('fixedSeason', state.fixedSeason); });
+
+    // Marca "Fora do elenco atual" automaticamente se a temporada for diferente do ano atual
+    const atualizarCheckForaElenco = () => {
+        if (state.editingId) return; // Não interfere ao editar
+        const anoAtual = new Date().getFullYear().toString();
+        const temporada = document.getElementById('input-temporada')?.value || '';
+        const foraCheck = document.getElementById('input-fora-do-elenco');
+        if (foraCheck) foraCheck.checked = temporada !== '' && temporada !== anoAtual;
+    };
+    document.getElementById('input-temporada')?.addEventListener('input', atualizarCheckForaElenco);
+    document.getElementById('input-temporada')?.addEventListener('change', atualizarCheckForaElenco);
+    // Aplica imediatamente ao carregar o form (para quando temporada Já vem preenchida)
+    atualizarCheckForaElenco();
+
     document.getElementById('form-jogadores').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         if (state.isSeasonFixed) { state.fixedSeason = fd.get('temporada'); localStorage.setItem('fixedSeason', state.fixedSeason); }
@@ -1179,9 +1193,9 @@ const showArtilheiroDetail = (playerName, event) => {
                             </table>
                         </div>
                         <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none; padding:0;">
-                            <div class="stats-section-title" style="font-size:0.85rem;">Contra Adversários</div>
+                            <div class="stats-section-title" style="font-size:0.85rem;">Contra AdversÃ¡rios</div>
                             <table class="stats-table">
-                                <thead><tr><th>Adversário</th><th>Gols</th></tr></thead>
+                                <thead><tr><th>AdversÃ¡rio</th><th>Gols</th></tr></thead>
                                 <tbody>${Object.values(advStats).sort((a,b)=>b.goals-a.goals).map(a => `<tr><td>${a.nome}</td><td><strong>${a.goals}</strong></td></tr>`).join('')}</tbody>
                             </table>
                         </div>
@@ -1293,7 +1307,7 @@ const showMultiGolsGames = (playerName, nGols, event) => {
                                 <th>Casa</th>
                                 <th>Placar</th>
                                 <th>Fora</th>
-                                <th>Estádio</th>
+                                <th>EstÃ¡dio</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1445,14 +1459,14 @@ const renderSixPlusTab = () => {
 };
 
 
-// CARTÕES FUNCTIONS
+// CARTÃ•ES FUNCTIONS
 const renderCartoes = () => {
     updateCartoesFilters();
     const detail = document.getElementById('cartoes-detail-container');
     if (detail) detail.classList.add('hidden');
 
     const fTemp = document.getElementById('cart-filter-temporada').value;
-    const fTime = document.getElementById('cart-filter-time').value; // 'Atlético' ou 'Adversário'
+    const fTime = document.getElementById('cart-filter-time').value; // 'Atlético' ou 'AdversÃ¡rio'
     const fPos = document.getElementById('cart-filter-posicao').value;
 
     const stats = {};
@@ -1461,7 +1475,7 @@ const renderCartoes = () => {
         
         const list = fTime === 'Atlético' ? (jogo.cartoesGalo || []) : (jogo.cartoesAdv || []);
         list.forEach(c => {
-            const name = c.jogador || 'Adversário';
+            const name = c.jogador || 'AdversÃ¡rio';
             const player = state.jogadores.find(j => j.nome_guerra === name);
             if (fPos && (player?.posicao || c.posicao) !== fPos) return;
 
@@ -1509,7 +1523,7 @@ const updateCartoesFilters = () => {
     const getFilteredData = (exclude) => state.jogos.filter(j => {
         if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
         
-        // Verifica se há cartões para o time/posição selecionada neste jogo
+        // Verifica se hÃ¡ cartÃµes para o time/posição selecionada neste jogo
         const list = fTime === 'Atlético' ? (j.cartoesGalo || []) : (j.cartoesAdv || []);
         const hasMatch = list.some(c => {
             const p = state.jogadores.find(ply => ply.nome_guerra === c.jogador);
@@ -1528,7 +1542,7 @@ const toggleCartoesDetail = (playerName, row) => {
     // Fecha outros detalhes abertos na tabela
     row.parentElement.querySelectorAll('.detail-row').forEach(r => r.remove());
     
-    if (isDetailOpen) return; // Se já estava aberto para este jogador, apenas fecha
+    if (isDetailOpen) return; // Se Já estava aberto para este jogador, apenas fecha
 
     const byCamp = {}, byAdv = {}, byArb = {};
     state.jogos.forEach(j => {
@@ -1556,7 +1570,7 @@ const toggleCartoesDetail = (playerName, row) => {
             <td colspan="5" style="padding: 1.5rem;" class="table-total-row">
                 <div class="detail-inline-container" style="display:block; margin:0; border:none; box-shadow:none; background:transparent;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
-                        <h3 style="margin:0; font-size:1.1rem; color:var(--primary-color);">Detalhamento de Cartões: ${playerName}</h3>
+                        <h3 style="margin:0; font-size:1.1rem; color:var(--primary-color);">Detalhamento de CartÃµes: ${playerName}</h3>
                         <button class="btn-icon" onclick="this.closest('.detail-row').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="form-grid" style="gap:1rem; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
@@ -1568,16 +1582,16 @@ const toggleCartoesDetail = (playerName, row) => {
                             </table>
                         </div>
                         <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
-                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Adversário</div>
+                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por AdversÃ¡rio</div>
                             <table class="stats-table" style="font-size:0.85rem;">
-                                <thead><tr><th>Adversário</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
+                                <thead><tr><th>AdversÃ¡rio</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
                                 <tbody>${Object.values(byAdv).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
                             </table>
                         </div>
                         <div class="stats-section detail-section-bg" style="margin:0; box-shadow:none;">
-                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Árbitro</div>
+                            <div class="stats-section-title" style="font-size:0.85rem; padding:0.5rem 1rem;">Por Ãrbitro</div>
                             <table class="stats-table" style="font-size:0.85rem;">
-                                <thead><tr><th>Árbitro</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
+                                <thead><tr><th>Ãrbitro</th><th class="col-mini">CA</th><th class="col-mini">CV</th><th class="col-mini">Total</th></tr></thead>
                                 <tbody>${Object.values(byArb).sort((a,b)=>b.t-a.t).map(x => `<tr><td>${x.nome}</td><td style="color:#f39c12; font-weight:bold;">${x.y}</td><td style="color:#e74c3c; font-weight:bold;">${x.r}</td><td><strong>${x.t}</strong></td></tr>`).join('')}</tbody>
                             </table>
                         </div>
@@ -1763,7 +1777,7 @@ const renderArbitragem = () => {
         nacFilter.dataset.bound = 'true';
     }
 
-    // Ordenação Dinâmica
+    // Ordenação DinÃ¢mica
     let sortedStats = statsArr;
     if (state.sortConfig.tableId === 'arbitragem-table') {
         sortedStats = sortInternal(statsArr, 'arbitragem-table');
@@ -1772,7 +1786,7 @@ const renderArbitragem = () => {
         sortedStats.sort((a, b) => b.jogos - a.jogos);
     }
 
-    const roleLabel = state.arbTab === 'arbitro' ? 'Árbitro' : (state.arbTab === 'assistente' ? 'Assistente' : 'VAR');
+    const roleLabel = state.arbTab === 'arbitro' ? 'Ãrbitro' : (state.arbTab === 'assistente' ? 'Assistente' : 'VAR');
 
     tbody.innerHTML = sortedStats.length === 0 ? `<tr><td colspan="18" style="text-align:center;">Nenhum ${roleLabel.toLowerCase()} encontrado com estes filtros</td></tr>` : 
         sortedStats.map(s => `
@@ -1939,7 +1953,7 @@ const renderEquipeArbitragem = () => {
             if (!profissionais[name]) profissionais[name] = { 
                 nome: name, 
                 jogos: [], 
-                roles: { 'Árbitro': 0, 'Assistente': 0, 'VAR': 0 }, 
+                roles: { 'Ãrbitro': 0, 'Assistente': 0, 'VAR': 0 }, 
                 foto: arbInfo?.foto || 'https://via.placeholder.com/100',
                 nacionalidade: arbInfo?.federacao || ''
             };
@@ -1947,7 +1961,7 @@ const renderEquipeArbitragem = () => {
             profissionais[name].jogos.push(j);
         };
 
-        p(j.arbitro, 'Árbitro');
+        p(j.arbitro, 'Ãrbitro');
         p(j.assistente1, 'Assistente');
         p(j.assistente2, 'Assistente');
         p(j.varArbitro, 'VAR');
@@ -1982,8 +1996,8 @@ const renderEquipeArbitragem = () => {
     grid.innerHTML = cards.length === 0 ? '<div style="grid-column:1/-1;text-align:center;padding:3rem;border-radius:8px;" class="detail-section-bg">Nenhum profissional encontrado.</div>' : 
         cards.map(c => {
             let primaryRole = 'Assistente';
-            if (c.roles['Árbitro'] >= c.roles['Assistente'] && c.roles['Árbitro'] >= c.roles['VAR']) primaryRole = 'Árbitro';
-            else if (c.roles['VAR'] >= c.roles['Árbitro'] && c.roles['VAR'] >= c.roles['Assistente']) primaryRole = 'VAR';
+            if (c.roles['Ãrbitro'] >= c.roles['Assistente'] && c.roles['Ãrbitro'] >= c.roles['VAR']) primaryRole = 'Ãrbitro';
+            else if (c.roles['VAR'] >= c.roles['Ãrbitro'] && c.roles['VAR'] >= c.roles['Assistente']) primaryRole = 'VAR';
             
             return `
             <div class="artilheiro-card" onclick="showEquipeArbitragemDetail('${c.nome}', event)">
@@ -2030,7 +2044,7 @@ window.showEquipeArbitragemDetail = (name, event) => {
 
     const tbJogos = jList.sort((a,b)=>new Date(b.data) - new Date(a.data)).map(j => {
         let roleAtuacao = [];
-        if(j.arbitro===name) roleAtuacao.push('Árbitro');
+        if(j.arbitro===name) roleAtuacao.push('Ãrbitro');
         if(j.assistente1===name||j.assistente2===name) roleAtuacao.push('Assistente');
         if(j.varArbitro===name) roleAtuacao.push('VAR');
         return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${roleAtuacao.join(' / ')}</td></tr>`;
@@ -2105,7 +2119,7 @@ const renderJogos = () => {
     if (fVar) filtered = filtered.filter(j => (j.varArbitro || '').toLowerCase().includes(fVar.toLowerCase()));
     if (fMax) filtered = filtered.filter(j => (j.publico === 'N/I' ? 0 : parseInt(j.publico || 0)) <= parseInt(fMax || 9999999));
 
-    // Ordenação Dinâmica
+    // Ordenação DinÃ¢mica
     const sorted = sortInternal(filtered, 'jogos-table');
     const paginated = sorted.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
@@ -2138,7 +2152,7 @@ const renderJogos = () => {
             
             if (!match) return false;
             
-            // Verifica se o jogo j possui o valor que este autocomplete está sugerindo
+            // Verifica se o jogo j possui o valor que este autocomplete estÃ¡ sugerindo
             if (id === 'filter-temporada') return j.temporada === val;
             if (id === 'filter-campeonato') return j.campeonato === val;
             if (id === 'filter-casa') return j.casa === val;
@@ -2211,14 +2225,14 @@ window.showJogoDetail = (jogoId, event) => {
                     
                     <div class="form-grid" style="gap:1.5rem;">
                         <div class="stats-section detail-section-bg" style="margin:0;">
-                            <div class="stats-section-title">Informações Gerais</div>
+                            <div class="stats-section-title">InformaçÃµes Gerais</div>
                             <div style="padding:1rem;">
                                 <p><strong>Data:</strong> ${j.data.split('-').reverse().join('/')}</p>
                                 <p><strong>Campeonato:</strong> ${j.campeonato} (${j.rodada})</p>
-                                <p><strong>Estádio:</strong> ${j.estadio} - ${j.estadioEstado || ''} / ${j.estadioPais || ''}</p>
+                                <p><strong>EstÃ¡dio:</strong> ${j.estadio} - ${j.estadioEstado || ''} / ${j.estadioPais || ''}</p>
                                 <p><strong>Técnico Galo:</strong> ${j.tecnicoGalo}</p>
                                 <p><strong>Técnico Adv:</strong> ${j.tecnicoAdv}</p>
-                                <p><strong>Observações:</strong> ${j.observacao || '-'}</p>
+                                <p><strong>ObservaçÃµes:</strong> ${j.observacao || '-'}</p>
                             </div>
                         </div>
                         
@@ -2229,7 +2243,7 @@ window.showJogoDetail = (jogoId, event) => {
                                 <p><strong>Renda:</strong> ${j.renda === 'N/I' ? 'Não Identificada' : formatCurrency(j.renda)}</p>
                                 <p><strong>Ticket Médio:</strong> ${(j.publico > 0 && j.renda !== 'N/I') ? formatCurrency(j.renda / j.publico) : 'N/I'}</p>
                                 <hr>
-                                <p><strong>Árbitro:</strong> ${j.arbitro}</p>
+                                <p><strong>Ãrbitro:</strong> ${j.arbitro}</p>
                                 <p><strong>Assistente 1:</strong> ${j.assistente1 || '-'}</p>
                                 <p><strong>Assistente 2:</strong> ${j.assistente2 || '-'}</p>
                                 <p><strong>VAR:</strong> ${j.varArbitro || '-'}</p>
@@ -2304,7 +2318,7 @@ const populateFilter = (id, values) => {
     const curValue = s.value;
     const sortedValues = [...new Set(values)].sort();
     
-    // Comparar se as opções mudaram antes de reconstruir o DOM
+    // Comparar se as opçÃµes mudaram antes de reconstruir o DOM
     const currentOptions = Array.from(s.options).map(o => o.value).filter(v => v !== "");
     const isSame = sortedValues.length === currentOptions.length && sortedValues.every((v, i) => v === currentOptions[i]);
     
@@ -2327,7 +2341,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
     // Atualiza o filtro no registro global para que o listener o use dinamicamente
     window._autocompleteFilters[id] = filterFn;
 
-    // Se já estiver vinculado, apenas atualiza a fonte de dados e retorna
+    // Se Já estiver vinculado, apenas atualiza a fonte de dados e retorna
     if (inp.dataset.autocompleteBound) {
         inp.dataset.sourceKey = sourceKey;
         inp.dataset.field = field;
@@ -2452,7 +2466,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
 };
 
 const openQuickAddModal = (type, initialValue, targetInputId) => {
-    const tabNames = { adversarios: 'Adversário', estadios: 'Estádio', arbitros: 'Árbitro', competicoes: 'Competição', jogadores: 'Jogador' };
+    const tabNames = { adversarios: 'AdversÃ¡rio', estadios: 'EstÃ¡dio', arbitros: 'Ãrbitro', competicoes: 'Competição', jogadores: 'Jogador' };
     const name = tabNames[type];
     const miniModal = document.createElement('div');
     miniModal.id = 'quick-add-modal';
@@ -2517,7 +2531,7 @@ window.saveQuickAdd = (type, targetInputId) => {
         const clubeNome = document.getElementById('qa-clube').value.trim();
         const existe = state.adversarios.some(adv => adv.clube.trim().toLowerCase() === clubeNome.toLowerCase());
         if (existe) {
-            showToast(`O clube "${clubeNome}" já está cadastrado.`, 'error');
+            showToast(`O clube "${clubeNome}" Já estÃ¡ cadastrado.`, 'error');
             return;
         }
         item.clube = clubeNome;
@@ -2602,10 +2616,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             </div>
             <form id="multi-step-form">
                 <div class="form-block active" id="block-1">
-                    <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
-                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
+                    <div class="stats-section"><div class="stats-section-title">Dados BÃ¡sicos do Jogo</div><div class="p-4">
+                        <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1Âª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>EstÃ¡dio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do EstÃ¡dio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>País do EstÃ¡dio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
@@ -2613,7 +2627,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                     <div class="stats-section"><div class="stats-section-title">Arbitragem e Público</div><div class="p-4">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Árbitro *</label>
+                                <label>Ãrbitro *</label>
                                 <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.3rem;">
                                     <img id="img-game-arbitro" src="${DEFAULT_REF_PHOTO}" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:1px solid #ddd;">
                                     <input type="text" name="arbitro" id="game-arbitro" required value="${jogoToEdit?.arbitro || ''}" style="margin:0;">
@@ -2621,7 +2635,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                                 <label class="checkbox-inline" style="margin-top:0.5rem;"><input type="checkbox" id="game-arb-ni" ${jogoToEdit?.arbitro === 'N/I' ? 'checked' : ''}> Não identificado</label>
                             </div>
                             <div class="form-group">
-                                <label>País do Árbitro</label>
+                                <label>País do Ãrbitro</label>
                                 <input type="text" name="arbitroFederacao" id="game-arbitro-federacao" value="${jogoToEdit?.arbitroFederacao || ''}">
                             </div>
                         </div>
@@ -2648,12 +2662,12 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                                 </div>
                             </div>
                         </div>
-                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="text" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : formatPublico(jogoToEdit?.publico)}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="text" name="renda" id="game-renda" required value="${jogoToEdit?.renda === 'N/I' ? '' : formatRenda(jogoToEdit?.renda)}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> Portões fechados</label></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do Adversário *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Público *</label><input type="text" name="publico" id="game-publico" required value="${jogoToEdit?.publico === 'N/I' ? '' : formatPublico(jogoToEdit?.publico)}"><label class="checkbox-inline"><input type="checkbox" id="game-pub-ni" ${jogoToEdit?.publico === 'N/I' ? 'checked' : ''}> Não identificado</label></div><div class="form-group"><label>Renda (R$) *</label><input type="text" name="renda" id="game-renda" required value="${jogoToEdit?.renda === 'N/I' ? '' : formatRenda(jogoToEdit?.renda)}"><label class="checkbox-inline"><input type="checkbox" id="game-ren-ni" ${jogoToEdit?.renda === 'N/I' ? 'checked' : ''}> Não identificada</label></div><div class="form-group"><label>Ticket Médio</label><input type="text" name="ticketMedio" id="game-ticket-label" readonly value="N/I"><label class="checkbox-inline"><input type="checkbox" id="game-portoes-fechados" ${jogoToEdit?.portoesFechados ? 'checked' : ''}> PortÃµes fechados</label></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Técnico do Atlético *</label><input type="text" name="tecnicoGalo" id="game-tecnico-galo" required value="${jogoToEdit?.tecnicoGalo || state.fixedTecnicoAtle}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-tec" ${state.isTecnicoFixed ? 'checked' : ''}> Fixar técnico</label></div><div class="form-group"><label>Técnico do AdversÃ¡rio *</label><input type="text" name="tecnicoAdv" id="game-tecnico-adv" required value="${jogoToEdit?.tecnicoAdv || ''}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(1)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(3)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
-                <div class="form-block" id="block-3"><div class="stats-section"><div class="stats-section-title">Pênaltis</div><div class="p-4"><div class="form-group" style="width:200px;"><label>Pênaltis</label><select name="penaltis" id="game-penaltis-toggle"><option value="Não" ${jogoToEdit?.penaltis === 'Não' ? 'selected' : ''}>Não</option><option value="Sim" ${jogoToEdit?.penaltis === 'Sim' ? 'selected' : ''}>Sim</option></select></div><div id="penaltis-placar" style="display:${jogoToEdit?.penaltis === 'Sim' ? 'grid' : 'none'};" class="form-grid"><div class="form-group"><label>Gols Pênaltis Casa</label><input type="number" name="penaltisCasa" id="game-pen-casa" value="${jogoToEdit?.penaltisCasa || 0}"></div><div class="form-group"><label>Gols Pênaltis Fora</label><input type="number" name="penaltisFora" id="game-pen-fora" value="${jogoToEdit?.penaltisFora || 0}"></div></div><div class="form-group" style="margin-top:2rem;"><label>Observações</label><textarea name="observacao" rows="6" placeholder="Observações da partida...">${jogoToEdit?.observacao || ''}</textarea></div></div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(2)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(4)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
-                <div class="form-block" id="block-4"><div class="stats-section"><div class="stats-section-title">Cartões - Atlético <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-galo"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('galo')">+ Adicionar Cartão</button></div><div class="stats-section"><div class="stats-section-title">Cartões - Adversário <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-adv"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-adv-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('adv')">+ Adicionar Cartão</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(3)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(5)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
+                <div class="form-block" id="block-3"><div class="stats-section"><div class="stats-section-title">Pênaltis</div><div class="p-4"><div class="form-group" style="width:200px;"><label>Pênaltis</label><select name="penaltis" id="game-penaltis-toggle"><option value="Não" ${jogoToEdit?.penaltis === 'Não' ? 'selected' : ''}>Não</option><option value="Sim" ${jogoToEdit?.penaltis === 'Sim' ? 'selected' : ''}>Sim</option></select></div><div id="penaltis-placar" style="display:${jogoToEdit?.penaltis === 'Sim' ? 'grid' : 'none'};" class="form-grid"><div class="form-group"><label>Gols Pênaltis Casa</label><input type="number" name="penaltisCasa" id="game-pen-casa" value="${jogoToEdit?.penaltisCasa || 0}"></div><div class="form-group"><label>Gols Pênaltis Fora</label><input type="number" name="penaltisFora" id="game-pen-fora" value="${jogoToEdit?.penaltisFora || 0}"></div></div><div class="form-group" style="margin-top:2rem;"><label>ObservaçÃµes</label><textarea name="observacao" rows="6" placeholder="ObservaçÃµes da partida...">${jogoToEdit?.observacao || ''}</textarea></div></div></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(2)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(4)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
+                <div class="form-block" id="block-4"><div class="stats-section"><div class="stats-section-title">CartÃµes - Atlético <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-galo"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-med">Posição *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-galo-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('galo')">+ Adicionar Cartão</button></div><div class="stats-section"><div class="stats-section-title">CartÃµes - AdversÃ¡rio <label style="font-size:0.8rem; font-weight:normal;"><input type="checkbox" id="no-cards-adv"> Nenhum cartão</label></div><table class="stats-table"><thead><tr><th class="col-player">Jogador *</th><th class="col-mini">Amarelo *</th><th class="col-mini">Vermelho *</th><th class="col-mini"></th></tr></thead><tbody id="cards-adv-body"></tbody></table><button type="button" class="add-row-btn" style="margin-top:1rem;" onclick="addCardRow('adv')">+ Adicionar Cartão</button></div><div class="flex-end"><button type="button" class="btn-secondary" onclick="nextBlock(3)">Voltar</button><button type="button" class="btn-primary" onclick="nextBlock(5)">Avançar <i class="fas fa-chevron-right"></i></button></div></div>
                 <div class="form-block" id="block-5">
                     <div class="stats-section">
                         <div class="stats-section-title">Escalação do Atlético</div>
@@ -2719,7 +2733,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             const day = parts[2] || '01';
             dataInp.value = `${season}-${month}-${day}`;
 
-            // Ajuste dinâmico de linhas para NOVO jogo
+            // Ajuste dinÃ¢mico de linhas para NOVO jogo
             if (!state.editingJogoId) {
                 const targetCount = parseInt(season) <= 2019 ? 14 : 16;
                 const currentRows = document.querySelectorAll('#lineup-galo-body tr').length;
@@ -2808,7 +2822,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                     cont.lastElementChild?.remove();
                 }
             } 
-            // Se o contador aumentar, adicionamos novos sem apagar os já preenchidos
+            // Se o contador aumentar, adicionamos novos sem apagar os Já preenchidos
             else if (count > currentInputs) {
                 for (let i = currentInputs; i < count; i++) {
                     const wrapper = document.createElement('div');
@@ -2834,7 +2848,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         };
         
         inp.addEventListener('input', updateGCHtml);
-        inp.addEventListener('change', updateGCHtml); // Backup para mudanças via botões
+        inp.addEventListener('change', updateGCHtml); // Backup para mudanças via botÃµes
         if(dataList && dataList.length > 0) updateGCHtml();
     };
 
@@ -2889,7 +2903,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             updTicket();
         };
 
-        // Listeners para máscaras de Público e Renda
+        // Listeners para mÃ¡scaras de Público e Renda
         const inP = document.getElementById('game-publico');
         const inR = document.getElementById('game-renda');
 
@@ -2936,7 +2950,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
     const yellowVal = data ? data.amarelo : 1;
-    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="AdversÃ¡rio" class="card-player-inp" value="AdversÃ¡rio" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
     
     // TAB behavior for cards
     const inputsOnRow = row.querySelectorAll('input, select');
@@ -3094,7 +3108,7 @@ const addLineupRow = (team, data = null) => {
 };
 
 const removeLineupRow = (btn) => {
-    if (confirm('Deseja remover este jogador da lista? (Esta ação NÃO exclui o cadastro global do jogador)')) {
+    if (confirm('Deseja remover este jogador da lista? (Esta ação NÃƒO exclui o cadastro global do jogador)')) {
         btn.closest('tr').remove();
     }
 };
@@ -3119,7 +3133,7 @@ const saveNewJogo = () => {
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
     
-    // Processar Público e Renda (remover máscaras de forma robusta)
+    // Processar Público e Renda (remover mÃ¡scaras de forma robusta)
     if(document.getElementById('game-pub-ni').checked) {
         jogo.publico = 'N/I';
     } else {
@@ -3148,7 +3162,7 @@ const saveNewJogo = () => {
         minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
     }));
     jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ 
-        jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', 
+        jogador: row.querySelector('.card-player-inp')?.value || 'AdversÃ¡rio', 
         amarelo: row.querySelector('.yellow-sel')?.value || '0', 
         red: row.querySelector('.red-sel')?.value || '0', 
         minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
@@ -3194,7 +3208,7 @@ const saveNewJogo = () => {
     const duplicates = lineupNames.filter((name, idx) => lineupNames.indexOf(name) !== idx);
     if (duplicates.length > 0) {
         const dupNames = [...new Set(duplicates)].join(', ');
-        showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" está(ão) inserido(s) mais de uma vez na escalação.`, 'error');
+        showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" estÃ¡(ão) inserido(s) mais de uma vez na escalação.`, 'error');
         resetBtn();
         return;
     }
@@ -3206,7 +3220,7 @@ const saveNewJogo = () => {
     const advGols = parseInt(jogo.casa === 'Atlético' ? jogo.golsFora : jogo.golsCasa) || 0;
 
     if (gsTotal !== advGols) {
-        alert(`Erro de Validação: A quantidade de Gols Sofridos informada na escalação (${gsTotal}) não confere com os gols marcados pelo adversário (${advGols}). Ajuste os valores para salvar o jogo.`);
+        alert(`Erro de Validação: A quantidade de Gols Sofridos informada na escalação (${gsTotal}) não confere com os gols marcados pelo adversÃ¡rio (${advGols}). Ajuste os valores para salvar o jogo.`);
         resetBtn();
         return;
     }
@@ -3242,9 +3256,9 @@ const saveNewJogo = () => {
             showToast('Jogo salvo com sucesso!', 'success');
         } catch (error) {
             console.error('Erro detalhado ao salvar:', error);
-            // A mensagem já foi exibida pelo saveData, mas podemos tratar casos específicos:
+            // A mensagem Já foi exibida pelo saveData, mas podemos tratar casos específicos:
             if (error.message?.includes('schema')) {
-                showToast('Erro de Schema no Supabase. O banco de dados está desatualizado.', 'error');
+                showToast('Erro de Schema no Supabase. O banco de dados estÃ¡ desatualizado.', 'error');
             }
         } finally {
             resetBtn();
@@ -3698,7 +3712,7 @@ const renderAtleticoTecnicos = (container) => {
         </table>
         <div class="atle-tec-pagination">
             <button class="btn-secondary" ${state.atleTecPage === 1 ? 'disabled' : ''} onclick="state.atleTecPage--; renderEstatisticas();"><i class="fas fa-chevron-left"></i></button>
-            <span>Página ${state.atleTecPage} de ${totalPages || 1}</span>
+            <span>PÃ¡gina ${state.atleTecPage} de ${totalPages || 1}</span>
             <button class="btn-secondary" ${state.atleTecPage >= totalPages ? 'disabled' : ''} onclick="state.atleTecPage++; renderEstatisticas();"><i class="fas fa-chevron-right"></i></button>
         </div>
         ${renderTableLegend(['J', 'V', 'E', 'D', 'GM', 'GS', 'SG', 'Aprov', 'CS', 'CG'])}
@@ -3807,7 +3821,7 @@ const renderStatsPorFase = (container) => {
         if (selectedCamps.length > 0 && !selectedCamps.includes(j.campeonato) && !selectedCamps.includes('Todos')) return false;
         if (selectedCamps.length === 0) return false;
 
-        // Filtro Adversário
+        // Filtro AdversÃ¡rio
         if (selectedAdvs.length > 0 && !selectedAdvs.includes('Todos')) {
             if (!selectedAdvs.includes(j.casa) && !selectedAdvs.includes(j.fora)) return false;
         }
@@ -3865,7 +3879,7 @@ const renderStatsPorFase = (container) => {
     const availableTipos = [...new Set(state.competicoes.map(c => c.tipo))].filter(Boolean).sort();
     initMultiSelect('spf-multi-tipo', availableTipos, 'fas-tipo', () => renderStatsPorFase(container));
 
-    // Vincular eventos se necessário (apenas uma vez)
+    // Vincular eventos se necessÃ¡rio (apenas uma vez)
     if (!container.dataset.bound) {
         ['spf-filter-temporada-de', 'spf-filter-temporada-ate', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
             const el = document.getElementById(id);
@@ -4448,7 +4462,7 @@ const nextBlock = (n) => {
 // CADASTROS COMMON
 const deleteItem = async (tab, id) => {
     if (state.isFormActive) {
-        showToast('Não é permitido excluir registros enquanto um formulário de jogo está aberto. Salve ou cancele o jogo primeiro.', 'error');
+        showToast('Não é permitido excluir registros enquanto um formulÃ¡rio de jogo estÃ¡ aberto. Salve ou cancele o jogo primeiro.', 'error');
         return;
     }
     if (confirm('Excluir registro?')) {
@@ -4539,7 +4553,7 @@ const setupAutofillHandler = () => {
         const matches = state.jogadores.filter(p => normalizeStr(p.nome_completo) === nome);
         if (matches.length === 0) return;
 
-        // Ordena por ID decrescente — suporta ID numérico ou string
+        // Ordena por ID decrescente â€” suporta ID numérico ou string
         matches.sort((a, b) => {
             const nA = Number(a.id), nB = Number(b.id);
             if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
@@ -4661,7 +4675,7 @@ document.getElementById('stt-filter-tecnico')?.addEventListener('input', debounc
     });
 });
 
-document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Árbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
+document.getElementById('export-csv')?.addEventListener('click', () => { let csv = 'Data,Campeonato,Casa,Placar,Fora,Ãrbitro,Público,Renda\n'; state.jogos.forEach(j => { csv += `${j.data},${j.campeonato},${j.casa},${j.golsCasa}x${j.golsFora},${j.fora},${j.arbitro},${j.publico},${j.renda}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'jogos.csv'; a.click(); });
 document.getElementById('export-artilheiros-csv')?.addEventListener('click', () => {
     // Basic export for artilheiros
     alert('Artilheiros exportados com sucesso! (Funcionalidade demonstrativa)');
@@ -4678,7 +4692,7 @@ const renderJogadoresPage = () => {
     const nomeInp = document.getElementById('jogadores-filter-nome');
 
     if (deInp && !deInp.dataset.bound) {
-        // Agora usamos 'input' para filtros digitáveis para resposta imediata
+        // Agora usamos 'input' para filtros digitÃ¡veis para resposta imediata
         deInp.addEventListener('input', () => { state.jogadoresFilterDe = deInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
         ateInp.addEventListener('input', () => { state.jogadoresFilterAte = ateInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
         nomeInp.addEventListener('input', () => { state.jogadoresFilterNome = nomeInp.value; state.jogadoresCurrentPage = 1; renderJogadoresPage(); });
@@ -4715,7 +4729,7 @@ const renderJogadoresPage = () => {
         if (Array.isArray(j.lineupGalo)) {
             j.lineupGalo.forEach(l => {
                 const name = l.jogador;
-                if (!name || name === 'Adversário') return;
+                if (!name || name === 'AdversÃ¡rio') return;
                 
                 if (!statsMap[name]) {
                     const pInfo = state.jogadores.find(p => p.nome_guerra === name);
@@ -4830,7 +4844,7 @@ const renderJogadoresPage = () => {
             paginDiv.style.display = 'flex';
             paginDiv.innerHTML = `
                 <button class="page-btn" onclick="state.jogadoresCurrentPage=${page - 1}; renderJogadoresPage();" ${page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                <span style="font-weight:600;">Página ${page} de ${totalPages} <span style="font-size:0.8rem; color:var(--text-muted);">(${list.length} jogadores)</span></span>
+                <span style="font-weight:600;">PÃ¡gina ${page} de ${totalPages} <span style="font-size:0.8rem; color:var(--text-muted);">(${list.length} jogadores)</span></span>
                 <button class="page-btn" onclick="state.jogadoresCurrentPage=${page + 1}; renderJogadoresPage();" ${page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
             `;
         } else {
@@ -4884,7 +4898,7 @@ const renderPlayerCareerDetail = (playerName) => {
         if (golsAdv === 0) s.cs++;
     });
 
-    // Ordenação cronológica para Estreia e Último Jogo
+    // Ordenação cronológica para Estreia e Ãšltimo Jogo
     playerGames.sort((a, b) => new Date(a.data) - new Date(b.data));
 
     const formatFullMatchInfo = (j) => {
@@ -4941,7 +4955,7 @@ const renderPlayerCareerDetail = (playerName) => {
                     <span style="margin-left: 0.5rem; font-weight: 500;">${debutInfo}</span>
                 </div>
                 <div style="margin-bottom: ${firstGoalInfo ? '0.5rem' : '0'}; font-size: 0.95rem;">
-                    <strong style="color: var(--text-muted);">Último Jogo:</strong> 
+                    <strong style="color: var(--text-muted);">Ãšltimo Jogo:</strong> 
                     <span style="margin-left: 0.5rem; font-weight: 500;">${lastInfo}</span>
                 </div>
                 ${firstGoalInfo ? `
@@ -5045,10 +5059,10 @@ const renderDashboard = () => {
     if (titArt) titArt.innerText = `Top ${topLimit} Artilheiros`;
 
     const titAma = document.getElementById('dash-rank-ama-title');
-    if (titAma) titAma.innerText = `Top ${topLimit} Cartões Amarelos`;
+    if (titAma) titAma.innerText = `Top ${topLimit} CartÃµes Amarelos`;
 
     const titVer = document.getElementById('dash-rank-ver-title');
-    if (titVer) titVer.innerText = `Top ${topLimit} Cartões Vermelhos`;
+    if (titVer) titVer.innerText = `Top ${topLimit} CartÃµes Vermelhos`;
     
     let jogos = state.jogos || [];
     
@@ -5139,11 +5153,11 @@ const renderDashboard = () => {
             });
         }
         
-        // Cartões
+        // CartÃµes
         if(Array.isArray(j.cartoesGalo)) {
             j.cartoesGalo.forEach(c => {
                 const pNome = c.jogador;
-                if(!pNome || pNome === 'Adversário') return;
+                if(!pNome || pNome === 'AdversÃ¡rio') return;
                 
                 const yellow = parseInt(c.amarelo) || 0;
                 const red = parseInt(c.red) || 0;
@@ -5261,7 +5275,7 @@ const populatePRFilters = () => {
         }
     });
 
-    // Inicializa as opções se ainda não foram carregadas
+    // Inicializa as opçÃµes se ainda não foram carregadas
     updatePRFiltersOptions();
 };
 
@@ -5271,12 +5285,12 @@ const updatePRFiltersOptions = (excludeId = null) => {
     const fAdv = document.getElementById('pr-filter-adversario')?.value.toLowerCase();
     const fEst = document.getElementById('pr-filter-estadio')?.value.toLowerCase();
 
-    // Filtra os jogos baseando-se no que já está selecionado PARA populat os filtros
+    // Filtra os jogos baseando-se no que Já estÃ¡ selecionado PARA populat os filtros
     let filtered = (state.jogos || []).filter(j => j.casa === 'Atlético' || j.casa === 'Atlético-MG');
 
-    // Funções auxiliares para popular cada campo
+    // FunçÃµes auxiliares para popular cada campo
     const populatePRAutocomplete = (id, field, sourceData) => {
-        if (id === excludeId) return; // Não filtra o campo que o usuário está digitando no momento
+        if (id === excludeId) return; // Não filtra o campo que o usuÃ¡rio estÃ¡ digitando no momento
         
         // Aplica os filtros dos OUTROS campos para ver o que sobra neste
         let currentFiltered = filtered;
@@ -5450,7 +5464,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
                 
                 return `
                     <tr>
-                        <td><div class="rank-badge ${rankClass}">${rank}º</div></td>
+                        <td><div class="rank-badge ${rankClass}">${rank}Âº</div></td>
                         <td>${v.temporada}</td>
                         <td style="font-weight: 600; color: var(--text-main);">${v.adversario}</td>
                         <td>${v.competicao}</td>
@@ -5493,7 +5507,7 @@ const renderPublicoRenda = (tabId = 'hist-temporada') => {
 
         Object.values(estStats).forEach(s => {
             const estObj = state.estadios.find(e => e.nome === s.nome);
-            const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=Estádio';
+            const foto = estObj?.foto ? estObj.foto : 'https://via.placeholder.com/400x200?text=EstÃ¡dio';
             const aprov = (s.jogos > 0 ? ((s.v * 3 + s.e) / (s.jogos * 3)) * 100 : 0);
 
             const card = document.createElement('div');
@@ -5592,7 +5606,7 @@ const renderCuriosidades = () => {
                             <tr>
                                 <th style="text-align:center;">Data</th>
                                 <th style="text-align:center;">Campeonato</th>
-                                <th style="text-align:center;">Adversário</th>
+                                <th style="text-align:center;">AdversÃ¡rio</th>
                                 ${extraCols.map(c => `<th style="text-align:center;">${c}</th>`).join('')}
                                 <th style="text-align:right;">${extraLabel || 'Valor'}</th>
                             </tr>
@@ -5609,7 +5623,7 @@ const renderCuriosidades = () => {
                                         ${extraCols.map(c => {
                                             const label = c.toLowerCase();
                                             let key = '';
-                                            if (label === 'estádio') key = 'estadio';
+                                            if (label === 'estÃ¡dio') key = 'estadio';
                                             else if (label === 'jogador') key = 'jogador';
                                             else if (label === 'placar') key = 'placar';
                                             
@@ -5710,7 +5724,7 @@ const renderCuriosidades = () => {
         })
         .sort((a, b) => b.sortVal - a.sortVal);
 
-    // 6. Cartões
+    // 6. CartÃµes
     const cartoesStats = (field, team) => {
         return [...filtered]
             .map(j => {
@@ -5722,19 +5736,19 @@ const renderCuriosidades = () => {
     };
 
     grid.innerHTML = `
-        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
-        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['Estádio'])}
-        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
-        ${createTable('Menores Rendas', menoresRendas, 'sortVal', 'money', 'Renda', ['Estádio'])}
+        ${createTable('Maiores Públicos', maioresPublicos, 'sortVal', 'number', 'Público', ['EstÃ¡dio'])}
+        ${createTable('Menores Públicos', menoresPublicos, 'sortVal', 'number', 'Público', ['EstÃ¡dio'])}
+        ${createTable('Maiores Rendas', maioresRendas, 'sortVal', 'money', 'Renda', ['EstÃ¡dio'])}
+        ${createTable('Menores Rendas', menoresRendas, 'sortVal', 'money', 'Renda', ['EstÃ¡dio'])}
         ${createTable('Jogadores com mais gols em um único jogo', recordeGolsIndiv, 'sortVal', 'number', 'Gols', ['Jogador'])}
         ${createTable('Maiores Vitórias', maioresVitorias, 'placar', 'string', 'Placar')}
         ${createTable('Maiores Derrotas', maioresDerrotas, 'placar', 'string', 'Placar')}
         ${createTable('Mais Gols Marcados', maisGolsMarcados, 'sortVal', 'number', 'Gols')}
         ${createTable('Mais Gols Sofridos', maisGolsSofridos, 'sortVal', 'number', 'Gols')}
-        ${createTable('Mais Amarelos Recebidos', cartoesStats('amarelo', 'galo'), 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Vermelhos Recebidos', cartoesStats('red', 'galo'), 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Amarelos do Adversário', cartoesStats('amarelo', 'adv'), 'sortVal', 'number', 'Cartões')}
-        ${createTable('Mais Vermelhos do Adversário', cartoesStats('red', 'adv'), 'sortVal', 'number', 'Cartões')}
+        ${createTable('Mais Amarelos Recebidos', cartoesStats('amarelo', 'galo'), 'sortVal', 'number', 'CartÃµes')}
+        ${createTable('Mais Vermelhos Recebidos', cartoesStats('red', 'galo'), 'sortVal', 'number', 'CartÃµes')}
+        ${createTable('Mais Amarelos do AdversÃ¡rio', cartoesStats('amarelo', 'adv'), 'sortVal', 'number', 'CartÃµes')}
+        ${createTable('Mais Vermelhos do AdversÃ¡rio', cartoesStats('red', 'adv'), 'sortVal', 'number', 'CartÃµes')}
     `;
 };
 
@@ -5858,7 +5872,7 @@ const renderClubeStats = () => {
             paginDiv.style.display = 'flex';
             paginDiv.innerHTML = `
                 <button class="page-btn" onclick="state.advClubePage=${page-1}; renderClubeStats();" ${page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                <span style="font-weight:600; color:var(--text-main);">Página ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${list.length} clubes)</span></span>
+                <span style="font-weight:600; color:var(--text-main);">PÃ¡gina ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${list.length} clubes)</span></span>
                 <button class="page-btn" onclick="state.advClubePage=${page+1}; renderClubeStats();" ${page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
             `;
         } else {
@@ -5877,7 +5891,7 @@ window.changeAdvTab = (tab) => {
         c.style.display = 'none';
     });
 
-    // Remover active de todos os botões de aba
+    // Remover active de todos os botÃµes de aba
     document.querySelectorAll('#adversarios-section .tabs-container .tab-btn').forEach(b => b.classList.remove('active'));
 
     if (tab === 'clubes') {
@@ -5967,7 +5981,7 @@ const renderTecnicoStats = () => {
     // Filtro de mínimo de jogos
     if (fMinJogos > 0) statsArr = statsArr.filter(s => s.jogos >= fMinJogos);
 
-    // Ordenação automática por número de jogos (maior para menor)
+    // Ordenação automÃ¡tica por número de jogos (maior para menor)
     statsArr.sort((a, b) => b.jogos - a.jogos);
 
     const sorted = sortInternal(statsArr, 'table-tecnicos-adv');
@@ -6002,7 +6016,7 @@ const renderTecnicoStats = () => {
             paginDiv.style.display = 'flex';
             paginDiv.innerHTML = `
                 <button class="page-btn" onclick="state.advTecPage=${page-1}; renderTecnicoStats();" ${page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
-                <span style="font-weight:600; color:var(--text-main);">Página ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${sorted.length} técnicos)</span></span>
+                <span style="font-weight:600; color:var(--text-main);">PÃ¡gina ${page} de ${totalPages} <span style="color:var(--text-muted); font-size:0.85rem;">(${sorted.length} técnicos)</span></span>
                 <button class="page-btn" onclick="state.advTecPage=${page+1}; renderTecnicoStats();" ${page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
             `;
         } else {
@@ -6037,7 +6051,7 @@ window.showTecnicoJogos = (tecnicoNome, event) => {
                                 <th>Campeonato</th>
                                 <th>Equipe Técnico</th>
                                 <th>Placar</th>
-                                <th>Estádio</th>
+                                <th>EstÃ¡dio</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -6096,7 +6110,7 @@ const renderAdversarioPRModal = (clubeNome) => {
             </div>
             
             <div id="adv-modal-pagination" class="pagination-controls">
-                <!-- Paginação será renderizada aqui -->
+                <!-- Paginação serÃ¡ renderizada aqui -->
             </div>
         </div>
     `;
@@ -6130,7 +6144,7 @@ window.updateAdversarioModalGames = (clubeNome) => {
                     <th>Fora</th>
                     <th>Público</th>
                     <th>Renda</th>
-                    <th>Estádio</th>
+                    <th>EstÃ¡dio</th>
                 </tr>
             </thead>
             <tbody>
@@ -6155,7 +6169,7 @@ window.updateAdversarioModalGames = (clubeNome) => {
     const paginContainer = document.getElementById('adv-modal-pagination');
     paginContainer.innerHTML = `
         <button class="page-btn" ${advModalPage === 1 ? 'disabled' : ''} onclick="changeAdvModalPage('${clubeNome.replace(/'/g, "\\'")}', ${advModalPage - 1})">Anterior</button>
-        <span style="font-weight:600;">Página ${advModalPage} de ${totalPages || 1}</span>
+        <span style="font-weight:600;">PÃ¡gina ${advModalPage} de ${totalPages || 1}</span>
         <button class="page-btn" ${advModalPage === totalPages || totalPages === 0 ? 'disabled' : ''} onclick="changeAdvModalPage('${clubeNome.replace(/'/g, "\\'")}', ${advModalPage + 1})">Próxima</button>
     `;
 };
@@ -6314,7 +6328,7 @@ const renderEstadioModal = (estadioNome) => {
     overlay.innerHTML = `
         <div class="modal-content" style="padding: 2rem; width: 95%; max-width: 1200px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <h2 style="margin:0;">Estádio: ${estadioNome}</h2>
+                <h2 style="margin:0;">EstÃ¡dio: ${estadioNome}</h2>
                 <button class="btn-icon" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times" style="font-size:1.5rem;"></i></button>
             </div>
 
@@ -6340,7 +6354,7 @@ const renderEstadioModal = (estadioNome) => {
                 </table>
             </div>
 
-            <!-- TAB HISTÓRICO -->
+            <!-- TAB HISTÃ“RICO -->
             <div id="est-hist" class="est-modal-pane hidden">
                 <table class="premium-table" style="margin-bottom:1rem;">
                     <thead><tr><th>Data</th><th>Competição</th><th style="text-align:right;">Casa</th><th style="text-align:center;">Placar</th><th>Fora</th><th>Público</th><th>Renda</th></tr></thead>
@@ -6348,7 +6362,7 @@ const renderEstadioModal = (estadioNome) => {
                 </table>
                 <div class="pagination-controls" style="margin-top: 1rem;">
                     <button id="est-hist-prev" class="page-btn" onclick="window.changeEstadioHistPage(-1)"><i class="fas fa-chevron-left"></i> Anterior</button>
-                    <span id="est-hist-page-info" style="font-weight:600;">Página 1</span>
+                    <span id="est-hist-page-info" style="font-weight:600;">PÃ¡gina 1</span>
                     <button id="est-hist-next" class="page-btn" onclick="window.changeEstadioHistPage(1)">Próxima <i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
@@ -6388,7 +6402,7 @@ window.renderEstadioHistPage = () => {
     `).join('') || '<tr><td colspan="7" style="text-align:center; padding:2rem;">Nenhum jogo encontrado.</td></tr>';
 
     const maxPage = Math.ceil(window.estModalData.jogos.length / window.estModalData.perPage) || 1;
-    document.getElementById('est-hist-page-info').textContent = `Página ${window.estModalData.page} de ${maxPage}`;
+    document.getElementById('est-hist-page-info').textContent = `PÃ¡gina ${window.estModalData.page} de ${maxPage}`;
     document.getElementById('est-hist-prev').disabled = window.estModalData.page === 1;
     document.getElementById('est-hist-next').disabled = window.estModalData.page >= maxPage;
 };
@@ -6536,7 +6550,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 );
 
                 if (error) {
-                    console.error(`Erro ao buscar página ${from}-${to} da tabela ${tableName}:`, error);
+                    console.error(`Erro ao buscar pÃ¡gina ${from}-${to} da tabela ${tableName}:`, error);
                     throw error;
                 }
 
@@ -6600,7 +6614,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
         // Batch sizes por tabela: 'jogadores' usa 50 pois cada linha tem foto em Base64 (pode ser centenas de KB)
-        // Tabelas sem imagens usam 1000 para velocidade máxima
+        // Tabelas sem imagens usam 1000 para velocidade mÃ¡xima
         const batchSizes = {
             adversarios: 1000,
             estadios: 1000,
@@ -6637,7 +6651,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 if (hasChanges) {
-                    // Migração Básica de Árbitros
+                    // Migração BÃ¡sica de Ãrbitros
                     state.arbitros = (state.arbitros || []).map(a => {
                         if (a.federacao && a.federacao.trim().length === 2) {
                             return { ...a, federacao: 'Brasil' };
@@ -6695,7 +6709,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             document.getElementById(id)?.addEventListener('change', () => renderCurrentArtTab());
         });
 
-        // Vincular Eventos para Filtros de Cartões
+        // Vincular Eventos para Filtros de CartÃµes
         ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', () => renderCartoes());
         });
@@ -6838,3 +6852,4 @@ window.showSection = (id, skipHash) => {
 };
 
 window.sortTable = sortTable;
+
