@@ -2,6 +2,8 @@
 const supabaseUrl = 'https://nmcscyqyodxajlhuxckm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3NjeXF5b2R4YWpsaHV4Y2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODkzMDcsImV4cCI6MjA5MTI2NTMwN30.-idljlDFGF57K75NG2JRXbywQE09tSn-E95dgaG6TeQ';
 let supabaseClient = null;
+const ADMIN_EMAIL = 'stefanobrunofaria@gmail.com';
+const MUTABLE_TABLES = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
 
 // Foto placeholders
 const DEFAULT_PLAYER_PHOTO = 'https://via.placeholder.com/150';
@@ -62,6 +64,11 @@ const state = {
     arbitros: [],
     jogadores: [],
     jogos: [],
+    auth: {
+        session: null,
+        user: null,
+        role: 'guest'
+    },
     
     // Fixed Configurations
     fixedSeason: localStorage.getItem('fixedSeason')?.replace(/"/g, '') || '',
@@ -143,9 +150,172 @@ const showToast = (message, type = 'error') => {
     setTimeout(() => toast.remove(), 5000);
 };
 
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
+const isAdmin = () => normalizeEmail(state.auth.user?.email) === ADMIN_EMAIL;
+
+const requireAdmin = (message = 'Apenas o administrador pode alterar dados.') => {
+    if (isAdmin()) return true;
+    showToast(message, 'error');
+    return false;
+};
+
+const getInitials = (email) => {
+    const clean = normalizeEmail(email);
+    if (!clean) return '--';
+    const namePart = clean.split('@')[0].replace(/[._-]+/g, ' ').trim();
+    const parts = namePart.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return clean.slice(0, 2).toUpperCase();
+};
+
+const setAuthMessage = (message = '', type = '') => {
+    const messageEl = document.getElementById('auth-message');
+    if (!messageEl) return;
+    messageEl.textContent = message;
+    messageEl.classList.remove('error', 'success');
+    if (type) messageEl.classList.add(type);
+};
+
+const applyPermissionUI = () => {
+    const admin = isAdmin();
+    document.querySelectorAll('.nav-item[data-page="cadastros"]').forEach(item => {
+        item.classList.toggle('hidden', !admin);
+    });
+    document.getElementById('btn-novo-jogo')?.classList.toggle('hidden', !admin);
+};
+
+const updateAuthSession = (session) => {
+    state.auth.session = session || null;
+    state.auth.user = session?.user || null;
+    state.auth.role = state.auth.user ? (isAdmin() ? 'admin' : 'user') : 'guest';
+    syncAuthUI();
+};
+
+const syncAuthUI = () => {
+    const logged = !!state.auth.user;
+    const admin = isAdmin();
+    const authScreen = document.getElementById('auth-screen');
+    document.body.classList.toggle('auth-pending', !logged);
+    document.body.classList.toggle('app-ready', logged);
+    document.body.classList.toggle('role-admin', logged && admin);
+    document.body.classList.toggle('role-user', logged && !admin);
+    authScreen?.classList.toggle('hidden', logged);
+
+    const email = state.auth.user?.email || '';
+    const userInfo = document.querySelector('.user-info');
+    const nameEl = document.getElementById('user-profile-name') || userInfo?.querySelector('p');
+    const emailEl = document.getElementById('user-profile-email') || userInfo?.querySelector('span');
+    const roleEl = document.getElementById('user-profile-role');
+    const avatarEl = document.getElementById('user-avatar');
+
+    if (nameEl) nameEl.textContent = admin ? 'Administrador' : 'Usuário';
+    if (emailEl) emailEl.textContent = email;
+    if (roleEl) roleEl.textContent = admin ? 'Admin' : 'Usuário';
+    if (avatarEl) avatarEl.textContent = getInitials(email);
+
+    if (logged && !admin) {
+        const page = window.location.hash.replace('#', '').split('/')[0];
+        if (['cadastros', 'novo-jogo'].includes(page)) {
+            history.replaceState(null, '', '#dashboard');
+        }
+    }
+
+    applyPermissionUI();
+};
+
+const setAuthMode = (mode) => {
+    const nextMode = mode === 'signup' ? 'signup' : 'signin';
+    const form = document.getElementById('auth-form');
+    const submit = document.getElementById('auth-submit');
+    const password = document.getElementById('auth-password');
+
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.authMode === nextMode);
+    });
+
+    if (form) form.dataset.mode = nextMode;
+    if (submit) submit.textContent = nextMode === 'signup' ? 'Criar senha' : 'Entrar';
+    if (password) password.autocomplete = nextMode === 'signup' ? 'new-password' : 'current-password';
+    setAuthMessage();
+};
+
+const setupAuthUI = () => {
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        if (tab.dataset.bound) return;
+        tab.dataset.bound = 'true';
+        tab.addEventListener('click', () => setAuthMode(tab.dataset.authMode));
+    });
+
+    const form = document.getElementById('auth-form');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = 'true';
+    form.dataset.mode = form.dataset.mode || 'signin';
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!supabaseClient) {
+            setAuthMessage('Supabase não foi carregado.', 'error');
+            return;
+        }
+
+        const email = normalizeEmail(document.getElementById('auth-email')?.value);
+        const password = document.getElementById('auth-password')?.value || '';
+        const mode = form.dataset.mode === 'signup' ? 'signup' : 'signin';
+        const submit = document.getElementById('auth-submit');
+        const originalText = submit?.textContent || '';
+
+        if (submit) {
+            submit.disabled = true;
+            submit.textContent = mode === 'signup' ? 'Criando...' : 'Entrando...';
+        }
+        setAuthMessage();
+
+        try {
+            const response = mode === 'signup'
+                ? await supabaseClient.auth.signUp({ email, password })
+                : await supabaseClient.auth.signInWithPassword({ email, password });
+
+            if (response.error) throw response.error;
+
+            const session = response.data?.session || null;
+            if (session) {
+                updateAuthSession(session);
+                setAuthMessage('Acesso liberado.', 'success');
+                window.location.reload();
+                return;
+            }
+
+            setAuthMessage('Cadastro criado. Confirme seu e-mail e depois entre.', 'success');
+        } catch (error) {
+            console.error('Auth error:', error);
+            setAuthMessage(error.message || 'Não foi possível autenticar.', 'error');
+        } finally {
+            if (submit) {
+                submit.disabled = false;
+                submit.textContent = originalText || (mode === 'signup' ? 'Criar senha' : 'Entrar');
+            }
+        }
+    });
+};
+
+window.logoutEstatletico = async () => {
+    try {
+        if (supabaseClient) await supabaseClient.auth.signOut();
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        updateAuthSession(null);
+        window.location.reload();
+    }
+};
+
 const saveData = async (key, data) => {
     try {
         if (!supabaseClient) return;
+        if (MUTABLE_TABLES.includes(key) && !requireAdmin()) {
+            throw new Error('Permissão negada.');
+        }
         if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'].includes(key)) {
             // Cópia defensiva para remover colunas que podem não existir no Supabase ainda
             const safeData = data.map(item => {
@@ -169,6 +339,9 @@ const saveData = async (key, data) => {
         }
     } catch (e) {
         console.error('Network/Internal Error:', e);
+        if (e.message === 'Permissão negada.') {
+            throw e;
+        }
         if (!e.message || !e.message.includes('Supabase Error')) {
             showToast('Erro de conexão com o banco de dados.');
         }
@@ -465,6 +638,12 @@ const novoJogoContainer = document.getElementById('novo-jogo-container');
 
 // Navigation
 const showSection = (sectionId, skipHashUpdate = false) => {
+    if (['cadastros', 'novo-jogo'].includes(sectionId) && !isAdmin()) {
+        showToast('Apenas o administrador pode acessar esta página.', 'error');
+        sectionId = 'dashboard';
+        skipHashUpdate = false;
+    }
+
     document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
     const section = document.getElementById(`${sectionId}-section`);
     if (section) section.classList.remove('hidden');
@@ -511,6 +690,11 @@ const showSection = (sectionId, skipHashUpdate = false) => {
 
 // RENDERING CADASTROS
 const renderTab = (tabName) => {
+    if (!isAdmin()) {
+        showSection('dashboard');
+        return;
+    }
+
     state.currentTab = tabName;
     tabContent.innerHTML = '';
     // Update URL hash to reflect tab
@@ -759,7 +943,10 @@ const renderTableRows = (tab, filter = '') => {
             const ageYear = parseInt(item.temporada) || new Date().getFullYear();
             cells = `<td><img src="${item.foto}" class="photo-preview"></td><td>${item.nome_guerra}</td><td>${item.posicao}</td><td>${item.temporada}</td><td>${calculateAgeAtEndOfYear(item.nascimento, ageYear)}</td>`;
         }
-        return `<tr>${cells}<td class="actions"><button class="action-btn" onclick="prepareEdit('${tab}', ${item.id})"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
+        const actions = isAdmin()
+            ? `<button class="action-btn" onclick="prepareEdit('${tab}', ${item.id})"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteItem('${tab}', ${item.id})"><i class="fas fa-trash-alt delete"></i></button>`
+            : '-';
+        return `<tr>${cells}<td class="actions">${actions}</td></tr>`;
     }).join('');
 };
 
@@ -2201,7 +2388,10 @@ const renderJogos = () => {
         const pub = formatPublico(j.publico);
         const ren = formatRenda(j.renda);
         const tic = (j.publico > 0 && j.renda !== 'N/I') ? formatCurrency(j.renda / j.publico) : 'N/I';
-        return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn view-btn" onclick="showJogoDetail(${j.id}, event)" title="Visualizar Detalhes"><i class="fas fa-search"></i></button><button class="action-btn" onclick="editJogo(${j.id})" title="Editar"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})" title="Excluir"><i class="fas fa-trash-alt delete"></i></button></td></tr>`;
+        const adminActions = isAdmin()
+            ? `<button class="action-btn" onclick="editJogo(${j.id})" title="Editar"><i class="fas fa-edit"></i></button><button class="action-btn" onclick="deleteJogo(${j.id})" title="Excluir"><i class="fas fa-trash-alt delete"></i></button>`
+            : '';
+        return `<tr><td>${j.data.split('-').reverse().join('/')}</td><td>${j.campeonato}</td><td>${j.casa}</td><td><strong>${j.golsCasa} x ${j.golsFora}</strong></td><td>${j.fora}</td><td>${j.arbitro}</td><td>${pub}</td><td>${ren}</td><td>${tic}</td><td class="actions"><button class="action-btn view-btn" onclick="showJogoDetail(${j.id}, event)" title="Visualizar Detalhes"><i class="fas fa-search"></i></button>${adminActions}</td></tr>`;
     }).join('');
 };
 
@@ -2407,7 +2597,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
             drop.appendChild(item);
         });
         
-        if (showQuickAdd) {
+        if (showQuickAdd && isAdmin()) {
             const add = document.createElement('div'); 
             add.className = 'autocomplete-item new-item'; 
             add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
@@ -2466,6 +2656,8 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
 };
 
 const openQuickAddModal = (type, initialValue, targetInputId) => {
+    if (!requireAdmin('Apenas o administrador pode cadastrar informações.')) return;
+
     const tabNames = { adversarios: 'Adversário', estadios: 'Estádio', arbitros: 'Árbitro', competicoes: 'Competição', jogadores: 'Jogador' };
     const name = tabNames[type];
     const miniModal = document.createElement('div');
@@ -2526,6 +2718,8 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
 };
 
 window.saveQuickAdd = (type, targetInputId) => {
+    if (!requireAdmin('Apenas o administrador pode cadastrar informações.')) return;
+
     let item = { id: Date.now() };
     if (type === 'adversarios') {
         const clubeNome = document.getElementById('qa-clube').value.trim();
@@ -2601,6 +2795,8 @@ const updateRefereeInfo = () => {
 };
 
 const renderNovoJogoPage = (jogoToEdit = null) => {
+    if (!requireAdmin('Apenas o administrador pode cadastrar ou editar jogos.')) return;
+
     state.isFormActive = true; // Ativa trava de segurança
     state.editingJogoId = jogoToEdit ? jogoToEdit.id : null;
     showSection('novo-jogo');
@@ -3114,6 +3310,8 @@ const removeLineupRow = (btn) => {
 };
 
 const saveNewJogo = () => {
+    if (!requireAdmin('Apenas o administrador pode salvar jogos.')) return;
+
     const btnSalvar = document.getElementById('btn-salvar-jogo');
     if (btnSalvar) {
         if (btnSalvar.disabled) return;
@@ -4396,8 +4594,13 @@ const renderStatsIndividuais = (container) => {
     `;
 };
 
-const editJogo = (id) => renderNovoJogoPage(state.jogos.find(j => j.id === id));
+const editJogo = (id) => {
+    if (!requireAdmin('Apenas o administrador pode editar jogos.')) return;
+    renderNovoJogoPage(state.jogos.find(j => j.id === id));
+};
 const deleteJogo = async (id) => {
+    if (!requireAdmin('Apenas o administrador pode excluir jogos.')) return;
+
     if (confirm('Excluir jogo?')) {
         try {
             if (supabaseClient) {
@@ -4461,6 +4664,8 @@ const nextBlock = (n) => {
 
 // CADASTROS COMMON
 const deleteItem = async (tab, id) => {
+    if (!requireAdmin('Apenas o administrador pode excluir registros.')) return;
+
     if (state.isFormActive) {
         showToast('Não é permitido excluir registros enquanto um formulário de jogo está aberto. Salve ou cancele o jogo primeiro.', 'error');
         return;
@@ -4481,6 +4686,8 @@ const deleteItem = async (tab, id) => {
     }
 };
 const prepareEdit = (tab, id) => { 
+    if (!requireAdmin('Apenas o administrador pode editar registros.')) return;
+
     state.editingId = id; renderTab(tab); 
     let item = state[tab].find(i => i.id === id); 
     if (tab === 'jogadores') {
@@ -4620,6 +4827,7 @@ tabButtons.forEach(btn => btn.addEventListener('click', () => {
 document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => {
     const page = item.dataset.page;
     if (['estadios', 'competicoes', 'arbitros', 'jogadores', 'cadastros'].includes(page)) {
+        if (!requireAdmin('A página Cadastros é restrita ao administrador.')) return;
         showSection('cadastros');
         const targetTab = page === 'cadastros' ? 'adversarios' : page;
         renderTab(targetTab);
@@ -4652,7 +4860,10 @@ document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('cl
         showSection(page);
     }
 }));
-document.getElementById('btn-novo-jogo')?.addEventListener('click', () => renderNovoJogoPage());
+document.getElementById('btn-novo-jogo')?.addEventListener('click', () => {
+    if (!requireAdmin('Apenas o administrador pode cadastrar jogos.')) return;
+    renderNovoJogoPage();
+});
 ['filter-temporada', 'filter-campeonato', 'filter-casa', 'filter-fora', 'filter-estadio', 'filter-arbitro', 'filter-publico-min', 'filter-publico-max'].forEach(id => { document.getElementById(id)?.addEventListener('change', renderJogos); if(id.includes('publico')) document.getElementById(id)?.addEventListener('input', renderJogos); });
 ['elenco-filter-temporada', 'elenco-filter-posicao', 'elenco-filter-status', 'elenco-filter-nome', 'elenco-filter-nacionalidade'].forEach(id => document.getElementById(id)?.addEventListener('change', renderElenco));
 ['elenco-filter-idade-min', 'elenco-filter-idade-max'].forEach(id => document.getElementById(id)?.addEventListener('input', renderElenco));
@@ -6581,6 +6792,37 @@ window.addEventListener('DOMContentLoaded', async () => {
         return { data: allData, error: null };
     };
 
+    setupAuthUI();
+    try {
+        console.log('Estatlético: Preparando autenticação...');
+        if (!window.supabase) {
+            throw new Error("O script do Supabase não foi carregado corretamente.");
+        }
+
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const { data: authData, error: authError } = await supabaseClient.auth.getSession();
+        if (authError) throw authError;
+
+        updateAuthSession(authData?.session || null);
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            updateAuthSession(session || null);
+        });
+
+        if (!authData?.session) {
+            console.log('Estatlético: Aguardando login do usuário.');
+            clearTimeout(safetyTimer);
+            if (loader) loader.style.display = 'none';
+            return;
+        }
+    } catch (authError) {
+        console.error('Estatlético: Falha na autenticação:', authError);
+        updateAuthSession(null);
+        setAuthMessage(authError.message || 'Não foi possível preparar o login.', 'error');
+        clearTimeout(safetyTimer);
+        if (loader) loader.style.display = 'none';
+        return;
+    }
+
     // Cache Layer: Tenta carregar dados salvos imediatamente
     let cachedData = await idbCache.get('estatletico_cache');
     
@@ -6601,6 +6843,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             console.log('Estatlético: Carregando cache do IndexedDB...');
             Object.keys(cachedData).forEach(k => { if(state[k]) state[k] = cachedData[k]; });
             handleRouting(); // Renderiza com dados em cache
+            applyPermissionUI();
             if (loader) loader.style.display = 'none';
         } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
     }
@@ -6609,11 +6852,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         if(loader && !cachedData) loader.style.display = 'flex';
         
         console.log('Estatlético: Verificando Supabase Client...');
-        if (!window.supabase) {
-            throw new Error("O script do Supabase não foi carregado corretamente.");
+        if (!supabaseClient) {
+            if (!window.supabase) {
+                throw new Error("O script do Supabase não foi carregado corretamente.");
+            }
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         }
-        
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         // Remove the loader instantly if cache exists, or after a short delay if we're waiting for network
         if (!cachedData && loader) {
@@ -6682,6 +6926,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 } else if (hasChanges) {
                     handleRouting();
                 }
+                applyPermissionUI();
             });
 
     } catch (e) {
@@ -6710,6 +6955,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         enrichJogos();
         
         handleRouting();
+        applyPermissionUI();
         window.addEventListener('hashchange', handleRouting);
 
         // Vincular Eventos para Filtros de Artilheiros

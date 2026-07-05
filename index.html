@@ -32,11 +32,42 @@
         })();
     </script>
 </head>
-<body>
+<body class="auth-pending">
     <div id="global-loader">
         <div class="spinner"></div>
         <p style="margin-top: 1rem; font-weight: bold; color: var(--text-main);">Conectando ao Banco de Dados...</p>
     </div>
+
+    <section id="auth-screen" class="auth-screen hidden" aria-label="Acesso ao Estatlético">
+        <div class="auth-panel">
+            <div class="auth-brand">
+                <div class="auth-logo"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <h1>Estatlético</h1>
+                    <p>Portal de Estatísticas</p>
+                </div>
+            </div>
+
+            <div class="auth-tabs" role="tablist" aria-label="Tipo de acesso">
+                <button type="button" class="auth-tab active" data-auth-mode="signin">Entrar</button>
+                <button type="button" class="auth-tab" data-auth-mode="signup">Criar senha</button>
+            </div>
+
+            <form id="auth-form" class="auth-form">
+                <div class="form-group">
+                    <label for="auth-email">E-mail</label>
+                    <input type="email" id="auth-email" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="auth-password">Senha</label>
+                    <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required>
+                </div>
+                <button type="submit" class="btn-primary auth-submit" id="auth-submit">Entrar</button>
+            </form>
+
+            <p id="auth-message" class="auth-message" aria-live="polite"></p>
+        </div>
+    </section>
 
     <div class="mobile-header">
         <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -120,11 +151,15 @@
         </button>
 
         <div class="user-profile">
-            <div class="user-avatar">SB</div>
+            <div class="user-avatar" id="user-avatar">--</div>
             <div class="user-info">
                 <p>Stéfano Bruno</p>
                 <span>stefanobrunofaria@gmail.c...</span>
+                <small id="user-profile-role">Usuário</small>
             </div>
+            <button class="logout-btn" type="button" onclick="window.logoutEstatletico()" title="Sair">
+                <i class="fas fa-right-from-bracket"></i>
+            </button>
         </div>
     </aside>
 
