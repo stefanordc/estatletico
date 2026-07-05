@@ -229,6 +229,8 @@ const setAuthMode = (mode) => {
     const form = document.getElementById('auth-form');
     const submit = document.getElementById('auth-submit');
     const password = document.getElementById('auth-password');
+    const confirmGroup = document.getElementById('auth-confirm-group');
+    const confirmPassword = document.getElementById('auth-password-confirm');
 
     document.querySelectorAll('.auth-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.authMode === nextMode);
@@ -237,6 +239,11 @@ const setAuthMode = (mode) => {
     if (form) form.dataset.mode = nextMode;
     if (submit) submit.textContent = nextMode === 'signup' ? 'Criar senha' : 'Entrar';
     if (password) password.autocomplete = nextMode === 'signup' ? 'new-password' : 'current-password';
+    if (confirmGroup) confirmGroup.classList.toggle('hidden', nextMode !== 'signup');
+    if (confirmPassword) {
+        confirmPassword.required = nextMode === 'signup';
+        confirmPassword.value = '';
+    }
     setAuthMessage();
 };
 
@@ -261,9 +268,15 @@ const setupAuthUI = () => {
 
         const email = normalizeEmail(document.getElementById('auth-email')?.value);
         const password = document.getElementById('auth-password')?.value || '';
+        const confirmPassword = document.getElementById('auth-password-confirm')?.value || '';
         const mode = form.dataset.mode === 'signup' ? 'signup' : 'signin';
         const submit = document.getElementById('auth-submit');
         const originalText = submit?.textContent || '';
+
+        if (mode === 'signup' && password !== confirmPassword) {
+            setAuthMessage('As senhas não conferem.', 'error');
+            return;
+        }
 
         if (submit) {
             submit.disabled = true;
@@ -272,9 +285,22 @@ const setupAuthUI = () => {
         setAuthMessage();
 
         try {
-            const response = mode === 'signup'
-                ? await supabaseClient.auth.signUp({ email, password })
-                : await supabaseClient.auth.signInWithPassword({ email, password });
+            let response;
+            if (mode === 'signup') {
+                response = await supabaseClient.auth.signUp({ email, password });
+                if (response.error) throw response.error;
+
+                if (!response.data?.session) {
+                    const loginResponse = await supabaseClient.auth.signInWithPassword({ email, password });
+                    if (loginResponse.error) {
+                        setAuthMessage('Cadastro criado, mas o Supabase ainda exige confirmação de e-mail para liberar o login automático.', 'success');
+                        return;
+                    }
+                    response = loginResponse;
+                }
+            } else {
+                response = await supabaseClient.auth.signInWithPassword({ email, password });
+            }
 
             if (response.error) throw response.error;
 
@@ -286,7 +312,7 @@ const setupAuthUI = () => {
                 return;
             }
 
-            setAuthMessage('Cadastro criado. Confirme seu e-mail e depois entre.', 'success');
+            setAuthMessage('Cadastro criado, mas o Supabase ainda exige confirmação de e-mail para liberar o login.', 'success');
         } catch (error) {
             console.error('Auth error:', error);
             setAuthMessage(error.message || 'Não foi possível autenticar.', 'error');
