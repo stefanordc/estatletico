@@ -336,14 +336,21 @@ body.role-user #btn-novo-jogo {
 
 .logout-btn {
     margin-left: auto;
-    width: 34px;
+    min-width: 64px;
     height: 34px;
+    padding: 0 0.7rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.05);
     color: #aaa;
     cursor: pointer;
     transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .logout-btn:hover {
