@@ -3023,6 +3023,25 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             </form>
         </div>
     `;
+    const multiStepForm = document.getElementById('multi-step-form');
+    multiStepForm?.addEventListener('keydown', event => {
+        if (!event.ctrlKey || event.key !== 'Enter') return;
+
+        const activeBlock = multiStepForm.querySelector('.form-block.active');
+        const currentBlock = Number.parseInt(activeBlock?.id.split('-')[1], 10);
+        if (!currentBlock) return;
+
+        event.preventDefault();
+        if (currentBlock < 5) {
+            // nextBlock já confere os campos obrigatórios da etapa atual.
+            nextBlock(currentBlock + 1);
+            return;
+        }
+
+        // A última etapa usa as validações próprias da escalação antes de salvar.
+        saveNewJogo();
+    });
+
     setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
     setupAutocomplete('game-estadio', 'estadios', 'nome');
     setupAutocomplete('game-arbitro', 'arbitros', 'nome');
