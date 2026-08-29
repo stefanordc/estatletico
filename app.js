@@ -3466,6 +3466,11 @@ const saveNewJogo = () => {
 
     const fd = new FormData(document.getElementById('multi-step-form'));
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
+    if (shouldSkipPenaltyBlock()) {
+        jogo.penaltis = 'Não';
+        jogo.penaltisCasa = 0;
+        jogo.penaltisFora = 0;
+    }
     if(document.getElementById('game-arb-ni').checked) jogo.arbitro = 'N/I';
     
     // Processar Público e Renda (remover máscaras de forma robusta)
@@ -4820,9 +4825,22 @@ const validateBlock = (n) => {
     return valid;
 };
 
+const shouldSkipPenaltyBlock = () => {
+    const temporada = Number.parseInt(document.getElementById('game-temporada')?.value, 10);
+    const campeonato = normalizeString(document.getElementById('game-campeonato')?.value);
+    return temporada >= 2003 && campeonato.includes('campeonato brasileiro');
+};
+
 const nextBlock = (n) => {
     const current = parseInt(document.querySelector('.form-block.active').id.split('-')[1]);
     if (n > current && !validateBlock(current)) return;
+
+    // Desde 2003 o Campeonato Brasileiro não tem disputa por pênaltis.
+    // Faz o salto nas duas direções para que o fluxo permaneça consistente.
+    if (shouldSkipPenaltyBlock()) {
+        if (current === 2 && n === 3) n = 4;
+        if (current === 4 && n === 3) n = 2;
+    }
     
     document.querySelectorAll('.form-block').forEach(b => b.classList.remove('active'));
     document.getElementById(`block-${n}`).classList.add('active');
