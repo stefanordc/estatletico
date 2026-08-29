@@ -704,6 +704,29 @@ const tabButtons = document.querySelectorAll('.tab-btn');
 const modalContainer = document.getElementById('modal-container');
 const novoJogoContainer = document.getElementById('novo-jogo-container');
 
+// Fecha sempre o pop-up visível que estiver acima dos demais. O seletor cobre
+// os modais de consulta e o formulário rápido; os futuros pop-ups devem usar
+// uma dessas mesmas classes para herdar este comportamento.
+const closeTopPopup = () => {
+    const popups = Array.from(document.querySelectorAll('#quick-add-modal, .modal-overlay'))
+        .filter(popup => !popup.hidden && getComputedStyle(popup).display !== 'none');
+
+    if (!popups.length) return false;
+
+    const topPopup = popups.reduce((top, popup) => {
+        const topZIndex = Number.parseInt(getComputedStyle(top).zIndex, 10) || 0;
+        const popupZIndex = Number.parseInt(getComputedStyle(popup).zIndex, 10) || 0;
+        return popupZIndex >= topZIndex ? popup : top;
+    });
+    topPopup.remove();
+    return true;
+};
+
+document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' && event.key !== 'Esc') return;
+    if (closeTopPopup()) event.preventDefault();
+});
+
 // Navigation
 const showSection = (sectionId, skipHashUpdate = false) => {
     if (['cadastros', 'novo-jogo'].includes(sectionId) && !isAdmin()) {
