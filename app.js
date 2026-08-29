@@ -422,6 +422,48 @@ const calculateAgeAtEndOfYear = (birthDate, year) => {
     return year - birth.getFullYear();
 };
 
+const isAtletico = (teamName) => ['atlético', 'atletico', 'atlético-mg', 'atletico-mg'].includes(String(teamName || '').trim().toLowerCase());
+
+// O ID é a referência canônica nos dados de jogo. O nome continua salvo apenas
+// para exibição e compatibilidade com os jogos cadastrados antes desta mudança.
+const getSelectedPlayer = (input, season) => {
+    const selectedId = input?.dataset?.jogadorId;
+    if (selectedId) {
+        const byId = state.jogadores.find(p => String(p.id) === String(selectedId));
+        if (byId) return byId;
+    }
+
+    // Compatibilidade para um cadastro legado: só infere o ID quando o nome é
+    // inequivocamente único na temporada. Nunca escolhe arbitrariamente.
+    const candidates = state.jogadores.filter(p =>
+        p.nome_guerra === input?.value && String(p.temporada) === String(season) && p.posicao !== 'Técnico'
+    );
+    return candidates.length === 1 ? candidates[0] : null;
+};
+
+const getPlayerFromGameReference = (reference, season) => {
+    const byGlobalId = state.jogadores.find(p =>
+        String(p.id_jogador) === String(reference?.idJogador)
+        && String(p.temporada) === String(season)
+    );
+    if (byGlobalId) return byGlobalId;
+
+    // Compatibilidade de leitura para jogos ainda não migrados. Este ID nunca
+    // volta a ser gravado no JSON da partida.
+    const byLegacyId = state.jogadores.find(p => String(p.id) === String(reference?.jogadorId));
+    if (byLegacyId) return byLegacyId;
+
+    const byName = state.jogadores.filter(p =>
+        p.nome_guerra === reference?.jogador && String(p.temporada) === String(season)
+    );
+    return byName.length === 1 ? byName[0] : null;
+};
+
+const getAdversarioDoJogo = (casa, fora) => {
+    const adversarioNome = isAtletico(casa) ? fora : casa;
+    return state.adversarios.find(a => a.clube === adversarioNome) || null;
+};
+
 const convertMatchTime = (inputVal) => {
     let m = parseInt(inputVal);
     if (isNaN(m)) return { min: '', tempo: 1 };
@@ -939,7 +981,14 @@ const renderJogadores = () => {
             return;
         }
 
-        const item = { id: state.editingId || Date.now(), temporada: novaTemporada, nome_completo: novoNomeCompleto, nome_guerra: fd.get('nome_guerra'), posicao: fd.get('posicao'), nacionalidade: fd.get('nacionalidade'), nascimento: novoNascimento, numero: fd.get('numero'), foto: fd.get('foto') || 'https://via.placeholder.com/40', observacao: fd.get('observacao'), foraDoElenco: document.getElementById('input-fora-do-elenco').checked };
+        const samePlayer = state.jogadores.find(j =>
+            j.nome_completo?.trim().toLowerCase() === novoNomeCompleto?.trim().toLowerCase()
+            && j.nascimento === novoNascimento
+            && j.id !== state.editingId
+        );
+        const editingPlayer = state.jogadores.find(j => j.id === state.editingId);
+        const playerRecordId = state.editingId || Date.now();
+        const item = { id: playerRecordId, id_jogador: samePlayer?.id_jogador || editingPlayer?.id_jogador || playerRecordId, temporada: novaTemporada, nome_completo: novoNomeCompleto, nome_guerra: fd.get('nome_guerra'), posicao: fd.get('posicao'), nacionalidade: fd.get('nacionalidade'), nascimento: novoNascimento, numero: fd.get('numero'), foto: fd.get('foto') || 'https://via.placeholder.com/40', observacao: fd.get('observacao'), foraDoElenco: document.getElementById('input-fora-do-elenco').checked };
         if (state.editingId) { state.jogadores[state.jogadores.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
         else state.jogadores.push(item);
 
@@ -2596,15 +2645,18 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         const resultsFull = ds.filter(item => normalizeString(item[currentField]).includes(normVal))
                           .sort((a,b) => a[currentField].localeCompare(b[currentField]));
         
-        // Garantir valores únicos no dropdown para campos como 'temporada'
-        const results = [];
-        const seen = new Set();
-        resultsFull.forEach(item => {
-            if (!seen.has(item[currentField])) {
-                seen.add(item[currentField]);
-                results.push(item);
-            }
-        });
+        // Jogadores podem ter o mesmo nome de guerra. Nesse caso cada registro
+        // precisa permanecer selecionável para que o ID correto seja persistido.
+        const results = currentSourceKey === 'jogadores' ? resultsFull : [];
+        if (currentSourceKey !== 'jogadores') {
+            const seen = new Set();
+            resultsFull.forEach(item => {
+                if (!seen.has(item[currentField])) {
+                    seen.add(item[currentField]);
+                    results.push(item);
+                }
+            });
+        }
         
         const drop = document.createElement('div'); 
         drop.className = 'autocomplete-results';
@@ -2612,7 +2664,10 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         results.forEach((res, idx) => {
             const item = document.createElement('div'); 
             item.className = 'autocomplete-item'; 
-            item.textContent = res[currentField];
+            const duplicateName = currentSourceKey === 'jogadores' && resultsFull.filter(p => p[currentField] === res[currentField]).length > 1;
+            item.textContent = duplicateName
+                ? `${res[currentField]} — ${res.nascimento || 'nascimento não informado'} (${res.posicao || 'sem posição'})`
+                : res[currentField];
             item.onclick = () => { 
                 inp.value = res[currentField]; 
                 drop.remove(); 
@@ -2772,11 +2827,17 @@ window.saveQuickAdd = (type, targetInputId) => {
         item.numero = document.getElementById('qa-numero').value || ''; 
         item.foraDoElenco = document.getElementById('qa-fora-do-elenco').checked; 
         item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; 
+        const samePlayer = state.jogadores.find(p =>
+            p.nome_completo?.trim().toLowerCase() === item.nome_completo?.trim().toLowerCase()
+            && p.nascimento === item.nascimento
+        );
+        item.id_jogador = samePlayer?.id_jogador || item.id;
     }
     state[type].push(item); saveData(type, [item]);
     const inp = document.getElementById(targetInputId); 
     if(inp) { 
         inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
+        if (type === 'jogadores') inp.dataset.jogadorId = String(item.id);
         inp.dispatchEvent(new Event('change')); 
         if (type === 'arbitros' && ['game-arbitro', 'game-assistente1', 'game-assistente2', 'game-var'].includes(targetInputId)) {
             updateRefereeInfo();
@@ -3171,8 +3232,9 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
 const addCardRow = (team, data = null) => {
     const isAdv = team === 'adv'; const tbody = document.getElementById(`cards-${team}-body`); const row = document.createElement('tr'); const season = document.getElementById('game-temporada').value;
+    const selectedPlayer = isAdv ? null : getPlayerFromGameReference(data, season);
     const yellowVal = data ? data.amarelo : 1;
-    row.innerHTML = `<td class="col-player">${isAdv ? '<input type="text" placeholder="Adversário" class="card-player-inp" value="Adversário" required>' : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? `<input type="text" placeholder="Adversário" class="card-player-inp" value="${data?.jogador || 'Adversário'}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${data?.red == 0 ? 'selected' : '' }>0</option><option value="1" ${data?.red == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
     
     // TAB behavior for cards
     const inputsOnRow = row.querySelectorAll('input, select');
@@ -3205,6 +3267,7 @@ const addCardRow = (team, data = null) => {
                     return (!gS || pS === gS) && p.posicao !== 'Técnico';
                 },
                 (res) => {
+                    inp.dataset.jogadorId = String(res.id);
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.card-player-inp');
@@ -3213,10 +3276,12 @@ const addCardRow = (team, data = null) => {
                 }
             ); 
             
+            inp.addEventListener('input', () => { delete inp.dataset.jogadorId; });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
-                const player = state.jogadores.find(j => j.nome_guerra === inp.value && String(j.temporada) === String(currentSeason)); 
+                const player = getSelectedPlayer(inp, currentSeason);
                 if(player) { 
+                    inp.dataset.jogadorId = String(player.id);
                     const posInp = row.querySelector('.pos-inp');
                     if (posInp) posInp.value = player.posicao; 
                 } 
@@ -3231,10 +3296,11 @@ const addLineupRow = (team, data = null) => {
     const tbody = document.getElementById(`lineup-${team}-body`);
     const row = document.createElement('tr');
     const season = document.getElementById('game-temporada').value;
+    const selectedPlayer = isAdv ? null : getPlayerFromGameReference(data, season);
 
     row.innerHTML = `
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
-        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" value="${data?.jogador || ''}" required></div>`}</td>
+        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" value="${data?.jogador || ''}" required></div>`}</td>
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
@@ -3283,6 +3349,7 @@ const addLineupRow = (team, data = null) => {
                     return (!gS || pS === gS) && p.posicao !== 'Técnico';
                 },
                 (res) => {
+                    inp.dataset.jogadorId = String(res.id);
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.line-player-inp');
@@ -3316,10 +3383,12 @@ const addLineupRow = (team, data = null) => {
                 });
             });
 
+            inp.addEventListener('input', () => { delete inp.dataset.jogadorId; });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
-                const p = state.jogadores.find(j => j.nome_guerra === inp.value && String(j.temporada) === String(currentSeason)); 
+                const p = getSelectedPlayer(inp, currentSeason);
                 if(p) { 
+                    inp.dataset.jogadorId = String(p.id);
                     row.querySelector('.mini-foto').src = p.foto; 
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
@@ -3378,14 +3447,34 @@ const saveNewJogo = () => {
     saveData('fixedSeason', state.fixedSeason); saveData('isSeasonFixed', state.isSeasonFixed);
     saveData('fixedCampeonato', state.fixedCampeonato); saveData('isCampeonatoFixed', state.isCampeonatoFixed);
     saveData('fixedTecnicoAtle', state.fixedTecnicoAtle); saveData('isTecnicoFixed', state.isTecnicoFixed);
-    jogo.cartoesGalo = Array.from(document.querySelectorAll('#cards-galo-body tr')).map(row => ({ 
-        jogador: row.querySelector('.card-player-inp')?.value || '', 
-        posicao: row.querySelector('.pos-inp')?.value || '', 
-        amarelo: row.querySelector('.yellow-sel')?.value || '0', 
-        red: row.querySelector('.red-sel')?.value || '0', 
-        minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1' 
-    }));
+    const adversario = getAdversarioDoJogo(jogo.casa, jogo.fora);
+    if (!adversario) {
+        showToast('Selecione um adversário já cadastrado para que o jogo possa registrar o ID do clube.', 'error');
+        resetBtn();
+        return;
+    }
+    jogo.adversarioId = adversario.id;
+
+    const cardRowsGalo = Array.from(document.querySelectorAll('#cards-galo-body tr'));
+    jogo.cartoesGalo = cardRowsGalo.map(row => {
+        const input = row.querySelector('.card-player-inp');
+        const player = getSelectedPlayer(input, jogo.temporada);
+        return {
+            idJogador: player?.id_jogador,
+            jogador: input?.value || '',
+            posicao: row.querySelector('.pos-inp')?.value || '',
+            amarelo: row.querySelector('.yellow-sel')?.value || '0',
+            red: row.querySelector('.red-sel')?.value || '0',
+            minAmarelo: '', tempoAmarelo: '1', minVermelho: '', tempoVermelho: '1'
+        };
+    });
+    if (jogo.cartoesGalo.some(c => !c.idJogador)) {
+        showToast('Selecione cada jogador do Atlético nos cartões pela lista para registrar o ID correto.', 'error');
+        resetBtn();
+        return;
+    }
     jogo.cartoesAdv = Array.from(document.querySelectorAll('#cards-adv-body tr')).map(row => ({ 
+        adversarioId: adversario.id,
         jogador: row.querySelector('.card-player-inp')?.value || 'Adversário', 
         amarelo: row.querySelector('.yellow-sel')?.value || '0', 
         red: row.querySelector('.red-sel')?.value || '0', 
@@ -3400,13 +3489,16 @@ const saveNewJogo = () => {
 
     jogo.lineupGalo = [];
     Array.from(document.querySelectorAll('#lineup-galo-body tr')).forEach(r => {
-        const l = r.querySelector('.line-player-inp')?.value || r.querySelector('input[placeholder="Jogador"]')?.value;
+        const playerInput = r.querySelector('.line-player-inp');
+        const l = playerInput?.value || r.querySelector('input[placeholder="Jogador"]')?.value;
         if (!l || l.trim() === '' || l === 'Jogador') return; // Filtra linhas vazias
+        const player = getSelectedPlayer(playerInput, jogo.temporada);
         const gsInps = r.querySelectorAll('.gs-inp');
         const gsCnt = gsInps.length > 0 ? parseInt(gsInps[0].value || 0) : 0;
         
         jogo.lineupGalo.push({
             foto: r.querySelector('img')?.src || 'https://via.placeholder.com/35',
+            idJogador: player?.id_jogador,
             jogador: l,
             posicao: r.querySelector('.pos-inp')?.value || '-',
             golsCount: parseInt(r.querySelector('.goals-inp')?.value || 0),
@@ -3420,6 +3512,12 @@ const saveNewJogo = () => {
         });
     });
 
+    if (jogo.lineupGalo.some(l => !l.idJogador)) {
+        showToast('Selecione cada jogador da escalação pela lista para registrar o ID correto.', 'error');
+        resetBtn();
+        return;
+    }
+
     const titularesCount = jogo.lineupGalo.filter(l => l.titular).length;
     if (titularesCount !== 11) {
         alert(`Erro de Validação: O número de jogadores titulares deve ser exatamente 11. Você marcou ${titularesCount}.`);
@@ -3428,10 +3526,10 @@ const saveNewJogo = () => {
     }
 
     // Checar duplicatas na escalação
-    const lineupNames = jogo.lineupGalo.map(l => l.jogador.trim().toLowerCase()).filter(n => n && n !== 'jogador');
-    const duplicates = lineupNames.filter((name, idx) => lineupNames.indexOf(name) !== idx);
+    const lineupIds = jogo.lineupGalo.map(l => String(l.idJogador));
+    const duplicates = lineupIds.filter((id, idx) => lineupIds.indexOf(id) !== idx);
     if (duplicates.length > 0) {
-        const dupNames = [...new Set(duplicates)].join(', ');
+        const dupNames = [...new Set(duplicates)].map(id => state.jogadores.find(p => String(p.id) === id)?.nome_guerra || id).join(', ');
         showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" está(ão) inserido(s) mais de uma vez na escalação.`, 'error');
         resetBtn();
         return;
@@ -3460,7 +3558,8 @@ const saveNewJogo = () => {
         // Remove fotos para economizar espaço e evitar erros de schema imediato
         const jogoParaSalvar = {
             ...jogo,
-            lineupGalo: (jogo.lineupGalo || []).map(({ foto, ...player }) => player)
+            lineupGalo: (jogo.lineupGalo || []).map(({ foto, jogadorId, ...player }) => player),
+            cartoesGalo: (jogo.cartoesGalo || []).map(({ jogadorId, ...player }) => player)
         };
         
         try {
@@ -6722,14 +6821,55 @@ const idbCache = {
 
 const enrichJogos = () => {
     console.log('Estatlético: Enriquecendo lineups dos jogos...');
-    state.jogos = state.jogos.map(jogo => ({
-        ...jogo,
+    const jogosComReferenciasResolvidas = [];
+    state.jogos = state.jogos.map(jogo => {
+        const adversarioId = jogo.adversarioId || getAdversarioDoJogo(jogo.casa, jogo.fora)?.id;
+        const resolveLegacyPlayer = (registro) => getPlayerFromGameReference(registro, jogo.temporada);
+        const jogoEnriquecido = {
+            ...jogo,
+        // Dados antigos recebem ID apenas quando a correspondência é única. Se
+        // houver homônimos, o jogo deve ser aberto e o atleta escolhido de novo.
+        adversarioId,
         lineupGalo: (jogo.lineupGalo || []).map(l => {
-            const player = state.jogadores.find(p => p.nome_guerra === l.jogador && String(p.temporada) === String(jogo.temporada))
-                        || state.jogadores.find(p => p.nome_guerra === l.jogador);
-            return { ...l, foto: player?.foto || l.foto || 'https://via.placeholder.com/35' };
-        })
+            const player = resolveLegacyPlayer(l);
+            return {
+                ...l,
+                ...(player && !l.idJogador ? { idJogador: player.id_jogador } : {}),
+                foto: player?.foto || l.foto || 'https://via.placeholder.com/35'
+            };
+        }),
+        cartoesGalo: (jogo.cartoesGalo || []).map(c => {
+            const player = resolveLegacyPlayer(c);
+            return {
+                ...c,
+                ...(player && !c.idJogador ? { idJogador: player.id_jogador } : {})
+            };
+        }),
+        cartoesAdv: (jogo.cartoesAdv || []).map(c => ({ ...c, adversarioId: c.adversarioId || adversarioId }))
+        };
+        const recebeuNovaReferencia = !jogo.adversarioId && jogoEnriquecido.adversarioId
+            || (jogo.lineupGalo || []).some((l, index) => !l.idJogador && jogoEnriquecido.lineupGalo[index]?.idJogador)
+            || (jogo.cartoesGalo || []).some((c, index) => !c.idJogador && jogoEnriquecido.cartoesGalo[index]?.idJogador)
+            || (jogo.cartoesAdv || []).some((c, index) => !c.adversarioId && jogoEnriquecido.cartoesAdv[index]?.adversarioId);
+        const todasReferenciasResolvidas = Boolean(jogoEnriquecido.adversarioId)
+            && jogoEnriquecido.lineupGalo.every(l => l.idJogador)
+            && jogoEnriquecido.cartoesGalo.every(c => c.idJogador)
+            && jogoEnriquecido.cartoesAdv.every(c => c.adversarioId);
+        if (recebeuNovaReferencia && todasReferenciasResolvidas) jogosComReferenciasResolvidas.push(jogoEnriquecido);
+        return jogoEnriquecido;
+    });
+    return jogosComReferenciasResolvidas;
+};
+
+const persistResolvedGameReferences = async (jogos) => {
+    if (!jogos.length || !supabaseClient || !isAdmin()) return;
+    const payload = jogos.map(({ lineupGalo = [], ...jogo }) => ({
+        ...jogo,
+        lineupGalo: lineupGalo.map(({ foto, jogadorId, ...jogador }) => jogador),
+        cartoesGalo: (jogo.cartoesGalo || []).map(({ jogadorId, ...jogador }) => jogador)
     }));
+    await saveData('jogos', payload);
+    console.info(`Estatlético: ${payload.length} jogo(s) legado(s) tiveram referências por ID preenchidas.`);
 };
 
 // --- ENTRY POINT ---
@@ -6849,6 +6989,32 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Alterações feitas diretamente no Supabase (por exemplo, cadastrar um
+    // adversário no painel) não devem ficar invisíveis até o próximo reload.
+    let refreshingAdversarios = false;
+    const refreshAdversariosFromServer = async () => {
+        if (refreshingAdversarios || !supabaseClient) return;
+        refreshingAdversarios = true;
+        try {
+            const { data, error } = await supabaseClient.from('adversarios').select('*');
+            if (error || !data) return;
+
+            const oldIds = new Set(state.adversarios.map(item => String(item.id)));
+            const changed = data.length !== state.adversarios.length || data.some(item => !oldIds.has(String(item.id)));
+            if (!changed) return;
+
+            state.adversarios = data;
+            const cached = await idbCache.get('estatletico_cache') || {};
+            await idbCache.set('estatletico_cache', { ...cached, adversarios: data });
+            if (window.location.hash === '#cadastros/adversarios') renderTab('adversarios');
+        } catch (error) {
+            console.warn('Estatlético: não foi possível atualizar adversários em segundo plano.', error);
+        } finally {
+            refreshingAdversarios = false;
+        }
+    };
+    window.addEventListener('focus', refreshAdversariosFromServer);
+
     // Cache Layer: Tenta carregar dados salvos imediatamente
     let cachedData = await idbCache.get('estatletico_cache');
     
@@ -6942,8 +7108,14 @@ window.addEventListener('DOMContentLoaded', async () => {
                         await idbCache.set('estatletico_cache', freshData);
                     }
 
-                    // Re-enriquece após mudanças no background
-                    enrichJogos();
+                    // Re-enriquece após mudanças no background e atualiza no
+                    // banco somente os jogos legados sem qualquer ambiguidade.
+                    const jogosParaMigrar = enrichJogos();
+                    try {
+                        await persistResolvedGameReferences(jogosParaMigrar);
+                    } catch (error) {
+                        console.error('Estatlético: Não foi possível migrar as referências legadas.', error);
+                    }
                 }
                 
                 // Sempre tenta rotear se não tinha cache (para não deixar a tela preta) ou se houve mudanças
@@ -6966,6 +7138,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         const hamburgerBtn = document.getElementById('hamburger-btn');
         const sidebar = document.querySelector('.sidebar');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+        const sidebarCollapsedStorageKey = 'estatletico_sidebar_collapsed';
+
+        const setSidebarCollapsed = (collapsed, persist = true) => {
+            document.body.classList.toggle('sidebar-collapsed', collapsed);
+            sidebarCollapseBtn?.setAttribute('aria-expanded', String(!collapsed));
+            sidebarCollapseBtn?.setAttribute('aria-label', collapsed ? 'Expandir menu' : 'Recolher menu');
+            sidebarCollapseBtn?.setAttribute('title', collapsed ? 'Expandir menu' : 'Recolher menu');
+
+            if (persist) {
+                try {
+                    localStorage.setItem(sidebarCollapsedStorageKey, String(collapsed));
+                } catch (_) {
+                    // A preferência é apenas visual; o menu continua funcional sem armazenamento local.
+                }
+            }
+        };
+
+        try {
+            setSidebarCollapsed(localStorage.getItem(sidebarCollapsedStorageKey) === 'true', false);
+        } catch (_) {
+            setSidebarCollapsed(false, false);
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            const label = item.querySelector('span')?.textContent?.trim();
+            if (label) item.setAttribute('title', label);
+        });
+
+        sidebarCollapseBtn?.addEventListener('click', () => {
+            setSidebarCollapsed(!document.body.classList.contains('sidebar-collapsed'));
+        });
         
         hamburgerBtn?.addEventListener('click', () => {
             sidebar?.classList.toggle('active');
