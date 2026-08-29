@@ -107,6 +107,15 @@ const state = {
     isFormActive: false // Flag de segurança para bloquear exclusões durante edição
 };
 
+// Uma busca iniciada antes de um cadastro não pode apagar o item recém-criado
+// quando a resposta antiga chegar ao navegador.
+const tableDataVersions = Object.fromEntries(MUTABLE_TABLES.map(table => [table, 0]));
+const markTableDataChanged = (table) => {
+    if (Object.prototype.hasOwnProperty.call(tableDataVersions, table)) {
+        tableDataVersions[table] += 1;
+    }
+};
+
 // Cache para estatísticas pesadas para evitar travamentos
 const statsCache = {
     atleticoTecnicos: null,
@@ -343,6 +352,7 @@ const saveData = async (key, data) => {
             throw new Error('Permissão negada.');
         }
         if (['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'].includes(key)) {
+            markTableDataChanged(key);
             // Cópia defensiva para remover colunas que podem não existir no Supabase ainda
             const safeData = data.map(item => {
                 const safeItem = { ...item };
@@ -359,6 +369,7 @@ const saveData = async (key, data) => {
                 throw new Error(error.message); // â† Fundamental para que a função chamadora saiba da falha
             } else {
                 invalidateCache(); // Invalida o cache ao salvar no banco
+                void saveTableSnapshotToCache(key);
             }
         } else {
             localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data));
@@ -6879,6 +6890,69 @@ const idbCache = {
     }
 };
 
+const saveTableSnapshotToCache = async (table) => {
+    if (!Array.isArray(state[table])) return;
+    const cached = await idbCache.get('estatletico_cache') || {};
+    await idbCache.set('estatletico_cache', { ...cached, [table]: state[table] });
+};
+
+const mergeServerRowsWithLocalState = (table, serverRows) => {
+    const recordsById = new Map(serverRows.map(record => [String(record.id), record]));
+    (state[table] || []).forEach(localRecord => {
+        const id = String(localRecord.id);
+        recordsById.set(id, { ...(recordsById.get(id) || {}), ...localRecord });
+    });
+    return [...recordsById.values()];
+};
+
+const renderChangedCadastroIfVisible = (table) => {
+    const currentHash = window.location.hash.replace('#', '');
+    if (!state.isFormActive && currentHash === `cadastros/${table}`) {
+        renderTab(table);
+    }
+};
+
+const applyRealtimeTableChange = async (payload) => {
+    const table = payload.table;
+    if (!MUTABLE_TABLES.includes(table) || !Array.isArray(state[table])) return;
+
+    const record = payload.new || payload.old;
+    if (!record?.id) return;
+
+    const index = state[table].findIndex(item => String(item.id) === String(record.id));
+    if (payload.eventType === 'DELETE') {
+        if (index >= 0) state[table].splice(index, 1);
+    } else if (index >= 0) {
+        // Mantém campos usados apenas pela interface que não são persistidos na tabela.
+        state[table][index] = { ...state[table][index], ...payload.new };
+    } else {
+        state[table].push(payload.new);
+    }
+
+    markTableDataChanged(table);
+    if (table === 'jogos') enrichJogos();
+    await saveTableSnapshotToCache(table);
+    renderChangedCadastroIfVisible(table);
+};
+
+const startRealtimeSync = () => {
+    if (!supabaseClient?.channel) return;
+
+    let channel = supabaseClient.channel('estatletico-live-data');
+    MUTABLE_TABLES.forEach(table => {
+        channel = channel.on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table
+        }, applyRealtimeTableChange);
+    });
+    channel.subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Estatlético: sincronização em tempo real indisponível; a atualização por foco continuará ativa.');
+        }
+    });
+};
+
 const enrichJogos = () => {
     console.log('Estatlético: Enriquecendo lineups dos jogos...');
     const jogosComReferenciasResolvidas = [];
@@ -7049,31 +7123,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Alterações feitas diretamente no Supabase (por exemplo, cadastrar um
-    // adversário no painel) não devem ficar invisíveis até o próximo reload.
-    let refreshingAdversarios = false;
-    const refreshAdversariosFromServer = async () => {
-        if (refreshingAdversarios || !supabaseClient) return;
-        refreshingAdversarios = true;
+    // Alterações feitas diretamente no Supabase são refletidas de imediato
+    // via Realtime. Ao retornar a uma aba, há também uma sincronização de
+    // segurança para os cadastros caso a conexão em tempo real tenha caído.
+    let refreshingCadastros = false;
+    const refreshCadastrosFromServer = async () => {
+        if (refreshingCadastros || !supabaseClient) return;
+        refreshingCadastros = true;
         try {
-            const { data, error } = await supabaseClient.from('adversarios').select('*');
-            if (error || !data) return;
+            const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores'];
+            const results = await Promise.all(tables.map(async table => {
+                const { data, error } = await supabaseClient.from(table).select('*');
+                return { table, data, error };
+            }));
 
-            const oldIds = new Set(state.adversarios.map(item => String(item.id)));
-            const changed = data.length !== state.adversarios.length || data.some(item => !oldIds.has(String(item.id)));
-            if (!changed) return;
+            for (const { table, data, error } of results) {
+                if (error || !data) continue;
+                const knownIds = new Set(state[table].map(item => String(item.id)));
+                const changed = data.length !== state[table].length || data.some(item => !knownIds.has(String(item.id)));
+                if (!changed) continue;
 
-            state.adversarios = data;
-            const cached = await idbCache.get('estatletico_cache') || {};
-            await idbCache.set('estatletico_cache', { ...cached, adversarios: data });
-            if (window.location.hash === '#cadastros/adversarios') renderTab('adversarios');
+                state[table] = mergeServerRowsWithLocalState(table, data);
+                markTableDataChanged(table);
+                await saveTableSnapshotToCache(table);
+                renderChangedCadastroIfVisible(table);
+            }
         } catch (error) {
-            console.warn('Estatlético: não foi possível atualizar adversários em segundo plano.', error);
+            console.warn('Estatlético: não foi possível sincronizar os cadastros em segundo plano.', error);
         } finally {
-            refreshingAdversarios = false;
+            refreshingCadastros = false;
         }
     };
-    window.addEventListener('focus', refreshAdversariosFromServer);
+    window.addEventListener('focus', refreshCadastrosFromServer);
 
     // Cache Layer: Tenta carregar dados salvos imediatamente
     let cachedData = await idbCache.get('estatletico_cache');
@@ -7099,6 +7180,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (loader) loader.style.display = 'none';
         } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
     }
+
+    startRealtimeSync();
 
     try {
         if(loader && !cachedData) loader.style.display = 'flex';
@@ -7128,6 +7211,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             jogos: 200       // jogos tem lineups aninhados, usar tamanho médio
         };
         console.log('Estatlético: Buscando tabelas de forma otimizada em background...');
+        const fetchStartedVersions = Object.fromEntries(tables.map(table => [table, tableDataVersions[table]]));
 
         // Fetch tables concurrently in the background
         Promise.all(tables.map(t => fetchTableWithPagination(t, batchSizes[t]).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
@@ -7145,8 +7229,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                     if (res.data) {
-                        state[tableName] = res.data;
-                        freshData[tableName] = res.data;
+                        const receivedAfterLocalChange = tableDataVersions[tableName] !== fetchStartedVersions[tableName];
+                        state[tableName] = receivedAfterLocalChange
+                            ? mergeServerRowsWithLocalState(tableName, res.data)
+                            : res.data;
+                        freshData[tableName] = state[tableName];
                         hasChanges = true;
                         console.log(`Estatlético: Tabela "${tableName}" atualizada em background com ${res.data.length} registros.`);
                     } else if (!state[tableName]) {
