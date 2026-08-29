@@ -4839,14 +4839,17 @@ const validateBlock = (n) => {
 const shouldSkipPenaltyBlock = () => {
     const temporada = Number.parseInt(document.getElementById('game-temporada')?.value, 10);
     const campeonato = normalizeString(document.getElementById('game-campeonato')?.value);
-    return temporada >= 2003 && campeonato.includes('campeonato brasileiro');
+    const rodada = Number.parseInt(document.querySelector('[name="rodada"]')?.value, 10);
+    const isBrasileiraoFrom2003 = temporada >= 2003 && campeonato.includes('campeonato brasileiro');
+    const isMineiroFirstPhase = campeonato.includes('mineiro') && rodada >= 1 && rodada <= 11;
+    return isBrasileiraoFrom2003 || isMineiroFirstPhase;
 };
 
 const nextBlock = (n) => {
     const current = parseInt(document.querySelector('.form-block.active').id.split('-')[1]);
     if (n > current && !validateBlock(current)) return;
 
-    // Desde 2003 o Campeonato Brasileiro não tem disputa por pênaltis.
+    // O Brasileirão desde 2003 e a primeira fase do Mineiro não têm pênaltis.
     // Faz o salto nas duas direções para que o fluxo permaneça consistente.
     if (shouldSkipPenaltyBlock()) {
         if (current === 2 && n === 3) n = 4;
