@@ -4867,6 +4867,27 @@ const nextBlock = (n) => {
     window.scrollTo(0,0);
 };
 
+// Também aceita o atalho quando não há um campo focado, como acontece em uma
+// etapa de cartões vazia. Eventos originados dentro do formulário já são
+// tratados pelo listener do próprio formulário e não passam por este caminho.
+document.addEventListener('keydown', event => {
+    if (!event.ctrlKey || event.key !== 'Enter') return;
+
+    const form = document.getElementById('multi-step-form');
+    const jogoSection = document.getElementById('novo-jogo-section');
+    const popupAberto = document.querySelector('#quick-add-modal, .modal-overlay');
+    if (!form || jogoSection?.classList.contains('hidden') || popupAberto) return;
+    if (event.target instanceof Element && form.contains(event.target)) return;
+
+    const activeBlock = form.querySelector('.form-block.active');
+    const currentBlock = Number.parseInt(activeBlock?.id.split('-')[1], 10);
+    if (!currentBlock) return;
+
+    event.preventDefault();
+    if (currentBlock < 5) nextBlock(currentBlock + 1);
+    else saveNewJogo();
+});
+
 // CADASTROS COMMON
 const deleteItem = async (tab, id) => {
     if (!requireAdmin('Apenas o administrador pode excluir registros.')) return;
