@@ -852,6 +852,12 @@ td.actions .action-btn {
     animation: fadeInScale 0.2s ease-out;
 }
 
+.autocomplete-results.autocomplete-results-upward {
+    top: auto;
+    bottom: calc(100% + 2px);
+    transform-origin: bottom;
+}
+
 .autocomplete-item {
     padding: 0.85rem 1.2rem;
     cursor: pointer;

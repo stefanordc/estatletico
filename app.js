@@ -2694,6 +2694,12 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         
         const drop = document.createElement('div'); 
         drop.className = 'autocomplete-results';
+        // Na última linha da escalação não há espaço abaixo do campo: abre a
+        // lista para cima para ela não ficar escondida pelo botão de adicionar.
+        const lineupRow = inp.closest('#lineup-galo-body tr');
+        if (lineupRow && lineupRow === lineupRow.parentElement.lastElementChild) {
+            drop.classList.add('autocomplete-results-upward');
+        }
         
         results.forEach((res, idx) => {
             const item = document.createElement('div'); 
