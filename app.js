@@ -4793,6 +4793,8 @@ const deleteJogo = async (id) => {
                 if (error) throw error;
             }
             state.jogos = state.jogos.filter(j => j.id !== id);
+            markTableDataChanged('jogos');
+            void saveTableSnapshotToCache('jogos');
             renderJogos();
             showToast('Jogo excluído com sucesso!', 'success');
         } catch (e) {
@@ -4899,6 +4901,8 @@ const deleteItem = async (tab, id) => {
                 if (error) throw error;
             }
             state[tab] = state[tab].filter(i => i.id !== id);
+            markTableDataChanged(tab);
+            void saveTableSnapshotToCache(tab);
             renderTab(tab);
             showToast('Registro excluído com sucesso!', 'success');
         } catch (e) {
@@ -7158,6 +7162,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         refreshingCadastros = true;
         try {
             const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores'];
+            const refreshStartedVersions = Object.fromEntries(tables.map(table => [table, tableDataVersions[table]]));
             const results = await Promise.all(tables.map(async table => {
                 const { data, error } = await supabaseClient.from(table).select('*');
                 return { table, data, error };
@@ -7169,7 +7174,12 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const changed = data.length !== state[table].length || data.some(item => !knownIds.has(String(item.id)));
                 if (!changed) continue;
 
-                state[table] = mergeServerRowsWithLocalState(table, data);
+                // O servidor é a fonte de verdade para exclusões. Só mesclamos
+                // o estado local se ele mudou enquanto esta requisição rodava.
+                const localChangedDuringRefresh = tableDataVersions[table] !== refreshStartedVersions[table];
+                state[table] = localChangedDuringRefresh
+                    ? mergeServerRowsWithLocalState(table, data)
+                    : data;
                 markTableDataChanged(table);
                 await saveTableSnapshotToCache(table);
                 renderChangedCadastroIfVisible(table);
