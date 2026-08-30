@@ -5005,12 +5005,10 @@ const normalizeStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u03
 const setupAutofillHandler = () => {
     const nameInp = document.getElementById('input-nome-completo');
     if (!nameInp) return;
-    const autofillPlayer = (e) => {
-        const nome = normalizeStr(e.target.value);
-        if (!nome) return;
+    let lookupTimer;
+    let lookupVersion = 0;
 
-        // Compara sem acentos para suportar digitação de "Matias" == "Matías"
-        const matches = state.jogadores.filter(p => normalizeStr(p.nome_completo) === nome);
+    const preencherDados = (matches) => {
         if (matches.length === 0) return;
 
         // Ordena por ID decrescente â€” suporta ID numérico ou string
@@ -5066,8 +5064,53 @@ const setupAutofillHandler = () => {
         if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
     };
 
-    nameInp.addEventListener('input', autofillPlayer);
-    nameInp.addEventListener('blur', autofillPlayer);
+    const buscarDados = async (usarServidor = false) => {
+        const nomeDigitado = nameInp.value.trim();
+        const nomeNormalizado = normalizeStr(nomeDigitado);
+        if (!nomeNormalizado) return;
+
+        // O estado local responde sem esperar a rede.
+        const locais = state.jogadores.filter(p => normalizeStr(p.nome_completo) === nomeNormalizado);
+        preencherDados(locais);
+
+        if (!usarServidor || !supabaseClient) return;
+
+        const requestVersion = ++lookupVersion;
+        const { data, error } = await supabaseClient
+            .from('jogadores')
+            .select('*')
+            .ilike('nome_completo', nomeDigitado);
+
+        if (error) {
+            console.warn('Não foi possível buscar os dados do jogador para preenchimento automático.', error);
+            return;
+        }
+
+        // Evita preencher a partir de uma resposta antiga caso o usuário já
+        // tenha digitado outro nome enquanto a consulta estava em andamento.
+        if (requestVersion !== lookupVersion || normalizeStr(nameInp.value) !== nomeNormalizado) return;
+
+        const encontrados = (data || []).filter(p => normalizeStr(p.nome_completo) === nomeNormalizado);
+        if (encontrados.length === 0) return;
+
+        // Mantém o cache em memória atualizado para as próximas consultas.
+        encontrados.forEach(jogador => {
+            const index = state.jogadores.findIndex(item => String(item.id) === String(jogador.id));
+            if (index >= 0) state.jogadores[index] = jogador;
+            else state.jogadores.push(jogador);
+        });
+        markTableDataChanged('jogadores');
+        void saveTableSnapshotToCache('jogadores');
+        preencherDados(encontrados);
+    };
+
+    nameInp.addEventListener('input', () => {
+        void buscarDados(false);
+        clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(() => void buscarDados(true), 350);
+    });
+    nameInp.addEventListener('change', () => void buscarDados(true));
+    nameInp.addEventListener('blur', () => void buscarDados(true));
 };
 
 // INITIAL LISTENERS
