@@ -566,6 +566,15 @@ body.role-user #btn-novo-jogo {
     width: 100%;
 }
 
+.tecnico-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tecnico-form-grid .autocomplete-container,
+.tecnico-form-grid .autocomplete-container input {
+    width: 100%;
+}
+
 /* Responsive Grids */
 .grid-responsive-2 {
     display: grid;
