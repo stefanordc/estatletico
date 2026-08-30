@@ -3059,9 +3059,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         saveNewJogo();
     });
 
-    setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
-    setupAutocomplete('game-estadio', 'estadios', 'nome');
-    setupAutocomplete('game-arbitro', 'arbitros', 'nome');
+    // Nos dados da partida, sugestões ficam restritas ao técnico adversário.
+    // A escalação e os cartões mantêm seu próprio autocomplete para preservar
+    // a seleção pelo ID único do jogador.
+    setupAutocomplete('game-tecnico-adv', 'jogos', 'tecnicoAdv', null, null, false);
     document.getElementById('game-arbitro').addEventListener('blur', updateRefereeInfo);
     document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
 
@@ -3087,19 +3088,14 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         }
     });
 
-    setupAutocomplete('game-assistente1', 'arbitros', 'nome');
     document.getElementById('game-assistente1').addEventListener('blur', updateRefereeInfo);
 
-    setupAutocomplete('game-assistente2', 'arbitros', 'nome');
     document.getElementById('game-assistente2').addEventListener('blur', updateRefereeInfo);
 
-    setupAutocomplete('game-var', 'arbitros', 'nome');
     document.getElementById('game-var').addEventListener('blur', updateRefereeInfo);
 
     // Initial photo load if editing
     setTimeout(updateRefereeInfo, 100);
-    setupAutocomplete('game-fora', 'adversarios', 'clube');
-    setupAutocomplete('game-casa', 'adversarios', 'clube');
     const estInp = document.getElementById('game-estadio'); 
     estInp.addEventListener('change', () => { 
         const est = state.estadios.find(e => e.nome === estInp.value); 
