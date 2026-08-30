@@ -3059,7 +3059,8 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         saveNewJogo();
     });
 
-    // Nos dados da partida, sugestões ficam restritas ao técnico adversário.
+    // Nos dados da partida, sugestões ficam restritas ao técnico adversário
+    // e ao estádio, para permitir encontrá-lo digitando apenas parte do nome.
     // A escalação e os cartões mantêm seu próprio autocomplete para preservar
     // a seleção pelo ID único do jogador.
     setupAutocomplete('game-tecnico-adv', 'jogos', 'tecnicoAdv', null, null, false);
@@ -3096,6 +3097,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
     // Initial photo load if editing
     setTimeout(updateRefereeInfo, 100);
+    setupAutocomplete('game-estadio', 'estadios', 'nome', null, null, false);
     const estInp = document.getElementById('game-estadio'); 
     estInp.addEventListener('change', () => { 
         const est = state.estadios.find(e => e.nome === estInp.value); 
