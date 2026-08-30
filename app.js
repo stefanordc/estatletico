@@ -2634,6 +2634,43 @@ const populateFilter = (id, values) => {
 
 window._autocompleteFilters = window._autocompleteFilters || {};
 
+// O carregamento inicial de jogadores pode demorar por causa das fotos em
+// Base64. Para não bloquear a escalação, busca somente a temporada solicitada
+// quando um jogador ainda não estiver presente no cache do navegador.
+const playerSeasonLookups = new Map();
+const hydratePlayersForSeason = async (season) => {
+    const normalizedSeason = String(season || '').trim();
+    if (!normalizedSeason || !supabaseClient) return [];
+    if (playerSeasonLookups.has(normalizedSeason)) return playerSeasonLookups.get(normalizedSeason);
+
+    const lookup = supabaseClient
+        .from('jogadores')
+        .select('*')
+        .eq('temporada', normalizedSeason)
+        .then(({ data, error }) => {
+            if (error || !data) {
+                if (error) console.warn(`Não foi possível carregar os jogadores da temporada ${normalizedSeason}.`, error);
+                return [];
+            }
+
+            data.forEach(jogador => {
+                const index = state.jogadores.findIndex(item => String(item.id) === String(jogador.id));
+                if (index >= 0) state.jogadores[index] = jogador;
+                else state.jogadores.push(jogador);
+            });
+            markTableDataChanged('jogadores');
+            void saveTableSnapshotToCache('jogadores');
+            return data;
+        })
+        .catch(error => {
+            console.warn(`Não foi possível carregar os jogadores da temporada ${normalizedSeason}.`, error);
+            return [];
+        });
+
+    playerSeasonLookups.set(normalizedSeason, lookup);
+    return lookup;
+};
+
 const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = null, showQuickAdd = true) => {
     const inp = document.getElementById(id); if (!inp) return;
     
@@ -2678,6 +2715,19 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         if (typeof currentFilterFn === 'function') ds = ds.filter(currentFilterFn);
         const resultsFull = ds.filter(item => normalizeString(item[currentField]).includes(normVal))
                           .sort((a,b) => a[currentField].localeCompare(b[currentField]));
+
+        // Em jogos históricos, o atleta pode não ter chegado no carregamento
+        // inicial. Busca a temporada em segundo plano e reabre a lista assim
+        // que os dados forem recebidos.
+        if (currentSourceKey === 'jogadores' && resultsFull.length === 0) {
+            const gameSeason = document.getElementById('game-temporada')?.value;
+            const typedValue = e.target.value;
+            void hydratePlayersForSeason(gameSeason).then(players => {
+                if (players.length > 0 && inp.isConnected && inp.value === typedValue) {
+                    inp.dispatchEvent(new Event('input'));
+                }
+            });
+        }
         
         // Jogadores podem ter o mesmo nome de guerra. Nesse caso cada registro
         // precisa permanecer selecionável para que o ID correto seja persistido.
