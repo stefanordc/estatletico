@@ -3717,27 +3717,43 @@ const saveNewJogo = () => {
             lineupGalo: (jogo.lineupGalo || []).map(({ foto, jogadorId, ...player }) => player),
             cartoesGalo: (jogo.cartoesGalo || []).map(({ jogadorId, ...player }) => player)
         };
+
+        // Atualiza a interface antes de esperar a resposta da rede. Em jogos com
+        // escalações grandes o upload do JSON pode levar alguns segundos; o
+        // usuário não deve permanecer preso na última etapa durante esse tempo.
+        const existingIndex = state.jogos.findIndex(j => String(j.id) === String(jogo.id));
+        const previousJogo = existingIndex >= 0 ? state.jogos[existingIndex] : null;
+        const actionLabel = existingIndex >= 0 ? 'Jogo atualizado' : 'Jogo cadastrado';
+        if (existingIndex >= 0) {
+            state.jogos[existingIndex] = jogo;
+        } else {
+            state.jogos.push(jogo);
+        }
+
+        state.isFormActive = false;
+        showSection('jogos');
+        showToast(`${actionLabel}. Sincronizando com o banco...`, 'success');
         
         try {
             await saveData('jogos', [jogoParaSalvar]);
-            
-            // Sucesso! Atualizar estado local
-            const existingIndex = state.jogos.findIndex(j => String(j.id) === String(jogo.id));
-            if (existingIndex >= 0) {
-                state.jogos[existingIndex] = jogo;
-            } else {
-                state.jogos.push(jogo);
-            }
-            
-            state.isFormActive = false; // Desativa trava ao salvar com sucesso
-            renderJogos();
-            showSection('jogos');
-            showToast('Jogo salvo com sucesso!', 'success');
+            showToast(`${actionLabel} e sincronizado com sucesso!`, 'success');
         } catch (error) {
             console.error('Erro detalhado ao salvar:', error);
+            // A interface foi atualizada de forma otimista. Se o banco rejeitar
+            // o envio, restaura exatamente o estado que havia antes do salvamento.
+            if (previousJogo) {
+                const currentIndex = state.jogos.findIndex(j => String(j.id) === String(jogo.id));
+                if (currentIndex >= 0) state.jogos[currentIndex] = previousJogo;
+            } else {
+                state.jogos = state.jogos.filter(j => String(j.id) !== String(jogo.id));
+            }
+            void saveTableSnapshotToCache('jogos');
+            renderJogos();
             // A mensagem Já foi exibida pelo saveData, mas podemos tratar casos específicos:
             if (error.message?.includes('schema')) {
                 showToast('Erro de Schema no Supabase. O banco de dados está desatualizado.', 'error');
+            } else {
+                showToast('O jogo não foi salvo no banco. A alteração local foi desfeita.', 'error');
             }
         } finally {
             resetBtn();
