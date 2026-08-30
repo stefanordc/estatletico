@@ -2635,21 +2635,26 @@ const populateFilter = (id, values) => {
 window._autocompleteFilters = window._autocompleteFilters || {};
 
 // O carregamento inicial de jogadores pode demorar por causa das fotos em
-// Base64. Para não bloquear a escalação, busca somente a temporada solicitada
-// quando um jogador ainda não estiver presente no cache do navegador.
+// Base64. A busca da escalação traz apenas os campos necessários e somente os
+// atletas compatíveis com o texto digitado, sem escrever no IndexedDB.
 const playerSeasonLookups = new Map();
-const hydratePlayersForSeason = async (season) => {
+const hydratePlayersForSeason = async (season, term) => {
     const normalizedSeason = String(season || '').trim();
-    if (!normalizedSeason || !supabaseClient) return [];
-    if (playerSeasonLookups.has(normalizedSeason)) return playerSeasonLookups.get(normalizedSeason);
+    const searchTerm = String(term || '').trim();
+    if (!normalizedSeason || !searchTerm || !supabaseClient) return [];
+
+    const lookupKey = `${normalizedSeason}:${normalizeString(searchTerm)}`;
+    if (playerSeasonLookups.has(lookupKey)) return playerSeasonLookups.get(lookupKey);
 
     const lookup = supabaseClient
         .from('jogadores')
-        .select('*')
+        .select('id, id_jogador, nome_completo, nome_guerra, posicao, temporada, nacionalidade, nascimento')
         .eq('temporada', normalizedSeason)
+        .ilike('nome_guerra', `%${searchTerm}%`)
+        .limit(20)
         .then(({ data, error }) => {
             if (error || !data) {
-                if (error) console.warn(`Não foi possível carregar os jogadores da temporada ${normalizedSeason}.`, error);
+                if (error) console.warn(`Não foi possível buscar jogadores da temporada ${normalizedSeason}.`, error);
                 return [];
             }
 
@@ -2658,16 +2663,14 @@ const hydratePlayersForSeason = async (season) => {
                 if (index >= 0) state.jogadores[index] = jogador;
                 else state.jogadores.push(jogador);
             });
-            markTableDataChanged('jogadores');
-            void saveTableSnapshotToCache('jogadores');
             return data;
         })
         .catch(error => {
-            console.warn(`Não foi possível carregar os jogadores da temporada ${normalizedSeason}.`, error);
+            console.warn(`Não foi possível buscar jogadores da temporada ${normalizedSeason}.`, error);
             return [];
         });
 
-    playerSeasonLookups.set(normalizedSeason, lookup);
+    playerSeasonLookups.set(lookupKey, lookup);
     return lookup;
 };
 
@@ -2722,11 +2725,12 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         if (currentSourceKey === 'jogadores' && resultsFull.length === 0) {
             const gameSeason = document.getElementById('game-temporada')?.value;
             const typedValue = e.target.value;
-            void hydratePlayersForSeason(gameSeason).then(players => {
+            clearTimeout(inp._playerLookupTimer);
+            inp._playerLookupTimer = setTimeout(() => void hydratePlayersForSeason(gameSeason, typedValue).then(players => {
                 if (players.length > 0 && inp.isConnected && inp.value === typedValue) {
                     inp.dispatchEvent(new Event('input'));
                 }
-            });
+            }), 250);
         }
         
         // Jogadores podem ter o mesmo nome de guerra. Nesse caso cada registro
@@ -3520,7 +3524,7 @@ const addLineupRow = (team, data = null) => {
                 const p = getSelectedPlayer(inp, currentSeason);
                 if(p) { 
                     inp.dataset.jogadorId = String(p.id);
-                    row.querySelector('.mini-foto').src = p.foto; 
+                    row.querySelector('.mini-foto').src = p.foto || DEFAULT_PLAYER_PHOTO;
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
             }); 
