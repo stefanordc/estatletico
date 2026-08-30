@@ -4855,7 +4855,8 @@ const shouldSkipPenaltyBlock = () => {
     const temporada = Number.parseInt(document.getElementById('game-temporada')?.value, 10);
     const campeonato = normalizeString(document.getElementById('game-campeonato')?.value);
     const rodada = Number.parseInt(document.querySelector('[name="rodada"]')?.value, 10);
-    const isBrasileiraoFrom2003 = temporada >= 2003 && campeonato.includes('campeonato brasileiro');
+    const isBrasileirao = campeonato === 'brasileiro' || campeonato.includes('campeonato brasileiro');
+    const isBrasileiraoFrom2003 = temporada >= 2003 && isBrasileirao;
     const isMineiroFirstPhase = campeonato.includes('mineiro') && rodada >= 1 && rodada <= 11;
     return isBrasileiraoFrom2003 || isMineiroFirstPhase;
 };
