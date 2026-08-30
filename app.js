@@ -2794,31 +2794,31 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     `;
     let formHtml = '';
     if(type === 'competicoes') {
-        formHtml = `<div class="form-group"><label>Campeonato *</label><input type="text" id="qa-campeonato" value="${initialValue}"></div><div class="form-group"><label>Tipo *</label><select id="qa-tipo"><option value="Regional">Regional</option><option value="Nacional">Nacional</option><option value="Internacional">Internacional</option></select></div>`;
+        formHtml = `<div class="form-group"><label>Campeonato *</label><input type="text" id="qa-campeonato" required value="${initialValue}"></div><div class="form-group"><label>Tipo *</label><select id="qa-tipo" required><option value="">Selecione</option><option value="Regional">Regional</option><option value="Nacional">Nacional</option><option value="Internacional">Internacional</option></select></div>`;
     } else if(type === 'estadios') {
-        const opts = state.adversarios.map(adv => `<option value="${adv.clube}">${adv.clube}</option>`).join('');
-        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado</label><input type="text" id="qa-estado"></div><div class="form-group"><label>País</label><input type="text" id="qa-pais" value="Brasil"></div></div><div class="form-group"><label>Mandante</label><select id="qa-mandante"><option value="">Selecione</option>${opts}</select></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-estadio">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
+        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado *</label><input type="text" id="qa-estado" required></div><div class="form-group"><label>País *</label><input type="text" id="qa-pais" required value="Brasil"></div></div><div class="form-group"><label>Mandante</label><input type="text" id="qa-mandante"></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-estadio">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if(type === 'adversarios') {
-        formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado</label><input type="text" id="qa-estado"></div><div class="form-group"><label>País</label><input type="text" id="qa-pais" value="Brasil"></div></div><div class="form-group"><label>Escudo (URL)</label><input type="text" id="qa-escudo"></div>`;
+        formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado *</label><input type="text" id="qa-estado" required></div><div class="form-group"><label>País *</label><input type="text" id="qa-pais" required value="Brasil"></div></div><div class="form-group"><label>Escudo (Cole)</label><div class="paste-area" id="qa-paste-adversario">Ctrl+V</div><input type="hidden" id="qa-escudo"></div><div class="form-group"><label>Escudo (URL)</label><input type="text" id="qa-escudo-url"></div>`;
     } else if(type === 'arbitros') {
-        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>País</label><input type="text" id="qa-federacao" value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
+        formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>País *</label><input type="text" id="qa-federacao" required value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if (type === 'jogadores') {
         formHtml = `
-            <div class="form-group"><label>Nome Completo</label><input type="text" id="qa-nome-completo"></div>
-            <div class="form-group"><label>Nome de Guerra *</label><input type="text" id="qa-nome-guerra" value="${initialValue}"></div>
+            <div class="form-group"><label>Nome Completo *</label><input type="text" id="qa-nome-completo" required></div>
+            <div class="form-group"><label>Nome de Guerra *</label><input type="text" id="qa-nome-guerra" required value="${initialValue}"></div>
             <div class="form-grid">
-                <div class="form-group"><label>Posição *</label><select id="qa-pos"><option value="">Selecione</option><option value="Goleiro">Goleiro</option><option value="Lateral-Direito">Lateral-Direito</option><option value="Lateral-Esquerdo">Lateral-Esquerdo</option><option value="Zagueiro">Zagueiro</option><option value="Volante">Volante</option><option value="Meia">Meia</option><option value="Atacante">Atacante</option></select></div>
-                <div class="form-group"><label>Temporada</label><input type="text" id="qa-temporada" value="${state.fixedSeason || 2026}"></div>
+                <div class="form-group"><label>Posição *</label><select id="qa-pos" required><option value="">Selecione</option><option value="Goleiro">Goleiro</option><option value="Lateral-Direito">Lateral-Direito</option><option value="Lateral-Esquerdo">Lateral-Esquerdo</option><option value="Zagueiro">Zagueiro</option><option value="Volante">Volante</option><option value="Meia">Meia</option><option value="Atacante">Atacante</option><option value="Técnico">Técnico</option></select></div>
+                <div class="form-group"><label>Temporada *</label><input type="text" id="qa-temporada" required value="${state.fixedSeason || 2026}"></div>
             </div>
             <div class="form-grid">
                 <div class="form-group"><label>Nascimento</label><input type="date" id="qa-nascimento"></div>
-                <div class="form-group"><label>Nacionalidade</label><input type="text" id="qa-nacionalidade" value="Brasil"></div>
+                <div class="form-group"><label>Nacionalidade *</label><input type="text" id="qa-nacionalidade" required value="Brasil"></div>
             </div>
             <div class="form-grid">
                 <div class="form-group"><label>Número</label><input type="number" id="qa-numero"></div>
                 <div class="form-group" style="align-self:flex-end; padding-bottom:0.5rem;"><label class="checkbox-inline"><input type="checkbox" id="qa-fora-do-elenco"> Fora do elenco atual</label></div>
             </div>
             <div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-jogador">Ctrl+V</div><input type="hidden" id="qa-foto"></div>
+            <div class="form-group"><label>Observação</label><textarea id="qa-observacao" rows="3"></textarea></div>
         `;
     }
     miniModal.innerHTML = `
@@ -2836,13 +2836,25 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
         </div>
     `;
     document.body.appendChild(miniModal);
-    if(type === 'estadios') setupPasteHandler('qa-paste-estadio', 'qa-foto');
+    if(type === 'estadios') {
+        setupPasteHandler('qa-paste-estadio', 'qa-foto');
+        setupAutocomplete('qa-mandante', 'adversarios', 'clube', null, null, false);
+    }
+    if(type === 'adversarios') setupPasteHandler('qa-paste-adversario', 'qa-escudo');
     if(type === 'arbitros') setupPasteHandler('qa-paste-arbitro', 'qa-foto');
     if(type === 'jogadores') setupPasteHandler('qa-paste-jogador', 'qa-foto');
 };
 
 window.saveQuickAdd = (type, targetInputId) => {
     if (!requireAdmin('Apenas o administrador pode cadastrar informações.')) return;
+
+    const modal = document.getElementById('quick-add-modal');
+    const invalid = [...modal.querySelectorAll('[required]')].find(field => !field.value.trim());
+    if (invalid) {
+        invalid.focus();
+        showToast('Preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
 
     let item = { id: Date.now() };
     if (type === 'adversarios') {
@@ -2855,7 +2867,7 @@ window.saveQuickAdd = (type, targetInputId) => {
         item.clube = clubeNome;
         item.estado = document.getElementById('qa-estado').value;
         item.pais = document.getElementById('qa-pais').value;
-        item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32';
+        item.escudo = document.getElementById('qa-escudo').value || document.getElementById('qa-escudo-url').value || 'https://via.placeholder.com/32';
     }
     else if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
@@ -2868,6 +2880,7 @@ window.saveQuickAdd = (type, targetInputId) => {
         item.nascimento = document.getElementById('qa-nascimento').value || ''; 
         item.nacionalidade = document.getElementById('qa-nacionalidade').value || 'Brasil'; 
         item.numero = document.getElementById('qa-numero').value || ''; 
+        item.observacao = document.getElementById('qa-observacao').value || '';
         item.foraDoElenco = document.getElementById('qa-fora-do-elenco').checked; 
         item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; 
         const samePlayer = state.jogadores.find(p =>
@@ -2881,6 +2894,7 @@ window.saveQuickAdd = (type, targetInputId) => {
     if(inp) { 
         inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
         if (type === 'jogadores') inp.dataset.jogadorId = String(item.id);
+        inp.dispatchEvent(new Event('input'));
         inp.dispatchEvent(new Event('change')); 
         if (type === 'arbitros' && ['game-arbitro', 'game-assistente1', 'game-assistente2', 'game-var'].includes(targetInputId)) {
             updateRefereeInfo();
@@ -3104,9 +3118,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
     // Initial photo load if editing
     setTimeout(updateRefereeInfo, 100);
-    setupAutocomplete('game-estadio', 'estadios', 'nome', null, null, false);
-    setupAutocomplete('game-casa', 'adversarios', 'clube', null, null, false);
-    setupAutocomplete('game-fora', 'adversarios', 'clube', null, null, false);
+    setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
+    setupAutocomplete('game-estadio', 'estadios', 'nome');
+    setupAutocomplete('game-casa', 'adversarios', 'clube');
+    setupAutocomplete('game-fora', 'adversarios', 'clube');
     const estInp = document.getElementById('game-estadio'); 
     estInp.addEventListener('change', () => { 
         const est = state.estadios.find(e => e.nome === estInp.value); 
