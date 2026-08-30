@@ -5058,109 +5058,93 @@ const setupAutofillHandler = () => {
     let lookupTimer;
     let lookupVersion = 0;
 
-    const preencherDados = (matches) => {
-        if (matches.length === 0) return;
-
-        // Ordena por ID decrescente â€” suporta ID numérico ou string
-        matches.sort((a, b) => {
-            const nA = Number(a.id), nB = Number(b.id);
-            if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
-            return String(b.id).localeCompare(String(a.id));
-        });
-        const src = matches[0]; // mais recente como base
-
-        // Função auxiliar: pega o melhor valor de um campo entre todos os registros
-        // Para um dado campo, prefere valores que não sejam os defaults/vazios
-        const getBestValue = (field, defaults = []) => {
-            const nonDefault = matches.find(m => {
-                const v = m[field];
-                return v !== undefined && v !== null && v !== '' &&
-                       !defaults.map(d => d.toLowerCase()).includes(String(v).toLowerCase().trim());
-            });
-            return nonDefault ? nonDefault[field] : (src[field] || '');
-        };
-
-        // Preenche cada campo com o melhor valor disponível
+    const preencherDados = jogador => {
+        const valores = getPlayerAutofillValues(jogador);
+        if (!valores) return;
         const elNomeGuerra = document.getElementById('input-nome-guerra');
-        if (elNomeGuerra) elNomeGuerra.value = getBestValue('nome_guerra');
+        if (elNomeGuerra) elNomeGuerra.value = valores.nome_guerra;
 
         const elPosicao = document.getElementById('input-posicao');
-        if (elPosicao) elPosicao.value = getBestValue('posicao');
+        if (elPosicao) elPosicao.value = valores.posicao;
 
-        // Nacionalidade: prioriza qualquer valor diferente de 'Brasil' (padrão do form)
         const elNac = document.getElementById('input-nacionalidade');
-        if (elNac) elNac.value = getBestValue('nacionalidade', ['brasil']);
+        if (elNac) elNac.value = valores.nacionalidade;
 
         const elNascimento = document.getElementById('input-nascimento');
-        if (elNascimento) elNascimento.value = getBestValue('nascimento');
-
-        // O número não é autofilled pois é individual por temporada
-
-        const elObs = document.getElementById('input-observacao');
-        if (elObs) elObs.value = getBestValue('observacao');
+        if (elNascimento) elNascimento.value = valores.nascimento;
 
         const elFoto = document.getElementById('foto-input-jogador');
         const fotoArea = document.getElementById('paste-area-jogador');
-        const foto = getBestValue('foto', ['https://via.placeholder.com/40']);
+        const foto = valores.foto;
         if (elFoto) elFoto.value = foto;
         if (fotoArea) {
             fotoArea.innerHTML = foto
                 ? `<img src="${foto}" style="max-height:80px;">`
                 : 'Ctrl+V';
         }
-
-        // Checkbox Fora do Elenco
-        const foraCheck = document.getElementById('input-fora-do-elenco');
-        if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
     };
 
-    const buscarDados = async (usarServidor = false) => {
+    const buscarDados = async () => {
         const nomeDigitado = nameInp.value.trim();
-        const nomeNormalizado = normalizeStr(nomeDigitado);
+        const nomeNormalizado = normalizePlayerLookupName(nomeDigitado);
         if (!nomeNormalizado) return;
 
-        // O estado local responde sem esperar a rede.
-        const locais = state.jogadores.filter(p => normalizeStr(p.nome_completo) === nomeNormalizado);
-        preencherDados(locais);
-
-        if (!usarServidor || !supabaseClient) return;
-
         const requestVersion = ++lookupVersion;
-        const { data, error } = await supabaseClient
-            .from('jogadores')
-            .select('*')
-            .ilike('nome_completo', nomeDigitado);
+        nameInp.setAttribute('aria-busy', 'true');
 
-        if (error) {
+        try {
+            // Busca exata no banco e ordena pela temporada mais recente. O
+            // fallback com "%" só é usado para tolerar espaços duplicados;
+            // a filtragem final continua sendo sempre uma correspondência exata.
+            let dados = [];
+            if (supabaseClient) {
+                const exact = await supabaseClient
+                    .from('jogadores')
+                    .select('id, nome_completo, nome_guerra, posicao, nacionalidade, nascimento, foto, temporada')
+                    .ilike('nome_completo', nomeDigitado)
+                    .order('temporada', { ascending: false })
+                    .limit(10);
+                if (!exact.error) dados = exact.data || [];
+
+                if (dados.length === 0) {
+                    const termoFlexivel = `%${nomeNormalizado.replace(/ /g, '%')}%`;
+                    const flexible = await supabaseClient
+                        .from('jogadores')
+                        .select('id, nome_completo, nome_guerra, posicao, nacionalidade, nascimento, foto, temporada')
+                        .ilike('nome_completo', termoFlexivel)
+                        .order('temporada', { ascending: false })
+                        .limit(20);
+                    if (!flexible.error) dados = flexible.data || [];
+                }
+            }
+
+            // Mantém um fallback local para uma indisponibilidade momentânea
+            // da rede, mas a consulta ao banco sempre é a fonte principal.
+            if (dados.length === 0) dados = state.jogadores;
+
+            if (requestVersion !== lookupVersion || normalizePlayerLookupName(nameInp.value) !== nomeNormalizado) return;
+            const encontrados = dados.filter(p => normalizePlayerLookupName(p.nome_completo) === nomeNormalizado);
+            const jogador = selectMostRecentPlayer(encontrados);
+            if (!jogador) return;
+
+            preencherDados(jogador);
+            showToast(`Dados encontrados para ${jogador.nome_completo} — preenchidos automaticamente.`, 'success');
+        } catch (error) {
+            // A busca é auxiliar e jamais pode travar o formulário.
             console.warn('Não foi possível buscar os dados do jogador para preenchimento automático.', error);
-            return;
+        } finally {
+            if (requestVersion === lookupVersion) nameInp.removeAttribute('aria-busy');
         }
-
-        // Evita preencher a partir de uma resposta antiga caso o usuário já
-        // tenha digitado outro nome enquanto a consulta estava em andamento.
-        if (requestVersion !== lookupVersion || normalizeStr(nameInp.value) !== nomeNormalizado) return;
-
-        const encontrados = (data || []).filter(p => normalizeStr(p.nome_completo) === nomeNormalizado);
-        if (encontrados.length === 0) return;
-
-        // Mantém o cache em memória atualizado para as próximas consultas.
-        encontrados.forEach(jogador => {
-            const index = state.jogadores.findIndex(item => String(item.id) === String(jogador.id));
-            if (index >= 0) state.jogadores[index] = jogador;
-            else state.jogadores.push(jogador);
-        });
-        markTableDataChanged('jogadores');
-        void saveTableSnapshotToCache('jogadores');
-        preencherDados(encontrados);
     };
 
     nameInp.addEventListener('input', () => {
-        void buscarDados(false);
         clearTimeout(lookupTimer);
-        lookupTimer = setTimeout(() => void buscarDados(true), 350);
+        lookupTimer = setTimeout(() => void buscarDados(), 500);
     });
-    nameInp.addEventListener('change', () => void buscarDados(true));
-    nameInp.addEventListener('blur', () => void buscarDados(true));
+    nameInp.addEventListener('blur', () => {
+        clearTimeout(lookupTimer);
+        void buscarDados();
+    });
 };
 
 // INITIAL LISTENERS
