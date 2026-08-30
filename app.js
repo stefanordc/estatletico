@@ -452,6 +452,15 @@ const getSelectedPlayer = (input, season) => {
     return candidates.length === 1 ? candidates[0] : null;
 };
 
+// Ao editar um jogo, a escalação já traz o identificador global salvo no JSON.
+// Ele continua válido mesmo que a consulta dos jogadores da temporada falhe ou
+// ainda esteja carregando no navegador.
+const getSelectedPlayerGlobalId = (input, season) => {
+    return getSelectedPlayer(input, season)?.id_jogador
+        || input?.dataset?.globalJogadorId
+        || null;
+};
+
 const getPlayerFromGameReference = (reference, season) => {
     const byGlobalId = state.jogadores.find(p =>
         String(p.id_jogador) === String(reference?.idJogador)
@@ -3387,7 +3396,7 @@ const addCardRow = (team, data = null) => {
     const isSeasonUpTo2006 = Number.parseInt(season, 10) <= 2006;
     const yellowVal = data?.amarelo ?? (isSeasonUpTo2006 ? 0 : 1);
     const redVal = data?.red ?? (isSeasonUpTo2006 ? 1 : 0);
-    row.innerHTML = `<td class="col-player">${isAdv ? `<input type="text" placeholder="Adversário" class="card-player-inp" value="${data?.jogador || 'Adversário'}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${redVal == 0 ? 'selected' : '' }>0</option><option value="1" ${redVal == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
+    row.innerHTML = `<td class="col-player">${isAdv ? `<input type="text" placeholder="Adversário" class="card-player-inp" value="${data?.jogador || 'Adversário'}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="card-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" data-global-jogador-id="${data?.idJogador || selectedPlayer?.id_jogador || ''}" value="${data?.jogador || ''}" required></div>`}</td>${isAdv ? '' : `<td><input type="text" class="pos-inp" readonly value="${data?.posicao || '-' }" required></td>`}<td><select class="yellow-sel" required><option value="0" ${yellowVal == 0 ? 'selected' : '' }>0</option><option value="1" ${yellowVal == 1 ? 'selected' : '' }>1</option></select></td><td><select class="red-sel" required><option value="0" ${redVal == 0 ? 'selected' : '' }>0</option><option value="1" ${redVal == 1 ? 'selected' : '' }>1</option></select></td><td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-times" style="color:#7f8c8d;"></i></button></td>`;
     
     // TAB behavior for cards
     const inputsOnRow = row.querySelectorAll('input, select');
@@ -3421,6 +3430,7 @@ const addCardRow = (team, data = null) => {
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
+                    inp.dataset.globalJogadorId = String(res.id_jogador || '');
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.card-player-inp');
@@ -3429,12 +3439,16 @@ const addCardRow = (team, data = null) => {
                 }
             ); 
             
-            inp.addEventListener('input', () => { delete inp.dataset.jogadorId; });
+            inp.addEventListener('input', () => {
+                delete inp.dataset.jogadorId;
+                delete inp.dataset.globalJogadorId;
+            });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
                 const player = getSelectedPlayer(inp, currentSeason);
                 if(player) { 
                     inp.dataset.jogadorId = String(player.id);
+                    inp.dataset.globalJogadorId = String(player.id_jogador || '');
                     const posInp = row.querySelector('.pos-inp');
                     if (posInp) posInp.value = player.posicao; 
                 } 
@@ -3453,7 +3467,7 @@ const addLineupRow = (team, data = null) => {
 
     row.innerHTML = `
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
-        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" value="${data?.jogador || ''}" required></div>`}</td>
+        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" data-global-jogador-id="${data?.idJogador || selectedPlayer?.id_jogador || ''}" value="${data?.jogador || ''}" required></div>`}</td>
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
@@ -3503,6 +3517,7 @@ const addLineupRow = (team, data = null) => {
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
+                    inp.dataset.globalJogadorId = String(res.id_jogador || '');
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.line-player-inp');
@@ -3536,12 +3551,16 @@ const addLineupRow = (team, data = null) => {
                 });
             });
 
-            inp.addEventListener('input', () => { delete inp.dataset.jogadorId; });
+            inp.addEventListener('input', () => {
+                delete inp.dataset.jogadorId;
+                delete inp.dataset.globalJogadorId;
+            });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
                 const p = getSelectedPlayer(inp, currentSeason);
                 if(p) { 
                     inp.dataset.jogadorId = String(p.id);
+                    inp.dataset.globalJogadorId = String(p.id_jogador || '');
                     row.querySelector('.mini-foto').src = p.foto || DEFAULT_PLAYER_PHOTO;
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
@@ -3616,9 +3635,9 @@ const saveNewJogo = () => {
     const cardRowsGalo = Array.from(document.querySelectorAll('#cards-galo-body tr'));
     jogo.cartoesGalo = cardRowsGalo.map(row => {
         const input = row.querySelector('.card-player-inp');
-        const player = getSelectedPlayer(input, jogo.temporada);
+        const idJogador = getSelectedPlayerGlobalId(input, jogo.temporada);
         return {
-            idJogador: player?.id_jogador,
+            idJogador,
             jogador: input?.value || '',
             posicao: row.querySelector('.pos-inp')?.value || '',
             amarelo: row.querySelector('.yellow-sel')?.value || '0',
@@ -3650,13 +3669,13 @@ const saveNewJogo = () => {
         const playerInput = r.querySelector('.line-player-inp');
         const l = playerInput?.value || r.querySelector('input[placeholder="Jogador"]')?.value;
         if (!l || l.trim() === '' || l === 'Jogador') return; // Filtra linhas vazias
-        const player = getSelectedPlayer(playerInput, jogo.temporada);
+        const idJogador = getSelectedPlayerGlobalId(playerInput, jogo.temporada);
         const gsInps = r.querySelectorAll('.gs-inp');
         const gsCnt = gsInps.length > 0 ? parseInt(gsInps[0].value || 0) : 0;
         
         jogo.lineupGalo.push({
             foto: r.querySelector('img')?.src || 'https://via.placeholder.com/35',
-            idJogador: player?.id_jogador,
+            idJogador,
             jogador: l,
             posicao: r.querySelector('.pos-inp')?.value || '-',
             golsCount: parseInt(r.querySelector('.goals-inp')?.value || 0),
@@ -3687,7 +3706,7 @@ const saveNewJogo = () => {
     const lineupIds = jogo.lineupGalo.map(l => String(l.idJogador));
     const duplicates = lineupIds.filter((id, idx) => lineupIds.indexOf(id) !== idx);
     if (duplicates.length > 0) {
-        const dupNames = [...new Set(duplicates)].map(id => state.jogadores.find(p => String(p.id) === id)?.nome_guerra || id).join(', ');
+        const dupNames = [...new Set(duplicates)].map(id => getPlayerByGlobalId(id)?.nome_guerra || id).join(', ');
         showToast(`Erro de Validação: O(s) jogador(es) "${dupNames}" está(ão) inserido(s) mais de uma vez na escalação.`, 'error');
         resetBtn();
         return;
