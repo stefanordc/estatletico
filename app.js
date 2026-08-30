@@ -5005,7 +5005,7 @@ const normalizeStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u03
 const setupAutofillHandler = () => {
     const nameInp = document.getElementById('input-nome-completo');
     if (!nameInp) return;
-    nameInp.addEventListener('blur', (e) => {
+    const autofillPlayer = (e) => {
         const nome = normalizeStr(e.target.value);
         if (!nome) return;
 
@@ -5046,26 +5046,28 @@ const setupAutofillHandler = () => {
         const elNascimento = document.getElementById('input-nascimento');
         if (elNascimento) elNascimento.value = getBestValue('nascimento');
 
-        const elNumero = document.getElementById('input-numero');
         // O número não é autofilled pois é individual por temporada
 
         const elObs = document.getElementById('input-observacao');
-        if (elObs) elObs.value = src.observacao || '';
+        if (elObs) elObs.value = getBestValue('observacao');
 
-        // A foto não é autofilled pois é individual por temporada
+        const elFoto = document.getElementById('foto-input-jogador');
+        const fotoArea = document.getElementById('paste-area-jogador');
+        const foto = getBestValue('foto', ['https://via.placeholder.com/40']);
+        if (elFoto) elFoto.value = foto;
+        if (fotoArea) {
+            fotoArea.innerHTML = foto
+                ? `<img src="${foto}" style="max-height:80px;">`
+                : 'Ctrl+V';
+        }
 
         // Checkbox Fora do Elenco
         const foraCheck = document.getElementById('input-fora-do-elenco');
-        if (foraCheck) {
-            const anoAtual = new Date().getFullYear().toString();
-            const temporada = document.getElementById('input-temporada')?.value || '';
-            if (temporada !== '' && temporada !== anoAtual) {
-                foraCheck.checked = true;
-            } else {
-                foraCheck.checked = !!src.foraDoElenco;
-            }
-        }
-    });
+        if (foraCheck) foraCheck.checked = !!src.foraDoElenco;
+    };
+
+    nameInp.addEventListener('input', autofillPlayer);
+    nameInp.addEventListener('blur', autofillPlayer);
 };
 
 // INITIAL LISTENERS
