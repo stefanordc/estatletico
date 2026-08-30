@@ -470,6 +470,13 @@ const getPlayerFromGameReference = (reference, season) => {
     return byName.length === 1 ? byName[0] : null;
 };
 
+const getPlayerByGlobalId = (idJogador, season = null) => {
+    if (!idJogador) return null;
+    const samePlayer = state.jogadores.filter(player => String(player.id_jogador) === String(idJogador));
+    if (!samePlayer.length) return null;
+    return samePlayer.find(player => season !== null && String(player.temporada) === String(season)) || samePlayer[0];
+};
+
 const getAdversarioDoJogo = (casa, fora) => {
     const adversarioNome = isAtletico(casa) ? fora : casa;
     return state.adversarios.find(a => a.clube === adversarioNome) || null;
@@ -1126,6 +1133,7 @@ const showPlayerDetail = (playerId, event) => {
     if (existing) return;
 
     const player = state.jogadores.find(j => j.id === playerId);
+    const playerGlobalId = player?.id_jogador;
     const isTecnico = player.posicao === 'Técnico';
     const isGoalie = player.posicao === 'Goleiro';
 
@@ -1152,7 +1160,7 @@ const showPlayerDetail = (playerId, event) => {
                 else ss.losses++;
             }
         } else {
-            const inLineup = jogo.lineupGalo?.find(l => l.jogador === player.nome_guerra);
+            const inLineup = jogo.lineupGalo?.find(l => getGamePlayerGlobalId(l) === String(playerGlobalId));
             if (inLineup) {
                 ss.gamesCount++;
                 ss.goals += parseInt(inLineup.golsCount || 0);
@@ -1165,7 +1173,7 @@ const showPlayerDetail = (playerId, event) => {
                 else if (jogo.vencedor === 'Empate') ss.draws++;
                 else ss.losses++;
 
-                const cards = jogo.cartoesGalo?.filter(c => c.jogador === player.nome_guerra);
+                const cards = jogo.cartoesGalo?.filter(c => getGamePlayerGlobalId(c) === String(playerGlobalId));
                 cards?.forEach(c => { ss.yellow += parseInt(c.amarelo || 0); ss.red += parseInt(c.red || 0); });
 
                 if (isGoalie) {
@@ -1392,16 +1400,18 @@ const renderArtilheiros = () => {
         if (!matchMatchesFilter) return;
 
         jogo.lineupGalo?.forEach(l => {
-            if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, goals: 0, games: 0 };
-            stats[l.jogador].games++;
-            stats[l.jogador].goals += parseInt(l.golsCount || 0);
+            const idJogador = getGamePlayerGlobalId(l);
+            if (!idJogador) return;
+            if (!stats[idJogador]) {
+                const player = getPlayerByGlobalId(idJogador, jogo.temporada);
+                stats[idJogador] = { idJogador, nome: player?.nome_guerra || l.jogador || 'Jogador', goals: 0, games: 0, player };
+            }
+            stats[idJogador].games++;
+            stats[idJogador].goals += parseInt(l.golsCount || 0);
         });
     });
 
-    let artList = Object.values(stats).map(s => {
-        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
-        return { ...s, player: p };
-    });
+    let artList = Object.values(stats);
 
     // Exibir somente jogadores com gols >= 1
     artList = artList.filter(a => a.goals >= 1);
@@ -1434,7 +1444,7 @@ const renderArtilheiros = () => {
             <tbody>
                 ${sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum artilheiro encontrado.</td></tr>' : 
                     sortedData.map(a => `
-                        <tr onclick="showArtilheiroDetail('${a.nome}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
+                        <tr onclick="showArtilheiroDetail('${a.idJogador}', event)" style="cursor:pointer;" title="Clique para ver detalhes">
                             <td><img src="${a.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                             <td style="font-weight:bold;">${a.nome}</td>
                             <td>${a.games}</td>
@@ -1447,17 +1457,19 @@ const renderArtilheiros = () => {
     `;
 };
 
-const showArtilheiroDetail = (playerName, event) => {
+const showArtilheiroDetail = (idJogador, event) => {
     const row = event.currentTarget.closest('tr');
-    const existing = document.getElementById(`art-detail-${playerName.replace(/\s+/g, '-')}`);
+    const existing = document.getElementById(`art-detail-${idJogador}`);
     document.querySelectorAll('.art-detail-row').forEach(r => r.remove());
     if (existing) return;
+
+    const playerName = getPlayerByGlobalId(idJogador)?.nome_guerra || 'Jogador';
 
     const campStats = {};
     const advStats = {};
     state.jogos.forEach(j => {
-        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
-        const hasPlayed = j.lineupGalo?.some(p => p.jogador === playerName);
+        const lp = j.lineupGalo?.find(p => getGamePlayerGlobalId(p) === String(idJogador));
+        const hasPlayed = Boolean(lp);
         if (hasPlayed) {
             if (!campStats[j.campeonato]) campStats[j.campeonato] = { nome: j.campeonato, games: 0, goals: 0 };
             campStats[j.campeonato].games++;
@@ -1473,7 +1485,7 @@ const showArtilheiroDetail = (playerName, event) => {
     });
 
     const html = `
-        <tr id="art-detail-${playerName.replace(/\s+/g, '-')}" class="art-detail-row">
+        <tr id="art-detail-${idJogador}" class="art-detail-row">
             <td colspan="5">
                 <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
@@ -1525,22 +1537,25 @@ const renderMultiGolsTab = (nGols) => {
 
         jogo.lineupGalo?.forEach(l => {
             const g = parseInt(l.golsCount || 0);
+            const idJogador = getGamePlayerGlobalId(l);
+            if (!idJogador) return;
             if (g === nGols) {
-                if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, count: 0, totalGames: 0 };
-                stats[l.jogador].count++;
+                if (!stats[idJogador]) {
+                    const player = getPlayerByGlobalId(idJogador, jogo.temporada);
+                    stats[idJogador] = { idJogador, nome: player?.nome_guerra || l.jogador || 'Jogador', count: 0, totalGames: 0, player };
+                }
+                stats[idJogador].count++;
             }
         });
         
         // Contar jogos totais para os jogadores que alcançaram a marca (dentro dos filtros aplicados)
         jogo.lineupGalo?.forEach(l => {
-            if (stats[l.jogador]) stats[l.jogador].totalGames++;
+            const idJogador = getGamePlayerGlobalId(l);
+            if (idJogador && stats[idJogador]) stats[idJogador].totalGames++;
         });
     });
 
-    let list = Object.values(stats).filter(s => s.count > 0).map(s => {
-        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
-        return { ...s, player: p };
-    });
+    let list = Object.values(stats).filter(s => s.count > 0);
 
     if (fJog) list = list.filter(a => a.nome === fJog);
     if (fPos) list = list.filter(a => a.player?.posicao === fPos);
@@ -1564,7 +1579,7 @@ const renderMultiGolsTab = (nGols) => {
             <tbody>
                 ${list.length === 0 ? `<tr><td colspan="4" style="text-align:center;">Nenhum registro de ${nGols} gols em um único jogo.</td></tr>` : 
                     list.map(s => `
-                        <tr onclick="showMultiGolsGames('${s.nome}', ${nGols}, event)" style="cursor:pointer;" title="Clique para ver os jogos">
+                        <tr onclick="showMultiGolsGames('${s.idJogador}', ${nGols}, event)" style="cursor:pointer;" title="Clique para ver os jogos">
                             <td><img src="${s.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                             <td style="font-weight:bold;">${s.nome}</td>
                             <td>${s.totalGames}</td>
@@ -1576,23 +1591,23 @@ const renderMultiGolsTab = (nGols) => {
     `;
 };
 
-const showMultiGolsGames = (playerName, nGols, event) => {
+const showMultiGolsGames = (idJogador, nGols, event) => {
     const row = event.currentTarget.closest('tr');
-    const existing = document.getElementById(`multigols-detail-${playerName.replace(/\s+/g, '-')}`);
+    const existing = document.getElementById(`multigols-detail-${idJogador}`);
     document.querySelectorAll('.multigols-detail-row').forEach(r => r.remove());
     if (existing) return;
 
     const games = state.jogos.filter(j => {
-        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
+        const lp = j.lineupGalo?.find(p => getGamePlayerGlobalId(p) === String(idJogador));
         return lp && parseInt(lp.golsCount) === nGols;
     }).sort((a,b) => new Date(b.data) - new Date(a.data));
 
     const html = `
-        <tr id="multigols-detail-${playerName.replace(/\s+/g, '-')}" class="multigols-detail-row">
+        <tr id="multigols-detail-${idJogador}" class="multigols-detail-row">
             <td colspan="4">
                 <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                        <h4 style="margin:0;">Jogos com ${nGols} gols: ${playerName}</h4>
+                        <h4 style="margin:0;">Jogos com ${nGols} gols: ${getPlayerByGlobalId(idJogador)?.nome_guerra || 'Jogador'}</h4>
                         <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <table class="stats-table">
@@ -1648,18 +1663,20 @@ const renderSixPlusTab = () => {
 
         jogo.lineupGalo?.forEach(l => {
             const g = parseInt(l.golsCount || 0);
+            const idJogador = getGamePlayerGlobalId(l);
+            if (!idJogador) return;
             if (g >= 6 && g <= 10) {
-                if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, total: 0, 6:0, 7:0, 8:0, 9:0, 10:0 };
-                stats[l.jogador][g]++;
-                stats[l.jogador].total++;
+                if (!stats[idJogador]) {
+                    const player = getPlayerByGlobalId(idJogador, jogo.temporada);
+                    stats[idJogador] = { idJogador, nome: player?.nome_guerra || l.jogador || 'Jogador', total: 0, 6:0, 7:0, 8:0, 9:0, 10:0, player };
+                }
+                stats[idJogador][g]++;
+                stats[idJogador].total++;
             }
         });
     });
 
-    let list = Object.values(stats).map(s => {
-        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
-        return { ...s, player: p };
-    });
+    let list = Object.values(stats);
 
     if (fJog) list = list.filter(a => a.nome === fJog);
     if (fPos) list = list.filter(a => a.player?.posicao === fPos);
@@ -1686,7 +1703,7 @@ const renderSixPlusTab = () => {
             <tbody>
                 ${list.length === 0 ? '<tr><td colspan="7" style="text-align:center;">Nenhum registro de 6 ou mais gols em um único jogo.</td></tr>' : 
                     list.map(s => `
-                        <tr onclick="showSixPlusGames('${s.nome}', event)" style="cursor:pointer;" title="Clique para ver os jogos">
+                        <tr onclick="showSixPlusGames('${s.idJogador}', event)" style="cursor:pointer;" title="Clique para ver os jogos">
                             <td><img src="${s.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                             <td style="font-weight:bold;">${s.nome}</td>
                             <td>${s[6]}</td>
@@ -1700,24 +1717,24 @@ const renderSixPlusTab = () => {
             </tbody>
         </table>
     `;
-};const showSixPlusGames = (playerName, event) => {
+};const showSixPlusGames = (idJogador, event) => {
     const row = event.currentTarget.closest('tr');
-    const existing = document.getElementById(`sixplus-detail-${playerName.replace(/\s+/g, '-')}`);
+    const existing = document.getElementById(`sixplus-detail-${idJogador}`);
     document.querySelectorAll('.sixplus-detail-row').forEach(r => r.remove());
     if (existing) return;
 
     const games = state.jogos.filter(j => {
-        const lp = j.lineupGalo?.find(p => p.jogador === playerName);
+        const lp = j.lineupGalo?.find(p => getGamePlayerGlobalId(p) === String(idJogador));
         const g = parseInt(lp?.golsCount || 0);
         return lp && g >= 6 && g <= 10;
     }).sort((a,b) => new Date(b.data) - new Date(a.data));
 
     const html = `
-        <tr id="sixplus-detail-${playerName.replace(/\s+/g, '-')}" class="sixplus-detail-row">
+        <tr id="sixplus-detail-${idJogador}" class="sixplus-detail-row">
             <td colspan="7">
                 <div class="detail-inline-container" style="display:block; margin:0; padding:1.5rem; background:rgba(0,0,0,0.02);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                        <h4 style="margin:0;">Jogos com 6 ou mais gols: ${playerName}</h4>
+                        <h4 style="margin:0;">Jogos com 6 ou mais gols: ${getPlayerByGlobalId(idJogador)?.nome_guerra || 'Jogador'}</h4>
                         <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <table class="stats-table">
@@ -1733,7 +1750,7 @@ const renderSixPlusTab = () => {
                         </thead>
                         <tbody>
                             ${games.map(j => {
-                                const lp = j.lineupGalo.find(p => p.jogador === playerName);
+                                const lp = j.lineupGalo.find(p => getGamePlayerGlobalId(p) === String(idJogador));
                                 return `
                                     <tr>
                                         <td>${j.data.split('-').reverse().join('/')}</td>
@@ -1772,21 +1789,20 @@ const renderCartoes = () => {
         const list = fTime === 'Atlético' ? (jogo.cartoesGalo || []) : (jogo.cartoesAdv || []);
         list.forEach(c => {
             const name = c.jogador || 'Adversário';
-            const player = state.jogadores.find(j => j.nome_guerra === name);
+            const idJogador = fTime === 'Atlético' ? getGamePlayerGlobalId(c) : null;
+            const statsKey = idJogador || `adversario:${c.adversarioId || ''}:${name}`;
+            const player = idJogador ? getPlayerByGlobalId(idJogador, jogo.temporada) : null;
             if (fPos && (player?.posicao || c.posicao) !== fPos) return;
 
-            if (!stats[name]) stats[name] = { nome: name, yellow: 0, red: 0, games: new Set() };
-            stats[name].yellow += parseInt(c.amarelo || 0);
-            stats[name].red += parseInt(c.red || 0);
-            stats[name].games.add(jogo.id);
-            if (!stats[name].posicao) stats[name].posicao = c.posicao || '-';
+            if (!stats[statsKey]) stats[statsKey] = { idJogador, nome: player?.nome_guerra || name, yellow: 0, red: 0, games: new Set(), player };
+            stats[statsKey].yellow += parseInt(c.amarelo || 0);
+            stats[statsKey].red += parseInt(c.red || 0);
+            stats[statsKey].games.add(jogo.id);
+            if (!stats[statsKey].posicao) stats[statsKey].posicao = player?.posicao || c.posicao || '-';
         });
     });
 
-    let cardList = Object.values(stats).map(s => {
-        const p = state.jogadores.find(j => j.nome_guerra === s.nome);
-        return { ...s, total: s.yellow + s.red, player: p, gamesCount: s.games.size };
-    });
+    let cardList = Object.values(stats).map(s => ({ ...s, total: s.yellow + s.red, gamesCount: s.games.size }));
 
     const tbody = document.querySelector('#cartoes-table tbody');
     if (!tbody) return;
@@ -1800,7 +1816,7 @@ const renderCartoes = () => {
 
     tbody.innerHTML = sortedData.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Nenhum registro de cartão encontrado.</td></tr>' : 
         sortedData.map((c, idx) => `
-            <tr onclick="toggleCartoesDetail('${c.nome}', this)" style="cursor:pointer;" title="Clique para ver detalhes" data-player="${c.nome}">
+            <tr onclick="toggleCartoesDetail('${c.idJogador || ''}', '${c.nome.replace(/'/g, "\\'")}', this)" style="cursor:pointer;" title="Clique para ver detalhes" data-player-id="${c.idJogador || ''}">
                 <td><img src="${c.player?.foto || 'https://via.placeholder.com/100'}" class="mini-foto" style="width:30px; height:30px; border-radius:50%; object-fit:cover;"></td>
                 <td style="font-weight:bold;">${c.nome}</td>
                 <td style="color:#f39c12; font-weight:bold;">${c.yellow}</td>
@@ -1822,7 +1838,7 @@ const updateCartoesFilters = () => {
         // Verifica se há cartões para o time/posição selecionada neste jogo
         const list = fTime === 'Atlético' ? (j.cartoesGalo || []) : (j.cartoesAdv || []);
         const hasMatch = list.some(c => {
-            const p = state.jogadores.find(ply => ply.nome_guerra === c.jogador);
+            const p = fTime === 'Atlético' ? getPlayerByGlobalId(getGamePlayerGlobalId(c), j.temporada) : null;
             return !fPos || (p?.posicao === fPos || c.posicao === fPos);
         });
         return hasMatch;
@@ -1831,7 +1847,7 @@ const updateCartoesFilters = () => {
     populateFilter('cart-filter-temporada', [...new Set(getFilteredData('temporada').map(j => j.temporada))]);
 };
 
-const toggleCartoesDetail = (playerName, row) => {
+const toggleCartoesDetail = (idJogador, playerName, row) => {
     const nextRow = row.nextElementSibling;
     const isDetailOpen = nextRow && nextRow.classList.contains('detail-row');
     
@@ -1842,8 +1858,8 @@ const toggleCartoesDetail = (playerName, row) => {
 
     const byCamp = {}, byAdv = {}, byArb = {};
     state.jogos.forEach(j => {
-        const cGalo = (j.cartoesGalo || []).find(c => c.jogador === playerName);
-        const cAdv = (j.cartoesAdv || []).find(c => c.jogador === playerName);
+        const cGalo = idJogador ? (j.cartoesGalo || []).find(c => getGamePlayerGlobalId(c) === String(idJogador)) : null;
+        const cAdv = idJogador ? null : (j.cartoesAdv || []).find(c => c.jogador === playerName);
         const cardObj = cGalo || cAdv;
         if (!cardObj) return;
 
@@ -4754,10 +4770,12 @@ const renderStatsIndividuais = (container) => {
         }
 
         j.lineupGalo?.forEach(l => {
-            const player = state.jogadores.find(p => p.nome_guerra === l.jogador && p.temporada === j.temporada);
-            if (!stats[l.jogador]) stats[l.jogador] = { nome: l.jogador, foto: l.foto, posicao: l.posicao, jogos: 0, v: 0, d: 0, gols: 0, gs: 0, yellow: 0, red: 0, pontos: 0, cs: 0 };
+            const idJogador = getGamePlayerGlobalId(l);
+            if (!idJogador) return;
+            const player = getPlayerByGlobalId(idJogador, j.temporada);
+            if (!stats[idJogador]) stats[idJogador] = { idJogador, nome: player?.nome_guerra || l.jogador || 'Jogador', foto: player?.foto || l.foto, posicao: player?.posicao || l.posicao, jogos: 0, v: 0, d: 0, gols: 0, gs: 0, yellow: 0, red: 0, pontos: 0, cs: 0 };
             
-            const s = stats[l.jogador];
+            const s = stats[idJogador];
             s.jogos++;
             s.gols += parseInt(l.golsCount || 0);
             s.gs += parseInt(l.gsCount || 0);
@@ -4773,9 +4791,10 @@ const renderStatsIndividuais = (container) => {
         });
 
         j.cartoesGalo?.forEach(c => {
-             if (stats[c.jogador]) {
-                 stats[c.jogador].yellow += parseInt(c.amarelo || 0);
-                 stats[c.jogador].red += parseInt(c.red || 0);
+             const idJogador = getGamePlayerGlobalId(c);
+             if (idJogador && stats[idJogador]) {
+                 stats[idJogador].yellow += parseInt(c.amarelo || 0);
+                 stats[idJogador].red += parseInt(c.red || 0);
              }
         });
     });
@@ -4840,7 +4859,7 @@ const renderStatsIndividuais = (container) => {
                 ${list.sort((a,b) => b.jogos - a.jogos).map(s => {
                     const aprove = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
                     return `
-                        <tr onclick="showPlayerDetail(${state.jogadores.find(p => p.nome_guerra === s.nome)?.id}, event)" style="cursor:pointer;">
+                        <tr onclick="showPlayerDetail(${getPlayerByGlobalId(s.idJogador)?.id}, event)" style="cursor:pointer;">
                             <td><img src="${s.foto}" class="mini-foto" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #eee;"></td>
                             <td><strong>${s.nome}</strong></td>
                             <td>${s.posicao}</td>
@@ -5283,13 +5302,14 @@ const renderJogadoresPage = () => {
 
         if (Array.isArray(j.lineupGalo)) {
             j.lineupGalo.forEach(l => {
-                const name = l.jogador;
-                if (!name || name === 'Adversário') return;
+                const idJogador = getGamePlayerGlobalId(l);
+                if (!idJogador) return;
                 
-                if (!statsMap[name]) {
-                    const pInfo = state.jogadores.find(p => p.nome_guerra === name);
-                    statsMap[name] = {
-                        nome: name,
+                if (!statsMap[idJogador]) {
+                    const pInfo = getPlayerByGlobalId(idJogador, j.temporada);
+                    statsMap[idJogador] = {
+                        idJogador,
+                        nome: pInfo?.nome_guerra || l.jogador || 'Jogador',
                         foto: pInfo?.foto || l.foto || DEFAULT_PLAYER_PHOTO,
                         posicao: pInfo?.posicao || l.posicao || '-',
                         jogos: 0,
@@ -5300,7 +5320,7 @@ const renderJogadoresPage = () => {
                     };
                 }
                 
-                const s = statsMap[name];
+                const s = statsMap[idJogador];
                 s.jogos++;
                 const golsGalo = parseInt(isMandante ? j.golsCasa : j.golsFora) || 0;
                 if (golsGalo > golsAdv) s.v++;
@@ -5360,7 +5380,7 @@ const renderJogadoresPage = () => {
             const isGoleiro = p.posicao === 'Goleiro';
             
             return `
-                <div class="player-card" onclick="renderPlayerCareerDetail('${p.nome.replace(/'/g, "\\'")}')" style="cursor:pointer; animation: fadeIn 0.4s ease-out both; animation-delay: ${i * 0.05}s;">
+                <div class="player-card" onclick="renderPlayerCareerDetail('${p.idJogador}')" style="cursor:pointer; animation: fadeIn 0.4s ease-out both; animation-delay: ${i * 0.05}s;">
                     <div class="player-rank">#${rank}</div>
                     <img src="${p.foto}" class="player-photo" onerror="this.src='${DEFAULT_PLAYER_PHOTO}'">
                     <div class="player-info">
@@ -5408,13 +5428,13 @@ const renderJogadoresPage = () => {
     }
 };
 
-const renderPlayerCareerDetail = (playerName) => {
+const renderPlayerCareerDetail = (idJogador) => {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.display = 'flex';
     overlay.style.zIndex = '5000';
     
-    const pInfo = state.jogadores.find(p => p.nome_guerra === playerName);
+    const pInfo = getPlayerByGlobalId(idJogador);
     const isGoleiro = pInfo?.posicao === 'Goleiro';
     
     // Coleta de jogos para estreia e último jogo
@@ -5423,7 +5443,7 @@ const renderPlayerCareerDetail = (playerName) => {
     // Agregação por temporada
     const seasonsMap = {};
     state.jogos.forEach(j => {
-        const line = j.lineupGalo?.find(l => l.jogador === playerName);
+        const line = j.lineupGalo?.find(l => getGamePlayerGlobalId(l) === String(idJogador));
         if (!line) return;
         
         playerGames.push(j);
@@ -5467,7 +5487,7 @@ const renderPlayerCareerDetail = (playerName) => {
     
     // Find first goal
     const gamesWithGoals = playerGames.filter(j => {
-        const line = j.lineupGalo?.find(l => l.jogador === playerName);
+        const line = j.lineupGalo?.find(l => getGamePlayerGlobalId(l) === String(idJogador));
         return line && parseInt(line.golsCount) > 0;
     });
     // playerGames is already sorted chronologically, so index 0 is the first goal
@@ -5496,7 +5516,7 @@ const renderPlayerCareerDetail = (playerName) => {
                 <div style="display:flex; align-items:center; gap:1.5rem;">
                     <img src="${foto}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:3px solid var(--primary-color);">
                     <div>
-                        <h2 style="margin:0; font-size:1.8rem;">${playerName}</h2>
+                        <h2 style="margin:0; font-size:1.8rem;">${pInfo?.nome_guerra || 'Jogador'}</h2>
                         <div style="color:var(--text-muted); font-size:0.9rem;">${pInfo?.nome_completo || ''}</div>
                         <div class="badge position-badge" style="margin-top:0.5rem;">${pInfo?.posicao || '-'}</div>
                     </div>

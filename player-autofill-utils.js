@@ -20,6 +20,11 @@ const getPlayerAutofillValues = player => player ? ({
     foto: player.foto || ''
 }) : null;
 
+const getGamePlayerGlobalId = reference => {
+    const id = reference?.idJogador ?? reference?.id_jogador;
+    return id === undefined || id === null || id === '' ? null : String(id);
+};
+
 if (typeof module !== 'undefined') {
-    module.exports = { normalizePlayerLookupName, selectMostRecentPlayer, getPlayerAutofillValues };
+    module.exports = { normalizePlayerLookupName, selectMostRecentPlayer, getPlayerAutofillValues, getGamePlayerGlobalId };
 }

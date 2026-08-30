@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const {
     normalizePlayerLookupName,
     selectMostRecentPlayer,
-    getPlayerAutofillValues
+    getPlayerAutofillValues,
+    getGamePlayerGlobalId
 } = require('../player-autofill-utils.js');
 
 test('normaliza nome para correspondência exata sem caixa, acentos e espaços extras', () => {
@@ -45,4 +46,13 @@ test('retorna somente os campos permitidos para autopreenchimento', () => {
 
 test('não retorna valores para jogador não encontrado', () => {
     assert.equal(getPlayerAutofillValues(null), null);
+});
+
+test('mantém Hulk Lateral e Hulk Atacante em chaves de estatística distintas', () => {
+    const hulkLateral = getGamePlayerGlobalId({ idJogador: 1776804290967, jogador: 'Hulk' });
+    const hulkAtacante = getGamePlayerGlobalId({ idJogador: 'outro-hulk', jogador: 'Hulk' });
+    const stats = { [hulkLateral]: { jogos: 1 }, [hulkAtacante]: { jogos: 1 } };
+
+    assert.notEqual(hulkLateral, hulkAtacante);
+    assert.equal(Object.keys(stats).length, 2);
 });
