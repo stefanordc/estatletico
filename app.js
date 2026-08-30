@@ -2718,10 +2718,13 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
             drop.appendChild(item);
         });
         
-        if (showQuickAdd && isAdmin()) {
+        const shouldOfferRefereeRegistration = currentSourceKey === 'arbitros' && results.length === 0;
+        if (showQuickAdd && isAdmin() && (currentSourceKey !== 'arbitros' || shouldOfferRefereeRegistration)) {
             const add = document.createElement('div'); 
             add.className = 'autocomplete-item new-item'; 
-            add.innerHTML = `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
+            add.innerHTML = currentSourceKey === 'arbitros'
+                ? `<i class="fas fa-plus-circle"></i> Cadastrar árbitro "${e.target.value}"`
+                : `<i class="fas fa-plus-circle"></i> + Novo "${e.target.value}"`;
             add.onclick = () => { drop.remove(); openQuickAddModal(sourceKey, e.target.value, id); };
             drop.appendChild(add); 
         }
@@ -3064,7 +3067,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     // A escalação e os cartões mantêm seu próprio autocomplete para preservar
     // a seleção pelo ID único do jogador.
     setupAutocomplete('game-tecnico-adv', 'jogos', 'tecnicoAdv', null, null, false);
-    setupAutocomplete('game-arbitro', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('game-arbitro', 'arbitros', 'nome');
     document.getElementById('game-arbitro').addEventListener('blur', updateRefereeInfo);
     document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
 
@@ -3090,13 +3093,13 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         }
     });
 
-    setupAutocomplete('game-assistente1', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('game-assistente1', 'arbitros', 'nome');
     document.getElementById('game-assistente1').addEventListener('blur', updateRefereeInfo);
 
-    setupAutocomplete('game-assistente2', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('game-assistente2', 'arbitros', 'nome');
     document.getElementById('game-assistente2').addEventListener('blur', updateRefereeInfo);
 
-    setupAutocomplete('game-var', 'arbitros', 'nome', null, null, false);
+    setupAutocomplete('game-var', 'arbitros', 'nome');
     document.getElementById('game-var').addEventListener('blur', updateRefereeInfo);
 
     // Initial photo load if editing
