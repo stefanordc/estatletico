@@ -482,6 +482,24 @@ const getSelectedPlayerGlobalId = (input, season) => {
         || null;
 };
 
+// A chave de escalação prioriza o identificador global, mas usa o ID da linha
+// como reserva para cadastros históricos que ainda não receberam id_jogador.
+// Isso permite ocultar o atleta nas sugestões antes mesmo da migração completa.
+const getPlayerSelectionKey = (player) => {
+    if (!player) return null;
+    if (player.id_jogador) return `global:${player.id_jogador}`;
+    if (player.id) return `registro:${player.id}`;
+    return null;
+};
+
+const getSelectedLineupPlayerKey = (input, season) => {
+    const selectedPlayer = getSelectedPlayer(input, season);
+    if (selectedPlayer) return getPlayerSelectionKey(selectedPlayer);
+    if (input?.dataset?.globalJogadorId) return `global:${input.dataset.globalJogadorId}`;
+    if (input?.dataset?.jogadorId) return `registro:${input.dataset.jogadorId}`;
+    return null;
+};
+
 const getPlayerFromGameReference = (reference, season) => {
     const byGlobalId = state.jogadores.find(p =>
         String(p.id_jogador) === String(reference?.idJogador)
@@ -3471,16 +3489,15 @@ const addCardRow = (team, data = null) => {
                 p => {
                     const gS = document.getElementById('game-temporada')?.value?.trim();
                     const pS = String(p.temporada || '').trim();
-                    const selectedGlobalIds = new Set(
+                    const selectedPlayerKeys = new Set(
                         Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
                             .filter(otherInput => otherInput !== inp)
-                            .map(otherInput => getSelectedPlayerGlobalId(otherInput, gS))
+                            .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
                             .filter(Boolean)
-                            .map(String)
                     );
                     return (!gS || pS === gS)
                         && p.posicao !== 'Técnico'
-                        && !selectedGlobalIds.has(String(p.id_jogador));
+                        && !selectedPlayerKeys.has(getPlayerSelectionKey(p));
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
