@@ -2818,7 +2818,20 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
         
         let ds = state[currentSourceKey]; 
         if (typeof currentFilterFn === 'function') ds = ds.filter(currentFilterFn);
+        // A escalação não pode sugerir novamente um nome já preenchido em
+        // outra linha. Esta barreira fica no próprio gerador de resultados,
+        // independentemente de filtros opcionais ou de IDs legados.
+        const isLineupPlayerInput = currentSourceKey === 'jogadores' && Boolean(inp.closest('#lineup-galo-body'));
+        const selectedLineupNames = isLineupPlayerInput
+            ? new Set(
+                Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
+                    .filter(otherInput => otherInput !== inp)
+                    .map(otherInput => normalizeString(otherInput.value).trim())
+                    .filter(Boolean)
+            )
+            : null;
         const resultsFull = ds.filter(item => normalizeString(item[currentField]).includes(normVal))
+                          .filter(item => !selectedLineupNames || !selectedLineupNames.has(normalizeString(item[currentField]).trim()))
                           .sort((a,b) => a[currentField].localeCompare(b[currentField]));
 
         // Em jogos históricos, o atleta pode não ter chegado no carregamento
