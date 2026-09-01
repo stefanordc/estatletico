@@ -435,6 +435,27 @@ const calculateAgeAtEndOfYear = (birthDate, year) => {
 
 const isAtletico = (teamName) => ['atlético', 'atletico', 'atlético-mg', 'atletico-mg'].includes(String(teamName || '').trim().toLowerCase());
 
+const getClubCrest = (clubName) => {
+    if (isAtletico(clubName)) return 'favicon.png.png';
+    const club = state.adversarios.find(item => normalizeString(item.clube) === normalizeString(clubName));
+    return club?.escudo && club.escudo !== DEFAULT_CLUB_PHOTO ? club.escudo : '';
+};
+
+const updateGameClubCrest = (inputId) => {
+    const input = document.getElementById(inputId);
+    const crest = document.getElementById(`${inputId}-crest`);
+    if (!input || !crest) return;
+
+    const src = getClubCrest(input.value);
+    crest.hidden = !src;
+    if (src) crest.src = src;
+};
+
+const updateGameClubCrests = () => {
+    updateGameClubCrest('game-casa');
+    updateGameClubCrest('game-fora');
+};
+
 // O ID é a referência canônica nos dados de jogo. O nome continua salvo apenas
 // para exibição e compatibilidade com os jogos cadastrados antes desta mudança.
 const getSelectedPlayer = (input, season) => {
@@ -2784,9 +2805,25 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
             const item = document.createElement('div'); 
             item.className = 'autocomplete-item'; 
             const duplicateName = currentSourceKey === 'jogadores' && resultsFull.filter(p => p[currentField] === res[currentField]).length > 1;
-            item.textContent = duplicateName
+            const label = duplicateName
                 ? `${res[currentField]} — ${res.nascimento || 'nascimento não informado'} (${res.posicao || 'sem posição'})`
                 : res[currentField];
+            if (currentSourceKey === 'adversarios' && ['game-casa', 'game-fora'].includes(id)) {
+                const crestSrc = getClubCrest(res[currentField]);
+                item.classList.add('club-autocomplete-item');
+                if (crestSrc) {
+                    const crest = document.createElement('img');
+                    crest.className = 'club-autocomplete-crest';
+                    crest.src = crestSrc;
+                    crest.alt = '';
+                    item.appendChild(crest);
+                }
+                const text = document.createElement('span');
+                text.textContent = label;
+                item.appendChild(text);
+            } else {
+                item.textContent = label;
+            }
             item.onclick = () => { 
                 inp.value = res[currentField]; 
                 drop.remove(); 
@@ -3038,7 +3075,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
                         <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div><div class="form-group"><label>Fora *</label><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><div class="club-input-with-crest"><img id="game-casa-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div></div></div><div class="form-group"><label>Fora *</label><div class="club-input-with-crest"><img id="game-fora-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
@@ -3199,8 +3236,15 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setTimeout(updateRefereeInfo, 100);
     setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
     setupAutocomplete('game-estadio', 'estadios', 'nome');
-    setupAutocomplete('game-casa', 'adversarios', 'clube');
-    setupAutocomplete('game-fora', 'adversarios', 'clube');
+    setupAutocomplete('game-casa', 'adversarios', 'clube', null, () => updateGameClubCrest('game-casa'));
+    setupAutocomplete('game-fora', 'adversarios', 'clube', null, () => updateGameClubCrest('game-fora'));
+    ['game-casa', 'game-fora'].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener('input', () => updateGameClubCrest(id));
+        input.addEventListener('change', () => updateGameClubCrest(id));
+        input.addEventListener('blur', () => updateGameClubCrest(id));
+    });
+    updateGameClubCrests();
     const estInp = document.getElementById('game-estadio'); 
     estInp.addEventListener('change', () => { 
         const est = state.estadios.find(e => e.nome === estInp.value); 
@@ -3219,6 +3263,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 document.getElementById('game-casa').value = est.mandante; 
                 document.getElementById('game-fora').value = '';
             }
+            updateGameClubCrests();
         }
     });
     const updWinner = () => { const c = parseInt(document.getElementById('game-gols-casa').value)||0, f = parseInt(document.getElementById('game-gols-fora').value)||0; const casa = document.getElementById('game-casa').value, fora = document.getElementById('game-fora').value; const venced = document.getElementById('game-vencedor'); if (c > f) venced.value = casa || 'Casa'; else if (f > c) venced.value = fora || 'Fora'; else venced.value = 'Empate'; };
@@ -3426,7 +3471,16 @@ const addCardRow = (team, data = null) => {
                 p => {
                     const gS = document.getElementById('game-temporada')?.value?.trim();
                     const pS = String(p.temporada || '').trim();
-                    return (!gS || pS === gS) && p.posicao !== 'Técnico';
+                    const selectedGlobalIds = new Set(
+                        Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
+                            .filter(otherInput => otherInput !== inp)
+                            .map(otherInput => getSelectedPlayerGlobalId(otherInput, gS))
+                            .filter(Boolean)
+                            .map(String)
+                    );
+                    return (!gS || pS === gS)
+                        && p.posicao !== 'Técnico'
+                        && !selectedGlobalIds.has(String(p.id_jogador));
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);

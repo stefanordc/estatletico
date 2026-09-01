@@ -657,6 +657,40 @@ body.role-user #btn-novo-jogo {
     transition: var(--transition);
 }
 
+/* Escudos exibidos nos campos Casa e Fora durante o cadastro de jogos. */
+.club-input-with-crest {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.club-input-with-crest .autocomplete-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.club-crest-preview {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: var(--bg-color);
+}
+
+.club-autocomplete-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.club-autocomplete-crest {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    object-fit: contain;
+}
+
 .form-group input:focus, .form-group select:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
