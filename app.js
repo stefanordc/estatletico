@@ -493,11 +493,20 @@ const getPlayerSelectionKey = (player) => {
 };
 
 const getSelectedLineupPlayerKey = (input, season) => {
+    if (input?.dataset?.selectedPlayerKey) return input.dataset.selectedPlayerKey;
     const selectedPlayer = getSelectedPlayer(input, season);
     if (selectedPlayer) return getPlayerSelectionKey(selectedPlayer);
     if (input?.dataset?.globalJogadorId) return `global:${input.dataset.globalJogadorId}`;
     if (input?.dataset?.jogadorId) return `registro:${input.dataset.jogadorId}`;
     return null;
+};
+
+const setSelectedLineupPlayerKey = (input, player) => {
+    if (!input) return;
+    const key = getPlayerSelectionKey(player)
+        || (input.dataset.globalJogadorId ? `global:${input.dataset.globalJogadorId}` : null)
+        || (input.dataset.jogadorId ? `registro:${input.dataset.jogadorId}` : null);
+    if (key) input.dataset.selectedPlayerKey = key;
 };
 
 const getPlayerFromGameReference = (reference, season) => {
@@ -3535,10 +3544,13 @@ const addLineupRow = (team, data = null) => {
     const row = document.createElement('tr');
     const season = document.getElementById('game-temporada').value;
     const selectedPlayer = isAdv ? null : getPlayerFromGameReference(data, season);
+    const selectedPlayerKey = selectedPlayer
+        ? getPlayerSelectionKey(selectedPlayer)
+        : data?.idJogador ? `global:${data.idJogador}` : data?.jogadorId ? `registro:${data.jogadorId}` : '';
 
     row.innerHTML = `
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
-        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" data-global-jogador-id="${data?.idJogador || selectedPlayer?.id_jogador || ''}" value="${data?.jogador || ''}" required></div>`}</td>
+        <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" data-global-jogador-id="${data?.idJogador || selectedPlayer?.id_jogador || ''}" data-selected-player-key="${selectedPlayerKey}" value="${data?.jogador || ''}" required></div>`}</td>
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
@@ -3589,6 +3601,7 @@ const addLineupRow = (team, data = null) => {
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
                     inp.dataset.globalJogadorId = String(res.id_jogador || '');
+                    setSelectedLineupPlayerKey(inp, res);
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.line-player-inp');
@@ -3625,6 +3638,7 @@ const addLineupRow = (team, data = null) => {
             inp.addEventListener('input', () => {
                 delete inp.dataset.jogadorId;
                 delete inp.dataset.globalJogadorId;
+                delete inp.dataset.selectedPlayerKey;
             });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
@@ -3632,6 +3646,7 @@ const addLineupRow = (team, data = null) => {
                 if(p) { 
                     inp.dataset.jogadorId = String(p.id);
                     inp.dataset.globalJogadorId = String(p.id_jogador || '');
+                    setSelectedLineupPlayerKey(inp, p);
                     row.querySelector('.mini-foto').src = p.foto || DEFAULT_PLAYER_PHOTO;
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
