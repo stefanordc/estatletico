@@ -458,6 +458,17 @@ const updateGameClubCrests = () => {
     updateGameClubCrest('game-fora');
 };
 
+const updateGameStadiumPhoto = () => {
+    const input = document.getElementById('game-estadio');
+    const photo = document.getElementById('game-estadio-photo');
+    if (!input || !photo) return;
+
+    const stadium = state.estadios.find(item => normalizeString(item.nome) === normalizeString(input.value));
+    const src = stadium?.foto && stadium.foto !== 'https://via.placeholder.com/40' ? stadium.foto : '';
+    photo.hidden = !src;
+    if (src) photo.src = src;
+};
+
 // O ID é a referência canônica nos dados de jogo. O nome continua salvo apenas
 // para exibição e compatibilidade com os jogos cadastrados antes desta mudança.
 const getSelectedPlayer = (input, season) => {
@@ -3104,7 +3115,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 <div class="form-block active" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
                         <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
-                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
+                        <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><div class="stadium-input-with-photo"><img id="game-estadio-photo" class="stadium-photo-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div></div></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><div class="club-input-with-crest"><img id="game-casa-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div></div></div><div class="form-group"><label>Fora *</label><div class="club-input-with-crest"><img id="game-fora-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
                     </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
@@ -3265,7 +3276,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     // Initial photo load if editing
     setTimeout(updateRefereeInfo, 100);
     setupAutocomplete('game-campeonato', 'competicoes', 'campeonato');
-    setupAutocomplete('game-estadio', 'estadios', 'nome');
+    setupAutocomplete('game-estadio', 'estadios', 'nome', null, () => updateGameStadiumPhoto());
     setupAutocomplete('game-casa', 'adversarios', 'clube', null, () => updateGameClubCrest('game-casa'));
     setupAutocomplete('game-fora', 'adversarios', 'clube', null, () => updateGameClubCrest('game-fora'));
     ['game-casa', 'game-fora'].forEach(id => {
@@ -3275,6 +3286,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         input.addEventListener('blur', () => updateGameClubCrest(id));
     });
     updateGameClubCrests();
+    updateGameStadiumPhoto();
     const estInp = document.getElementById('game-estadio'); 
     estInp.addEventListener('change', () => { 
         const est = state.estadios.find(e => e.nome === estInp.value); 
@@ -3295,7 +3307,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             }
             updateGameClubCrests();
         }
+        updateGameStadiumPhoto();
     });
+    estInp.addEventListener('input', updateGameStadiumPhoto);
+    estInp.addEventListener('blur', updateGameStadiumPhoto);
     const updWinner = () => { const c = parseInt(document.getElementById('game-gols-casa').value)||0, f = parseInt(document.getElementById('game-gols-fora').value)||0; const casa = document.getElementById('game-casa').value, fora = document.getElementById('game-fora').value; const venced = document.getElementById('game-vencedor'); if (c > f) venced.value = casa || 'Casa'; else if (f > c) venced.value = fora || 'Fora'; else venced.value = 'Empate'; };
     ['game-gols-casa', 'game-gols-fora', 'game-casa', 'game-fora'].forEach(id => document.getElementById(id).addEventListener('input', updWinner));
     const updTicket = () => { 
