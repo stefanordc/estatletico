@@ -436,7 +436,9 @@ const calculateAgeAtEndOfYear = (birthDate, year) => {
 const isAtletico = (teamName) => ['atlético', 'atletico', 'atlético-mg', 'atletico-mg'].includes(String(teamName || '').trim().toLowerCase());
 
 const getClubCrest = (clubName) => {
-    if (isAtletico(clubName)) return 'favicon.svg';
+    // O SVG do projeto é apenas o ícone do portal; o PNG contém o escudo
+    // completo do Atlético e é a fonte correta para esta exibição.
+    if (isAtletico(clubName)) return 'favicon.png.png';
     const club = state.adversarios.find(item => normalizeString(item.clube) === normalizeString(clubName));
     return club?.escudo && club.escudo !== DEFAULT_CLUB_PHOTO ? club.escudo : '';
 };
