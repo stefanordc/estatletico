@@ -522,6 +522,21 @@ const setSelectedLineupPlayerKey = (input, player) => {
     if (key) input.dataset.selectedPlayerKey = key;
 };
 
+// Jogos antigos podem conter apenas o texto do atleta. Neste caso, nome de
+// guerra + posição impede que ele reapareça enquanto a escalação estiver aberta.
+const getLineupPlayerDisplayKey = (input) => {
+    const row = input?.closest('tr');
+    const name = normalizeString(input?.value);
+    const position = normalizeString(row?.querySelector('.pos-inp')?.value);
+    return name && position && position !== '-' ? `${name}|${position}` : null;
+};
+
+const getPlayerDisplayKey = (player) => {
+    const name = normalizeString(player?.nome_guerra);
+    const position = normalizeString(player?.posicao);
+    return name && position ? `${name}|${position}` : null;
+};
+
 const getPlayerFromGameReference = (reference, season) => {
     const byGlobalId = state.jogadores.find(p =>
         String(p.id_jogador) === String(reference?.idJogador)
@@ -3522,9 +3537,16 @@ const addCardRow = (team, data = null) => {
                             .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
                             .filter(Boolean)
                     );
+                    const selectedDisplayKeys = new Set(
+                        Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
+                            .filter(otherInput => otherInput !== inp)
+                            .map(getLineupPlayerDisplayKey)
+                            .filter(Boolean)
+                    );
                     return (!gS || pS === gS)
                         && p.posicao !== 'Técnico'
-                        && !selectedPlayerKeys.has(getPlayerSelectionKey(p));
+                        && !selectedPlayerKeys.has(getPlayerSelectionKey(p))
+                        && !selectedDisplayKeys.has(getPlayerDisplayKey(p));
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
