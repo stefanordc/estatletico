@@ -887,7 +887,7 @@ const renderAdversarios = () => {
                     <div class="form-group"><label>Estado *</label><input type="text" name="estado" required></div>
                     <div class="form-group"><label>País *</label><input type="text" name="pais" value="Brasil" required></div>
                 </div>
-                <div class="form-group" style="margin-bottom: 1.5rem;"><label>Escudo (URL)</label><input type="text" name="escudo"></div>
+                <div class="form-group" style="margin-bottom: 1.5rem;"><label>Escudo (Cole)</label><div class="paste-area" id="paste-area-adversario">Ctrl+V</div><input type="hidden" name="escudo" id="escudo-input-adversario"></div>
                 <button type="submit" class="btn-primary">${state.editingId ? 'Atualizar' : 'Cadastrar'}</button>
             </form>
         </div>
@@ -897,6 +897,7 @@ const renderAdversarios = () => {
             <tbody id="table-body-adversarios">${renderTableRows('adversarios')}</tbody></table>
         </div>
     `;
+    setupPasteHandler('paste-area-adversario', 'escudo-input-adversario');
     document.getElementById('form-adversarios').addEventListener('submit', (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         const clubeNome = fd.get('clube');
@@ -2943,7 +2944,7 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     } else if(type === 'estadios') {
         formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado *</label><input type="text" id="qa-estado" required></div><div class="form-group"><label>País *</label><input type="text" id="qa-pais" required value="Brasil"></div></div><div class="form-group"><label>Mandante</label><input type="text" id="qa-mandante"></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-estadio">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if(type === 'adversarios') {
-        formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado *</label><input type="text" id="qa-estado" required></div><div class="form-group"><label>País *</label><input type="text" id="qa-pais" required value="Brasil"></div></div><div class="form-group"><label>Escudo (Cole)</label><div class="paste-area" id="qa-paste-adversario">Ctrl+V</div><input type="hidden" id="qa-escudo"></div><div class="form-group"><label>Escudo (URL)</label><input type="text" id="qa-escudo-url"></div>`;
+        formHtml = `<div class="form-group"><label>Clube *</label><input type="text" id="qa-clube" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>Estado *</label><input type="text" id="qa-estado" required></div><div class="form-group"><label>País *</label><input type="text" id="qa-pais" required value="Brasil"></div></div><div class="form-group"><label>Escudo (Cole)</label><div class="paste-area" id="qa-paste-adversario">Ctrl+V</div><input type="hidden" id="qa-escudo"></div>`;
     } else if(type === 'arbitros') {
         formHtml = `<div class="form-group"><label>Nome *</label><input type="text" id="qa-nome" required value="${initialValue}"></div><div class="form-grid"><div class="form-group"><label>País *</label><input type="text" id="qa-federacao" required value="Brasil"></div></div><div class="form-group"><label>Foto (Cole)</label><div class="paste-area" id="qa-paste-arbitro">Ctrl+V</div><input type="hidden" id="qa-foto"></div>`;
     } else if (type === 'jogadores') {
@@ -3012,7 +3013,7 @@ window.saveQuickAdd = (type, targetInputId) => {
         item.clube = clubeNome;
         item.estado = document.getElementById('qa-estado').value;
         item.pais = document.getElementById('qa-pais').value;
-        item.escudo = document.getElementById('qa-escudo').value || document.getElementById('qa-escudo-url').value || 'https://via.placeholder.com/32';
+        item.escudo = document.getElementById('qa-escudo').value || 'https://via.placeholder.com/32';
     }
     else if(type === 'competicoes') { item.campeonato = document.getElementById('qa-campeonato').value; item.tipo = document.getElementById('qa-tipo').value; }
     else if(type === 'estadios') { item.nome = document.getElementById('qa-nome').value; item.estado = document.getElementById('qa-estado').value; item.pais = document.getElementById('qa-pais').value; item.mandante = document.getElementById('qa-mandante').value; item.foto = document.getElementById('qa-foto').value || 'https://via.placeholder.com/40'; }
@@ -5173,12 +5174,15 @@ const prepareEdit = (tab, id) => {
             else inp.value = item[inp.name] !== undefined && item[inp.name] !== null ? item[inp.name] : ''; 
         } 
     });
-    // Preenche a foto manualmente pois é um hidden input
-    const fotoInp = form.querySelector('[name="foto"]');
-    const pasteArea = document.getElementById('paste-area-jogador');
-    if (fotoInp && item.foto && item.foto !== 'https://via.placeholder.com/40') {
-        fotoInp.value = item.foto;
-        if (pasteArea) pasteArea.innerHTML = `<img src="${item.foto}" style="max-height:80px;">`;
+    // Preenche a imagem manualmente pois foto/escudo são inputs ocultos.
+    const imageField = tab === 'adversarios' ? 'escudo' : 'foto';
+    const imageInput = form.querySelector(`[name="${imageField}"]`);
+    const pasteAreaId = tab === 'adversarios' ? 'paste-area-adversario' : 'paste-area-jogador';
+    const pasteArea = document.getElementById(pasteAreaId);
+    const image = item[imageField];
+    if (imageInput && image && !image.includes('via.placeholder.com')) {
+        imageInput.value = image;
+        if (pasteArea) pasteArea.innerHTML = `<img src="${image}" style="max-height:80px;">`;
     }
     window.scrollTo(0,0); 
 };
