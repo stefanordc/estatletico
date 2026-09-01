@@ -436,7 +436,7 @@ const calculateAgeAtEndOfYear = (birthDate, year) => {
 const isAtletico = (teamName) => ['atlético', 'atletico', 'atlético-mg', 'atletico-mg'].includes(String(teamName || '').trim().toLowerCase());
 
 const getClubCrest = (clubName) => {
-    if (isAtletico(clubName)) return 'favicon.png.png';
+    if (isAtletico(clubName)) return 'favicon.svg';
     const club = state.adversarios.find(item => normalizeString(item.clube) === normalizeString(clubName));
     return club?.escudo && club.escudo !== DEFAULT_CLUB_PHOTO ? club.escudo : '';
 };
