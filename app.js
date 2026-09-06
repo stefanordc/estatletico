@@ -3616,6 +3616,13 @@ const addLineupRow = (team, data = null) => {
         <td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-user-minus" style="color:#7f8c8d;"></i></button></td>
     `;
     
+    row.querySelector('.sub-ck').addEventListener('change', event => {
+        if (!event.target.checked) return;
+
+        const nextTitular = row.nextElementSibling?.querySelector('.titular-ck');
+        if (nextTitular) nextTitular.checked = false;
+    });
+
     const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
     const updateGoals = () => { 
         minCont.innerHTML = ''; tempoCont.innerHTML = ''; 
