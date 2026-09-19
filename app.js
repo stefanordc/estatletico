@@ -5212,9 +5212,11 @@ const deleteItem = async (tab, id) => {
         }
     }
 };
-const prepareEdit = (tab, id) => { 
+const prepareEdit = async (tab, id) => {
     if (!requireAdmin('Apenas o administrador pode editar registros.')) return;
 
+    // Garante que uma edição sem troca de imagem conserve a mídia original.
+    if (window.EstatleticoSync?.MEDIA_COLUMN[tab]) await requestMedia(tab, id);
     state.editingId = id; renderTab(tab); 
     let item = state[tab].find(i => i.id === id); 
     if (tab === 'jogadores') {
@@ -5234,6 +5236,7 @@ const prepareEdit = (tab, id) => {
 
         item = {
             ...item,
+            foto: item.foto,
             nacionalidade: getBest('nacionalidade', ['brasil']),
             nome_guerra: getBest('nome_guerra'),
             nascimento: getBest('nascimento'),
@@ -7329,7 +7332,8 @@ const getMediaPlaceholder = (tableName) => tableName === 'adversarios'
         : DEFAULT_REF_PHOTO;
 
 const rerenderAfterMediaLoad = () => {
-    if (!state.isFormActive) window.dispatchEvent(new Event('hashchange'));
+    // Formulários de cadastro preservam texto e imagem ainda não salvos.
+    if (!state.isFormActive && !isCadastroFormOpen()) window.dispatchEvent(new Event('hashchange'));
 };
 
 const requestMedia = async (tableName, id) => {
@@ -7443,8 +7447,9 @@ const isCadastroFormOpen = () => Boolean(document.querySelector(
 
 const renderChangedCadastroIfVisible = (table) => {
     const currentHash = window.location.hash.replace('#', '');
-    if (!state.isFormActive && !isCadastroFormOpen() && currentHash === `cadastros/${table}`) {
-        renderTab(table);
+    if (!state.isFormActive && currentHash === `cadastros/${table}`) {
+        const tbody = document.getElementById(`table-body-${table}`);
+        if (tbody) tbody.innerHTML = renderTableRows(table);
     }
 };
 
@@ -7634,6 +7639,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     const fetchLatestRevision = async () => {
+        if (window.EstatleticoData.source !== 'supabase') return 0;
         const { data, error } = await supabaseClient
             .from('estatletico_change_log')
             .select('revision')
@@ -7654,6 +7660,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
 
     const syncFromJournal = async (reason, revision = 0) => {
+        if (window.EstatleticoData.source !== 'supabase') return;
         announcedRevision = Math.max(announcedRevision, Number(revision) || 0);
         if (initialCoreLoad || journalSyncPromise || !supabaseClient) return journalSyncPromise;
         journalSyncPromise = (async () => {
@@ -7705,6 +7712,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
 
     const startRealtimeSync = () => {
+        if (window.EstatleticoData.source !== 'supabase') {
+            let channel = supabaseClient.channel('estatletico-local-data');
+            MUTABLE_TABLES.forEach(table => {
+                channel = channel.on('local-change', { table }, async payload => {
+                    const record = payload.new || payload.old;
+                    if (!record?.id) return;
+                    const index = state[table].findIndex(item => String(item.id) === String(record.id));
+                    if (payload.eventType === 'DELETE') state[table] = state[table].filter(item => String(item.id) !== String(record.id));
+                    else if (index >= 0) state[table][index] = attachMediaAccessors(table, [{ ...state[table][index], ...payload.new }])[0];
+                    else state[table].push(attachMediaAccessors(table, [payload.new])[0]);
+                    markTableDataChanged(table);
+                    invalidateCache();
+                    if (table === 'jogos') enrichJogos();
+                    await saveTableSnapshotToCache(table);
+                    renderChangedCadastroIfVisible(table);
+                });
+            });
+            channel.subscribe();
+            return;
+        }
         if (!supabaseClient?.channel) return;
         supabaseClient.channel('estatletico:sync', { config: { private: true } })
             .on('broadcast', { event: 'change' }, ({ payload }) => syncFromJournal('broadcast', payload?.revision))
@@ -7775,6 +7802,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
     } catch (e) {
+        initialCoreLoad = false;
         console.error('Estatlético: Falha na inicialização:', e);
     } finally {
         clearTimeout(safetyTimer);

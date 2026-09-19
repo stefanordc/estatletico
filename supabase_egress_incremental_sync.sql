@@ -40,6 +40,9 @@ declare
   v_revision bigint;
 begin
   if tg_op = 'UPDATE' and new is not distinct from old then return null; end if;
+  -- Serializa a atribuição da revisão até o commit: IDs crescentes nunca
+  -- ficam visíveis ao cliente antes de uma revisão menor pendente.
+  perform pg_advisory_xact_lock(hashtext('estatletico_change_log'));
   v_row_id := case when tg_op = 'DELETE' then old.id::text else new.id::text end;
   insert into public.estatletico_change_log (table_name, row_id, operation)
     values (tg_table_name, v_row_id, tg_op)

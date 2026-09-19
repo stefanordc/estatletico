@@ -12,7 +12,7 @@ Para conferir o rollout, execute o SQL uma vez com uma conexão administrativa e
 
 O site continua em HTML/CSS/JavaScript. O backend novo é Node.js, na mesma linguagem do projeto. Todos os arquivos estão completos no repositório; não é necessário colar trechos manualmente.
 
-**Estado da entrega:** implementação e testes locais realizados. Os dados reais ainda NÃO foram copiados: falta `SUPABASE_DB_URL`, e a credencial MySQL disponível no ambiente retornou `ER_ACCESS_DENIED_ERROR`. Os testes usaram uma instância MySQL separada, porta 3317, com dados sintéticos. Não houve escrita no Supabase nem alteração do banco MySQL principal.
+**Estado histórico da contingência MySQL:** os testes iniciais usaram uma instância MySQL separada, porta 3317, com dados sintéticos. Desde então, a conexão PostgreSQL foi configurada e o rollout incremental descrito acima foi aplicado e validado no Supabase; esta nota não descreve o estado atual do Supabase.
 
 ## Arquitetura e troca de banco
 

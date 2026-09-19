@@ -23,3 +23,10 @@ test('cliente busca mídia por demanda, com cache separado e invalidação', () 
   assert.match(source, /mediaRequests\.has\(key\)/);
   assert.match(source, /invalidateMedia\(table, id\)/);
 });
+
+test('modo MySQL continua usando seu provider e servidor entrega o módulo de sync', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '../server/index.cjs'), 'utf8');
+  assert.match(source, /if \(window\.EstatleticoData\.source !== 'supabase'\) return;/);
+  assert.match(server, /'data-sync-utils\.js'/);
+});
