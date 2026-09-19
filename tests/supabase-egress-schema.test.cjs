@@ -18,3 +18,11 @@ test('migração cria diário seguro e Broadcast compacto para todas as tabelas'
     assert.match(sql, new RegExp(`after insert or update or delete on public\\.${table}`, 'i'));
   }
 });
+
+test('documentação operacional descreve rollout incremental, retenção e rollback', () => {
+  const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8');
+  assert.match(readme, /supabase_egress_incremental_sync\.sql/);
+  assert.match(readme, /35 dias/i);
+  assert.match(readme, /estatletico:sync/);
+  assert.match(readme, /rollback/i);
+});

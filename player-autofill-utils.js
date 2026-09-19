@@ -20,11 +20,14 @@ const getPlayerAutofillValues = player => player ? ({
     foto: player.foto || ''
 }) : null;
 
+const shouldApplyAutofillValue = ({ candidate, currentValue = '', dirty = false, autoFilled = false }) =>
+    Boolean(candidate) && !dirty && (!currentValue || autoFilled);
+
 const getGamePlayerGlobalId = reference => {
     const id = reference?.idJogador ?? reference?.id_jogador;
     return id === undefined || id === null || id === '' ? null : String(id);
 };
 
 if (typeof module !== 'undefined') {
-    module.exports = { normalizePlayerLookupName, selectMostRecentPlayer, getPlayerAutofillValues, getGamePlayerGlobalId };
+    module.exports = { normalizePlayerLookupName, selectMostRecentPlayer, getPlayerAutofillValues, shouldApplyAutofillValue, getGamePlayerGlobalId };
 }

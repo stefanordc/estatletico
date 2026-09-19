@@ -4,6 +4,7 @@ const {
     normalizePlayerLookupName,
     selectMostRecentPlayer,
     getPlayerAutofillValues,
+    shouldApplyAutofillValue,
     getGamePlayerGlobalId
 } = require('../player-autofill-utils.js');
 
@@ -46,6 +47,14 @@ test('retorna somente os campos permitidos para autopreenchimento', () => {
 
 test('não retorna valores para jogador não encontrado', () => {
     assert.equal(getPlayerAutofillValues(null), null);
+});
+
+test('autopreenchimento não sobrescreve campo digitado e pode atualizar campo preenchido automaticamente', () => {
+    assert.equal(shouldApplyAutofillValue({ candidate: 'Atacante', currentValue: '', dirty: false }), true);
+    assert.equal(shouldApplyAutofillValue({ candidate: 'Atacante', currentValue: 'Zagueiro', dirty: true }), false);
+    assert.equal(shouldApplyAutofillValue({ candidate: 'Atacante', currentValue: 'Zagueiro', autoFilled: false }), false);
+    assert.equal(shouldApplyAutofillValue({ candidate: 'Atacante', currentValue: 'Zagueiro', autoFilled: true }), true);
+    assert.equal(shouldApplyAutofillValue({ candidate: '', currentValue: '', dirty: false }), false);
 });
 
 test('mantém Hulk Lateral e Hulk Atacante em chaves de estatística distintas', () => {
