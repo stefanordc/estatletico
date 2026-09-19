@@ -7306,11 +7306,113 @@ const idbCache = {
                 req.onerror = () => resolve(null);
             });
         } catch(e) { return null; }
+    },
+    async delete(key) {
+        try {
+            const db = await this.init();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(this.storeName, 'readwrite');
+                tx.objectStore(this.storeName).delete(key);
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(false);
+            });
+        } catch(e) { return false; }
     }
+};
+
+const mediaValues = new Map();
+const mediaRequests = new Map();
+const getMediaPlaceholder = (tableName) => tableName === 'adversarios'
+    ? DEFAULT_CLUB_PHOTO
+    : tableName === 'jogadores'
+        ? DEFAULT_PLAYER_PHOTO
+        : DEFAULT_REF_PHOTO;
+
+const rerenderAfterMediaLoad = () => {
+    if (!state.isFormActive) window.dispatchEvent(new Event('hashchange'));
+};
+
+const requestMedia = async (tableName, id) => {
+    const syncTools = window.EstatleticoSync;
+    const column = syncTools?.MEDIA_COLUMN[tableName];
+    if (!column || id === undefined || id === null) return getMediaPlaceholder(tableName);
+    const key = syncTools.mediaKey(tableName, id);
+    if (mediaValues.has(key)) return mediaValues.get(key) || getMediaPlaceholder(tableName);
+    if (mediaRequests.has(key)) return mediaRequests.get(key);
+
+    const request = (async () => {
+        const cached = await idbCache.get(`estatletico_media:${key}`);
+        if (cached && Object.prototype.hasOwnProperty.call(cached, 'value')) {
+            mediaValues.set(key, cached.value || '');
+            return cached.value || getMediaPlaceholder(tableName);
+        }
+        if (!supabaseClient) return getMediaPlaceholder(tableName);
+        const { data, error } = await supabaseClient
+            .from(tableName)
+            .select(syncTools.MEDIA_COLUMN[tableName])
+            .eq('id', id)
+            .limit(1);
+        if (error) throw error;
+        const value = data?.[0]?.[column] || '';
+        mediaValues.set(key, value);
+        await idbCache.set(`estatletico_media:${key}`, { value });
+        return value || getMediaPlaceholder(tableName);
+    })();
+    mediaRequests.set(key, request);
+    try {
+        return await request;
+    } finally {
+        mediaRequests.delete(key);
+        rerenderAfterMediaLoad();
+    }
+};
+
+const invalidateMedia = (tableName, id) => {
+    const syncTools = window.EstatleticoSync;
+    if (!syncTools?.MEDIA_COLUMN[tableName]) return;
+    const key = syncTools.mediaKey(tableName, id);
+    mediaValues.delete(key);
+    mediaRequests.delete(key);
+    void idbCache.delete(`estatletico_media:${key}`);
+};
+
+const mediaValue = (tableName, id) => {
+    const syncTools = window.EstatleticoSync;
+    const key = syncTools?.mediaKey(tableName, id);
+    if (key && mediaValues.has(key)) return mediaValues.get(key) || getMediaPlaceholder(tableName);
+    void requestMedia(tableName, id).catch(error => console.warn('Estatlético: não foi possível carregar mídia.', error));
+    return getMediaPlaceholder(tableName);
+};
+
+const attachMediaAccessors = (tableName, rows) => {
+    const syncTools = window.EstatleticoSync;
+    const column = syncTools?.MEDIA_COLUMN[tableName];
+    if (!column || !Array.isArray(rows)) return rows;
+    rows.forEach(row => {
+        if (!row || row.id === undefined) return;
+        const descriptor = Object.getOwnPropertyDescriptor(row, column);
+        if (descriptor?.get) return;
+        const key = syncTools.mediaKey(tableName, row.id);
+        if (descriptor && descriptor.value !== undefined && !mediaValues.has(key)) {
+            mediaValues.set(key, descriptor.value || '');
+            void idbCache.set(`estatletico_media:${key}`, { value: descriptor.value || '' });
+        }
+        Object.defineProperty(row, column, {
+            configurable: true,
+            enumerable: false,
+            get: () => mediaValue(tableName, row.id),
+            set: value => {
+                mediaValues.set(key, value || '');
+                void idbCache.set(`estatletico_media:${key}`, { value: value || '' });
+            }
+        });
+    });
+    return rows;
 };
 
 const saveTableSnapshotToCache = async (table) => {
     if (!Array.isArray(state[table])) return;
+    attachMediaAccessors(table, state[table]);
     const cached = await idbCache.get(window.EstatleticoData.cacheKey) || {};
     // O cache incremental guarda as tabelas dentro de `tables`, mas ainda
     // aceita o formato legado enquanto uma aba antiga estiver aberta.
@@ -7569,9 +7671,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
                     const current = Object.fromEntries(tables.map(table => [table, state[table] || []]));
                     const next = await syncTools.applyRevisionPage(current, syncMetadata.revision, revisions, resolveJournalRow);
+                    revisions.forEach(({ table_name: table, row_id: id }) => invalidateMedia(table, id));
                     for (const table of tables) {
                         if (JSON.stringify(state[table]) !== JSON.stringify(next.state[table])) {
-                            state[table] = next.state[table];
+                            state[table] = attachMediaAccessors(table, next.state[table]);
                             markTableDataChanged(table);
                             renderChangedCadastroIfVisible(table);
                             changed = true;
@@ -7630,7 +7733,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cacheEnvelope = cachedData?.tables ? cachedData : { tables: cachedData, sync: null };
     const hasValidCache = Boolean(cacheEnvelope.tables && !syncTools.needsFullReload(cacheEnvelope.sync));
     if (hasValidCache) {
-        Object.keys(cacheEnvelope.tables).forEach(table => { if (state[table]) state[table] = cacheEnvelope.tables[table]; });
+        Object.keys(cacheEnvelope.tables).forEach(table => {
+            if (state[table]) state[table] = attachMediaAccessors(table, cacheEnvelope.tables[table]);
+        });
         syncMetadata = cacheEnvelope.sync;
         handleRouting();
         applyPermissionUI();
@@ -7651,9 +7756,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             const results = await Promise.all(tables.map(table => fetchCoreTable(table, batchSizes[table]).then(result => ({ table, ...result }))));
             for (const { table, data, error } of results) {
                 if (error) throw error;
-                state[table] = tableDataVersions[table] !== versions[table]
+                state[table] = attachMediaAccessors(table, tableDataVersions[table] !== versions[table]
                     ? mergeServerRowsWithLocalState(table, data || [])
-                    : (data || []);
+                    : (data || []));
                 markTableDataChanged(table);
             }
             state.arbitros = state.arbitros.map(arbitro => arbitro.federacao?.trim().length === 2

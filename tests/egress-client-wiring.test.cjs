@@ -14,3 +14,12 @@ test('cliente Supabase usa projeções principais, diário e Broadcast privado',
   assert.doesNotMatch(source, /from\(tableName\)\.select\('\*'\)/);
   assert.doesNotMatch(source, /'postgres_changes'/);
 });
+
+test('cliente busca mídia por demanda, com cache separado e invalidação', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+  assert.match(source, /const requestMedia = async \(tableName, id\)/);
+  assert.match(source, /select\(syncTools\.MEDIA_COLUMN\[tableName\]\)/);
+  assert.match(source, /const invalidateMedia = \(tableName, id\)/);
+  assert.match(source, /mediaRequests\.has\(key\)/);
+  assert.match(source, /invalidateMedia\(table, id\)/);
+});
