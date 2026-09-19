@@ -49,9 +49,9 @@ Os quatro campos serão carregados por ID apenas quando um componente realmente 
 
 ### 2. Diário de revisões durável
 
-Uma migração criará uma tabela de diário com uma revisão monotônica, tabela afetada, ID do registro, operação (`INSERT`, `UPDATE` ou `DELETE`) e instante de gravação. Triggers `AFTER` nas seis tabelas escreverão uma entrada na mesma transação que alterou o dado.
+Uma migração criará uma tabela de diário com uma revisão monotônica, tabela afetada, ID do registro, operação (`INSERT`, `UPDATE` ou `DELETE`) e instante de gravação. Triggers `AFTER` nas seis tabelas escreverão uma entrada na mesma transação que alterou o dado. UPDATEs em que `NEW IS NOT DISTINCT FROM OLD` não criarão revisão nem Broadcast.
 
-O diário terá retenção documentada e superior ao período de cache aceito. A consulta será protegida por RLS para as mesmas pessoas que já podem ler os dados da aplicação. Se o cursor local estiver antes da retenção, o cliente fará uma carga principal completa e reiniciará seu cursor; nunca assumirá que um cache antigo ainda é válido.
+O diário terá retenção de 35 dias, removida diariamente por tarefa transacional, e o cache será considerado expirado após 30 dias. A consulta será protegida por RLS para as mesmas pessoas que já podem ler os dados da aplicação. Se o cursor local estiver antes da retenção, o cliente fará uma carga principal completa e reiniciará seu cursor; nunca assumirá que um cache antigo ainda é válido.
 
 O diário resolve alterações e exclusões mesmo que a aba estivesse fechada. Ele substitui a atual leitura completa ao ganhar foco por páginas pequenas de revisões desde o último cursor.
 
@@ -65,7 +65,7 @@ As triggers também enviarão um Broadcast privado no tópico único da aplicaç
 
 Será usado `realtime.send`, e não `realtime.broadcast_changes`, para que o evento não inclua a linha inteira. A função de trigger ficará em esquema não exposto, com `search_path` fixado e execução pública revogada. As políticas de `realtime.messages` concederão apenas a usuários autenticados a permissão de receber mensagens do tópico privado.
 
-O cliente assinará o Broadcast antes de iniciar a reconciliação. Para INSERT e UPDATE, buscará somente a projeção principal do ID informado e aplicará o registro ao estado, cache e tela. Para DELETE, removerá o ID e sua mídia do estado e cache sem nova consulta. Revisões duplicadas ou entregues fora de ordem serão idempotentes: o estado final será o da maior revisão aplicada.
+O cliente assinará o Broadcast antes de iniciar a reconciliação e só declarará o canal disponível após a confirmação de escuta do Realtime. Para INSERT e UPDATE, buscará somente a projeção principal do ID informado e aplicará o registro ao estado, cache e tela. Para DELETE, removerá o ID e sua mídia do estado e cache sem nova consulta. Revisões duplicadas ou entregues fora de ordem serão idempotentes: o estado final será o da maior revisão aplicada. A ordem canônica por chave primária será restaurada após cada mesclagem, e metadados de revisão permanecerão fora dos objetos consumidos pela interface.
 
 Após a validação do Broadcast, o cliente deixará de assinar `postgres_changes`, e somente as seis tabelas desta aplicação serão removidas da publicação antiga. Não será removido nem recriado nenhum objeto Realtime desconhecido.
 
