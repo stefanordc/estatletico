@@ -111,6 +111,7 @@ const state = {
 // quando a resposta antiga chegar ao navegador.
 const tableDataVersions = Object.fromEntries(MUTABLE_TABLES.map(table => [table, 0]));
 const markTableDataChanged = (table) => {
+    if (table === 'jogadores') playerSeasonLookups.clear();
     if (Object.prototype.hasOwnProperty.call(tableDataVersions, table)) {
         tableDataVersions[table] += 1;
     }
@@ -347,7 +348,9 @@ window.logoutEstatletico = async () => {
 
 const saveData = async (key, data) => {
     try {
-        if (!supabaseClient) return;
+        if (!supabaseClient) {
+            throw new Error('A conexão com a aplicação ainda não foi iniciada. Aguarde alguns segundos e tente novamente.');
+        }
         if (MUTABLE_TABLES.includes(key) && !requireAdmin()) {
             throw new Error('Permissão negada.');
         }
@@ -364,9 +367,8 @@ const saveData = async (key, data) => {
 
             const { error } = await supabaseClient.from(key).upsert(safeData);
             if (error) {
-                console.error('Supabase Error:', error);
-                showToast(`Erro ao salvar (${key}): ${error.message || JSON.stringify(error)}`);
-                throw new Error(error.message); // â† Fundamental para que a função chamadora saiba da falha
+                console.error('Erro ao salvar dados:', error);
+                throw new Error(error.message || `O banco recusou o cadastro de ${key}.`);
             } else {
                 invalidateCache(); // Invalida o cache ao salvar no banco
                 void saveTableSnapshotToCache(key);
@@ -379,10 +381,8 @@ const saveData = async (key, data) => {
         if (e.message === 'Permissão negada.') {
             throw e;
         }
-        if (!e.message || !e.message.includes('Supabase Error')) {
-            showToast('Erro de conexão com o banco de dados.');
-        }
-        throw e; // â† Passar erro adiante
+        showToast(`Não foi possível salvar: ${e.message || 'erro desconhecido.'}`);
+        throw e;
     }
 };
 
@@ -1023,7 +1023,7 @@ const renderArbitros = () => {
         </div>
     `;
     setupPasteHandler('paste-area-arbitro', 'foto-input-arbitro');
-    document.getElementById('form-arbitros').addEventListener('submit', (e) => {
+    document.getElementById('form-arbitros').addEventListener('submit', async (e) => {
         e.preventDefault(); const fd = new FormData(e.target);
         const novoNome = fd.get('nome');
         
@@ -1037,10 +1037,21 @@ const renderArbitros = () => {
             return;
         }
 
-        const item = { id: state.editingId || Date.now(), nome: novoNome, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
-        if (state.editingId) { state.arbitros[state.arbitros.findIndex(i => i.id === state.editingId)] = item; state.editingId = null; }
-        else state.arbitros.push(item);
-        saveData('arbitros', [item]); renderTab('arbitros');
+        const editingId = state.editingId;
+        const item = { id: editingId || Date.now(), nome: novoNome, federacao: fd.get('federacao'), foto: fd.get('foto') || 'https://via.placeholder.com/40' };
+        try {
+            await saveData('arbitros', [item]);
+            if (editingId) {
+                state.arbitros[state.arbitros.findIndex(i => i.id === editingId)] = item;
+                state.editingId = null;
+            } else {
+                state.arbitros.push(item);
+            }
+            renderTab('arbitros');
+            showToast('Árbitro salvo com sucesso!', 'success');
+        } catch (_) {
+            // saveData já informa o motivo e o formulário permanece preenchido.
+        }
     });
     handleSearch('arbitros');
 };
@@ -3030,7 +3041,7 @@ const openQuickAddModal = (type, initialValue, targetInputId) => {
     if(type === 'jogadores') setupPasteHandler('qa-paste-jogador', 'qa-foto');
 };
 
-window.saveQuickAdd = (type, targetInputId) => {
+window.saveQuickAdd = async (type, targetInputId) => {
     if (!requireAdmin('Apenas o administrador pode cadastrar informações.')) return;
 
     const modal = document.getElementById('quick-add-modal');
@@ -3074,7 +3085,13 @@ window.saveQuickAdd = (type, targetInputId) => {
         );
         item.id_jogador = samePlayer?.id_jogador || item.id;
     }
-    state[type].push(item); saveData(type, [item]);
+    try {
+        await saveData(type, [item]);
+    } catch (_) {
+        // saveData já mostra a mensagem retornada pelo servidor.
+        return;
+    }
+    state[type].push(item);
     const inp = document.getElementById(targetInputId); 
     if(inp) { 
         inp.value = item.campeonato || item.nome || item.clube || item.nome_guerra; 
@@ -5267,93 +5284,148 @@ const setupAutofillHandler = () => {
     if (!nameInp) return;
     let lookupTimer;
     let lookupVersion = 0;
+    const fields = {
+        nome_guerra: document.getElementById('input-nome-guerra'),
+        posicao: document.getElementById('input-posicao'),
+        nacionalidade: document.getElementById('input-nacionalidade'),
+        nascimento: document.getElementById('input-nascimento'),
+        foto: document.getElementById('foto-input-jogador')
+    };
+    // "Brasil" é o valor inicial do formulário, não uma escolha já feita.
+    // Assim, um cadastro existente de jogador estrangeiro continua trazendo
+    // sua nacionalidade corretamente.
+    if (fields.nacionalidade?.value === 'Brasil') {
+        fields.nacionalidade.dataset.autofillApplied = 'true';
+    }
+
+    // Um retorno lento do banco nunca pode substituir uma escolha que o
+    // usuário já fez enquanto a busca estava em andamento.
+    Object.values(fields).filter(Boolean).forEach(field => {
+        field.addEventListener('input', () => { field.dataset.autofillDirty = 'true'; });
+        field.addEventListener('change', () => { field.dataset.autofillDirty = 'true'; });
+    });
+    document.getElementById('paste-area-jogador')?.addEventListener('paste', () => {
+        if (fields.foto) fields.foto.dataset.autofillDirty = 'true';
+    });
+
+    const canFill = (field, value) => field && shouldApplyAutofillValue({
+        candidate: value,
+        currentValue: field.value,
+        dirty: field.dataset.autofillDirty === 'true',
+        autoFilled: field.dataset.autofillApplied === 'true'
+    });
 
     const preencherDados = jogador => {
         const valores = getPlayerAutofillValues(jogador);
         if (!valores) return;
-        const elNomeGuerra = document.getElementById('input-nome-guerra');
-        if (elNomeGuerra) elNomeGuerra.value = valores.nome_guerra;
+        ['nome_guerra', 'posicao', 'nacionalidade', 'nascimento'].forEach(key => {
+            const field = fields[key];
+            if (!canFill(field, valores[key])) return;
+            field.value = valores[key];
+            field.dataset.autofillApplied = 'true';
+        });
 
-        const elPosicao = document.getElementById('input-posicao');
-        if (elPosicao) elPosicao.value = valores.posicao;
-
-        const elNac = document.getElementById('input-nacionalidade');
-        if (elNac) elNac.value = valores.nacionalidade;
-
-        const elNascimento = document.getElementById('input-nascimento');
-        if (elNascimento) elNascimento.value = valores.nascimento;
-
-        const elFoto = document.getElementById('foto-input-jogador');
+        const elFoto = fields.foto;
         const fotoArea = document.getElementById('paste-area-jogador');
         const foto = valores.foto;
-        if (elFoto) elFoto.value = foto;
-        if (fotoArea) {
-            fotoArea.innerHTML = foto
-                ? `<img src="${foto}" style="max-height:80px;">`
-                : 'Ctrl+V';
+        if (canFill(elFoto, foto)) {
+            elFoto.value = foto;
+            elFoto.dataset.autofillApplied = 'true';
+            if (fotoArea) fotoArea.innerHTML = `<img src="${foto}" style="max-height:80px;">`;
         }
     };
 
-    const buscarDados = async () => {
+    const buscarFoto = async (jogador, requestVersion, nomeNormalizado) => {
+        if (!jogador?.id || !canFill(fields.foto, 'foto')) return;
+        try {
+            const response = await supabaseClient.from('jogadores').select('foto').eq('id', jogador.id).limit(1);
+            const foto = response.data?.[0]?.foto;
+            if (requestVersion !== lookupVersion || normalizePlayerLookupName(nameInp.value) !== nomeNormalizado || !canFill(fields.foto, foto)) return;
+            preencherDados({ foto });
+        } catch (error) {
+            console.warn('Não foi possível carregar a foto do jogador encontrado.', error);
+        }
+    };
+
+    const localizarJogador = async (nomeDigitado, nomeNormalizado) => {
+        // A lista local já contém os cadastros e evita uma viagem ao banco
+        // para o caso comum. A foto não participa desta busca rápida.
+        let dados = state.jogadores.filter(player =>
+            normalizePlayerLookupName(player.nome_completo) === nomeNormalizado
+        );
+        if (dados.length === 0 && supabaseClient) {
+            const exact = await supabaseClient
+                .from('jogadores')
+                .select('id, nome_completo, nome_guerra, posicao, nacionalidade, nascimento, temporada')
+                .ilike('nome_completo', nomeDigitado)
+                .order('temporada', { ascending: false })
+                .limit(10);
+            if (!exact.error) dados = exact.data || [];
+        }
+        return selectMostRecentPlayer(dados.filter(player =>
+            normalizePlayerLookupName(player.nome_completo) === nomeNormalizado
+        ));
+    };
+
+    let cachedLookup = { nome: '', promise: null, jogador: null };
+    const iniciarBusca = (nomeDigitado, nomeNormalizado) => {
+        if (cachedLookup.nome === nomeNormalizado && cachedLookup.promise) return cachedLookup.promise;
+        nameInp.setAttribute('aria-busy', 'true');
+        const promise = localizarJogador(nomeDigitado, nomeNormalizado);
+        cachedLookup = { nome: nomeNormalizado, promise, jogador: null };
+        promise.then(jogador => {
+            if (cachedLookup.nome === nomeNormalizado && cachedLookup.promise === promise) {
+                cachedLookup.jogador = jogador;
+            }
+            return jogador;
+        }).catch(error => {
+            console.warn('Não foi possível buscar os dados do jogador para preenchimento automático.', error);
+        }).finally(() => {
+            if (cachedLookup.nome === nomeNormalizado && cachedLookup.promise === promise) {
+                nameInp.removeAttribute('aria-busy');
+            }
+        });
+        return promise;
+    };
+
+    const prepararBusca = () => {
+        lookupVersion += 1;
+        clearTimeout(lookupTimer);
         const nomeDigitado = nameInp.value.trim();
         const nomeNormalizado = normalizePlayerLookupName(nomeDigitado);
-        if (!nomeNormalizado) return;
-
-        const requestVersion = ++lookupVersion;
-        nameInp.setAttribute('aria-busy', 'true');
-
-        try {
-            // Busca exata no banco e ordena pela temporada mais recente. O
-            // fallback com "%" só é usado para tolerar espaços duplicados;
-            // a filtragem final continua sendo sempre uma correspondência exata.
-            let dados = [];
-            if (supabaseClient) {
-                const exact = await supabaseClient
-                    .from('jogadores')
-                    .select('id, nome_completo, nome_guerra, posicao, nacionalidade, nascimento, foto, temporada')
-                    .ilike('nome_completo', nomeDigitado)
-                    .order('temporada', { ascending: false })
-                    .limit(10);
-                if (!exact.error) dados = exact.data || [];
-
-                if (dados.length === 0) {
-                    const termoFlexivel = `%${nomeNormalizado.replace(/ /g, '%')}%`;
-                    const flexible = await supabaseClient
-                        .from('jogadores')
-                        .select('id, nome_completo, nome_guerra, posicao, nacionalidade, nascimento, foto, temporada')
-                        .ilike('nome_completo', termoFlexivel)
-                        .order('temporada', { ascending: false })
-                        .limit(20);
-                    if (!flexible.error) dados = flexible.data || [];
-                }
+        cachedLookup = { nome: nomeNormalizado, promise: null, jogador: null };
+        if (nomeNormalizado.length < 3) {
+            nameInp.removeAttribute('aria-busy');
+            return;
+        }
+        const requestVersion = lookupVersion;
+        lookupTimer = setTimeout(() => {
+            if (requestVersion === lookupVersion && normalizePlayerLookupName(nameInp.value) === nomeNormalizado) {
+                void iniciarBusca(nomeDigitado, nomeNormalizado);
             }
+        }, 180);
+    };
+    nameInp.addEventListener('input', prepararBusca);
 
-            // Mantém um fallback local para uma indisponibilidade momentânea
-            // da rede, mas a consulta ao banco sempre é a fonte principal.
-            if (dados.length === 0) dados = state.jogadores;
-
-            if (requestVersion !== lookupVersion || normalizePlayerLookupName(nameInp.value) !== nomeNormalizado) return;
-            const encontrados = dados.filter(p => normalizePlayerLookupName(p.nome_completo) === nomeNormalizado);
-            const jogador = selectMostRecentPlayer(encontrados);
-            if (!jogador) return;
-
+    // Preenche apenas na entrada do campo seguinte. Assim a consulta já pode
+    // estar em cache, mas nunca muda o formulário enquanto o nome é digitado.
+    fields.nome_guerra?.addEventListener('focus', async () => {
+        clearTimeout(lookupTimer);
+        const requestVersion = lookupVersion;
+        const nomeDigitado = nameInp.value.trim();
+        const nomeNormalizado = normalizePlayerLookupName(nomeDigitado);
+        if (nomeNormalizado.length < 3) return;
+        try {
+            const jogador = cachedLookup.nome === nomeNormalizado && cachedLookup.jogador
+                ? cachedLookup.jogador
+                : await iniciarBusca(nomeDigitado, nomeNormalizado);
+            if (requestVersion !== lookupVersion || normalizePlayerLookupName(nameInp.value) !== nomeNormalizado || !jogador) return;
             preencherDados(jogador);
+            if (!jogador.foto) void buscarFoto(jogador, requestVersion, nomeNormalizado);
             showToast(`Dados encontrados para ${jogador.nome_completo} — preenchidos automaticamente.`, 'success');
         } catch (error) {
-            // A busca é auxiliar e jamais pode travar o formulário.
             console.warn('Não foi possível buscar os dados do jogador para preenchimento automático.', error);
-        } finally {
-            if (requestVersion === lookupVersion) nameInp.removeAttribute('aria-busy');
         }
-    };
-
-    nameInp.addEventListener('input', () => {
-        clearTimeout(lookupTimer);
-        lookupTimer = setTimeout(() => void buscarDados(), 500);
-    });
-    nameInp.addEventListener('blur', () => {
-        clearTimeout(lookupTimer);
-        void buscarDados();
     });
 };
 
@@ -7239,8 +7311,17 @@ const idbCache = {
 
 const saveTableSnapshotToCache = async (table) => {
     if (!Array.isArray(state[table])) return;
-    const cached = await idbCache.get('estatletico_cache') || {};
-    await idbCache.set('estatletico_cache', { ...cached, [table]: state[table] });
+    const cached = await idbCache.get(window.EstatleticoData.cacheKey) || {};
+    // O cache incremental guarda as tabelas dentro de `tables`, mas ainda
+    // aceita o formato legado enquanto uma aba antiga estiver aberta.
+    if (cached.tables) {
+        await idbCache.set(window.EstatleticoData.cacheKey, {
+            ...cached,
+            tables: { ...cached.tables, [table]: state[table] }
+        });
+        return;
+    }
+    await idbCache.set(window.EstatleticoData.cacheKey, { ...cached, [table]: state[table] });
 };
 
 const mergeServerRowsWithLocalState = (table, serverRows) => {
@@ -7252,52 +7333,17 @@ const mergeServerRowsWithLocalState = (table, serverRows) => {
     return [...recordsById.values()];
 };
 
+// Atualizações em segundo plano não podem recriar um formulário de cadastro:
+// recriar o DOM descarta texto, seleção e imagem que ainda não foram salvos.
+const isCadastroFormOpen = () => Boolean(document.querySelector(
+    '#form-adversarios, #form-estadios, #form-competicoes, #form-arbitros, #form-jogadores'
+));
+
 const renderChangedCadastroIfVisible = (table) => {
     const currentHash = window.location.hash.replace('#', '');
-    if (!state.isFormActive && currentHash === `cadastros/${table}`) {
+    if (!state.isFormActive && !isCadastroFormOpen() && currentHash === `cadastros/${table}`) {
         renderTab(table);
     }
-};
-
-const applyRealtimeTableChange = async (payload) => {
-    const table = payload.table;
-    if (!MUTABLE_TABLES.includes(table) || !Array.isArray(state[table])) return;
-
-    const record = payload.new || payload.old;
-    if (!record?.id) return;
-
-    const index = state[table].findIndex(item => String(item.id) === String(record.id));
-    if (payload.eventType === 'DELETE') {
-        if (index >= 0) state[table].splice(index, 1);
-    } else if (index >= 0) {
-        // Mantém campos usados apenas pela interface que não são persistidos na tabela.
-        state[table][index] = { ...state[table][index], ...payload.new };
-    } else {
-        state[table].push(payload.new);
-    }
-
-    markTableDataChanged(table);
-    if (table === 'jogos') enrichJogos();
-    await saveTableSnapshotToCache(table);
-    renderChangedCadastroIfVisible(table);
-};
-
-const startRealtimeSync = () => {
-    if (!supabaseClient?.channel) return;
-
-    let channel = supabaseClient.channel('estatletico-live-data');
-    MUTABLE_TABLES.forEach(table => {
-        channel = channel.on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table
-        }, applyRealtimeTableChange);
-    });
-    channel.subscribe(status => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('Estatlético: sincronização em tempo real indisponível; a atualização por foco continuará ativa.');
-        }
-    });
 };
 
 const enrichJogos = () => {
@@ -7395,7 +7441,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const fetchTableWithPagination = async (tableName, batchSize = 1000) => {
+    const syncTools = window.EstatleticoSync;
+    if (!syncTools) throw new Error('O módulo de sincronização incremental não foi carregado.');
+
+    const fetchCoreTable = async (tableName, batchSize = 1000) => {
         let allData = [];
         let from = 0;
         let to = batchSize - 1;
@@ -7411,7 +7460,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         while (!finished) {
             try {
                 const { data, error } = await fetchWithTimeout(
-                    supabaseClient.from(tableName).select('*').range(from, to),
+                    supabaseClient.from(tableName).select(syncTools.CORE_SELECTS[tableName]).order('id').range(from, to),
                     10000 // 10s timeout
                 );
 
@@ -7442,11 +7491,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupAuthUI();
     try {
         console.log('Estatlético: Preparando autenticação...');
-        if (!window.supabase) {
+        if (!window.EstatleticoData) {
             throw new Error("O script do Supabase não foi carregado corretamente.");
         }
 
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        supabaseClient = window.EstatleticoData.createClient(supabaseUrl, supabaseKey);
         const { data: authData, error: authError } = await supabaseClient.auth.getSession();
         if (authError) throw authError;
 
@@ -7470,162 +7519,155 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Alterações feitas diretamente no Supabase são refletidas de imediato
-    // via Realtime. Ao retornar a uma aba, há também uma sincronização de
-    // segurança para os cadastros caso a conexão em tempo real tenha caído.
-    let refreshingCadastros = false;
-    const refreshCadastrosFromServer = async () => {
-        if (refreshingCadastros || !supabaseClient) return;
-        refreshingCadastros = true;
-        try {
-            const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores'];
-            const refreshStartedVersions = Object.fromEntries(tables.map(table => [table, tableDataVersions[table]]));
-            const results = await Promise.all(tables.map(async table => {
-                const { data, error } = await supabaseClient.from(table).select('*');
-                return { table, data, error };
-            }));
+    let syncMetadata = { revision: 0, savedAt: 0 };
+    let journalSyncPromise = null;
+    let initialCoreLoad = false;
+    let announcedRevision = 0;
+    const tables = MUTABLE_TABLES;
+    const batchSizes = { adversarios: 1000, estadios: 1000, competicoes: 1000, arbitros: 1000, jogadores: 1000, jogos: 200 };
 
-            for (const { table, data, error } of results) {
-                if (error || !data) continue;
-                const knownIds = new Set(state[table].map(item => String(item.id)));
-                const changed = data.length !== state[table].length || data.some(item => !knownIds.has(String(item.id)));
-                if (!changed) continue;
+    const persistCoreCache = async () => idbCache.set(window.EstatleticoData.cacheKey, {
+        tables: Object.fromEntries(tables.map(table => [table, state[table]])),
+        sync: { ...syncMetadata }
+    });
 
-                // O servidor é a fonte de verdade para exclusões. Só mesclamos
-                // o estado local se ele mudou enquanto esta requisição rodava.
-                const localChangedDuringRefresh = tableDataVersions[table] !== refreshStartedVersions[table];
-                state[table] = localChangedDuringRefresh
-                    ? mergeServerRowsWithLocalState(table, data)
-                    : data;
-                markTableDataChanged(table);
-                await saveTableSnapshotToCache(table);
-                renderChangedCadastroIfVisible(table);
-            }
-        } catch (error) {
-            console.warn('Estatlético: não foi possível sincronizar os cadastros em segundo plano.', error);
-        } finally {
-            refreshingCadastros = false;
-        }
+    const fetchLatestRevision = async () => {
+        const { data, error } = await supabaseClient
+            .from('estatletico_change_log')
+            .select('revision')
+            .order('revision', { ascending: false })
+            .limit(1);
+        if (error) throw error;
+        return Number(data?.[0]?.revision) || 0;
     };
-    window.addEventListener('focus', refreshCadastrosFromServer);
 
-    // Cache Layer: Tenta carregar dados salvos imediatamente
-    let cachedData = await idbCache.get('estatletico_cache');
-    
-    // Fallback migration: if indexedDB is empty but localStorage has it, move it.
-    if (!cachedData) {
+    const resolveJournalRow = async (tableName, id) => {
+        const { data, error } = await supabaseClient
+            .from(tableName)
+            .select(syncTools.CORE_SELECTS[tableName])
+            .eq('id', id)
+            .limit(1);
+        if (error) throw error;
+        return data?.[0] || null;
+    };
+
+    const syncFromJournal = async (reason, revision = 0) => {
+        announcedRevision = Math.max(announcedRevision, Number(revision) || 0);
+        if (initialCoreLoad || journalSyncPromise || !supabaseClient) return journalSyncPromise;
+        journalSyncPromise = (async () => {
+            let changed = false;
+            try {
+                while (true) {
+                    const { data: revisions, error } = await supabaseClient
+                        .from('estatletico_change_log')
+                        .select('revision,table_name,row_id,operation')
+                        .gt('revision', syncMetadata.revision)
+                        .order('revision', { ascending: true })
+                        .limit(500);
+                    if (error) throw error;
+                    if (!revisions?.length) break;
+
+                    const current = Object.fromEntries(tables.map(table => [table, state[table] || []]));
+                    const next = await syncTools.applyRevisionPage(current, syncMetadata.revision, revisions, resolveJournalRow);
+                    for (const table of tables) {
+                        if (JSON.stringify(state[table]) !== JSON.stringify(next.state[table])) {
+                            state[table] = next.state[table];
+                            markTableDataChanged(table);
+                            renderChangedCadastroIfVisible(table);
+                            changed = true;
+                        }
+                    }
+                    syncMetadata = { revision: next.revision, savedAt: Date.now() };
+                    if (revisions.length < 500) break;
+                }
+                if (changed) {
+                    invalidateCache();
+                    enrichJogos();
+                    await persistCoreCache();
+                    if (!state.isFormActive && !isCadastroFormOpen()) handleRouting();
+                } else if (syncMetadata.revision) {
+                    syncMetadata.savedAt = Date.now();
+                    await persistCoreCache();
+                }
+            } catch (error) {
+                console.warn(`Estatlético: não foi possível reconciliar o diário (${reason}).`, error);
+            } finally {
+                journalSyncPromise = null;
+                const retry = announcedRevision > syncMetadata.revision;
+                announcedRevision = 0;
+                if (retry) void syncFromJournal('broadcast pendente');
+            }
+        })();
+        return journalSyncPromise;
+    };
+
+    const startRealtimeSync = () => {
+        if (!supabaseClient?.channel) return;
+        supabaseClient.channel('estatletico:sync', { config: { private: true } })
+            .on('broadcast', { event: 'change' }, ({ payload }) => syncFromJournal('broadcast', payload?.revision))
+            .subscribe(status => {
+                if (status === 'SUBSCRIBED') void syncFromJournal('reconexão');
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.warn('Estatlético: Broadcast indisponível; o diário será reconciliado no foco.');
+                    void syncFromJournal(status);
+                }
+            });
+    };
+
+    // Cache Layer: aceita o formato antigo por uma última vez, mas só usa
+    // incrementalmente entradas com cursor e prazo de retenção válidos.
+    let cachedData = await idbCache.get(window.EstatleticoData.cacheKey);
+    if (!cachedData && window.EstatleticoData.source === 'supabase') {
         const lsCache = localStorage.getItem('estatletico_cache');
         if (lsCache) {
             try {
                 cachedData = JSON.parse(lsCache);
-                await idbCache.set('estatletico_cache', cachedData);
+                await idbCache.set(window.EstatleticoData.cacheKey, cachedData);
                 localStorage.removeItem('estatletico_cache');
             } catch(e) {}
         }
     }
-
-    if (cachedData) {
-        try {
-            console.log('Estatlético: Carregando cache do IndexedDB...');
-            Object.keys(cachedData).forEach(k => { if(state[k]) state[k] = cachedData[k]; });
-            handleRouting(); // Renderiza com dados em cache
-            applyPermissionUI();
-            if (loader) loader.style.display = 'none';
-        } catch(e) { console.warn('Estatlético: Cache corrompido.'); }
+    const cacheEnvelope = cachedData?.tables ? cachedData : { tables: cachedData, sync: null };
+    const hasValidCache = Boolean(cacheEnvelope.tables && !syncTools.needsFullReload(cacheEnvelope.sync));
+    if (hasValidCache) {
+        Object.keys(cacheEnvelope.tables).forEach(table => { if (state[table]) state[table] = cacheEnvelope.tables[table]; });
+        syncMetadata = cacheEnvelope.sync;
+        handleRouting();
+        applyPermissionUI();
+        if (loader) loader.style.display = 'none';
     }
 
+    window.addEventListener('focus', () => { void syncFromJournal('foco'); });
     startRealtimeSync();
 
     try {
-        if(loader && !cachedData) loader.style.display = 'flex';
-        
-        console.log('Estatlético: Verificando Supabase Client...');
-        if (!supabaseClient) {
-            if (!window.supabase) {
-                throw new Error("O script do Supabase não foi carregado corretamente.");
+        if (loader && !hasValidCache) loader.style.display = 'flex';
+        if (!hasValidCache) {
+            initialCoreLoad = true;
+            // O cursor é obtido antes da carga. Qualquer alteração posterior
+            // entra pelo diário quando as seis tabelas principais terminarem.
+            syncMetadata = { revision: await fetchLatestRevision(), savedAt: Date.now() };
+            const versions = Object.fromEntries(tables.map(table => [table, tableDataVersions[table]]));
+            const results = await Promise.all(tables.map(table => fetchCoreTable(table, batchSizes[table]).then(result => ({ table, ...result }))));
+            for (const { table, data, error } of results) {
+                if (error) throw error;
+                state[table] = tableDataVersions[table] !== versions[table]
+                    ? mergeServerRowsWithLocalState(table, data || [])
+                    : (data || []);
+                markTableDataChanged(table);
             }
-            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            state.arbitros = state.arbitros.map(arbitro => arbitro.federacao?.trim().length === 2
+                ? { ...arbitro, federacao: 'Brasil' }
+                : arbitro);
+            enrichJogos();
+            await persistCoreCache();
+            initialCoreLoad = false;
+            await syncFromJournal('carga principal');
+            if (!isCadastroFormOpen()) handleRouting();
+            applyPermissionUI();
+        } else {
+            await syncFromJournal('inicialização');
         }
-        
-        // Remove the loader instantly if cache exists, or after a short delay if we're waiting for network
-        if (!cachedData && loader) {
-             loader.style.display = 'none'; // We'll show a non-blocking indicator instead if needed, but for now just hide it.
-        }
-
-        const tables = ['adversarios', 'estadios', 'competicoes', 'arbitros', 'jogadores', 'jogos'];
-        // Batch sizes por tabela: 'jogadores' usa 50 pois cada linha tem foto em Base64 (pode ser centenas de KB)
-        // Tabelas sem imagens usam 1000 para velocidade máxima
-        const batchSizes = {
-            adversarios: 1000,
-            estadios: 1000,
-            competicoes: 1000,
-            arbitros: 1000,
-            jogadores: 50,   // Base64 fotos = linhas muito grandes
-            jogos: 200       // jogos tem lineups aninhados, usar tamanho médio
-        };
-        console.log('Estatlético: Buscando tabelas de forma otimizada em background...');
-        const fetchStartedVersions = Object.fromEntries(tables.map(table => [table, tableDataVersions[table]]));
-
-        // Fetch tables concurrently in the background
-        Promise.all(tables.map(t => fetchTableWithPagination(t, batchSizes[t]).then(res => ({ table: t, ...res })).catch(err => ({ table: t, data: null, error: err }))))
-            .then(async results => {
-                console.log('Estatlético: Dados de background recebidos. Atualizando estado...');
-                const freshData = {};
-                let hasChanges = false;
-
-                results.forEach(res => {
-                    const tableName = res.table;
-                    if (res.error) {
-                        console.error(`Estatlético: Erro detectado na tabela "${tableName}":`, res.error);
-                        if (tableName === 'jogos') {
-                            showToast(`Atenção: O banco de dados recusou a tabela de Jogos. Verifique sua conexão.`, 'error');
-                        }
-                    }
-                    if (res.data) {
-                        const receivedAfterLocalChange = tableDataVersions[tableName] !== fetchStartedVersions[tableName];
-                        state[tableName] = receivedAfterLocalChange
-                            ? mergeServerRowsWithLocalState(tableName, res.data)
-                            : res.data;
-                        freshData[tableName] = state[tableName];
-                        hasChanges = true;
-                        console.log(`Estatlético: Tabela "${tableName}" atualizada em background com ${res.data.length} registros.`);
-                    } else if (!state[tableName]) {
-                        state[tableName] = []; 
-                    }
-                });
-
-                if (hasChanges) {
-                    // Migração Básica de Árbitros
-                    state.arbitros = (state.arbitros || []).map(a => {
-                        if (a.federacao && a.federacao.trim().length === 2) {
-                            return { ...a, federacao: 'Brasil' };
-                        }
-                        return a;
-                    });
-
-                    // Salva no cache IndexedDB
-                    if (Object.keys(freshData).length > 0) {
-                        await idbCache.set('estatletico_cache', freshData);
-                    }
-
-                    // Re-enriquece após mudanças no background e atualiza no
-                    // banco somente os jogos legados sem qualquer ambiguidade.
-                    const jogosParaMigrar = enrichJogos();
-                    try {
-                        await persistResolvedGameReferences(jogosParaMigrar);
-                    } catch (error) {
-                        console.error('Estatlético: Não foi possível migrar as referências legadas.', error);
-                    }
-                }
-                
-                // Sempre tenta rotear se não tinha cache (para não deixar a tela preta) ou se houve mudanças
-                if (!cachedData) {
-                    handleRouting();
-                } else if (hasChanges) {
-                    handleRouting();
-                }
-                applyPermissionUI();
-            });
 
     } catch (e) {
         console.error('Estatlético: Falha na inicialização:', e);
