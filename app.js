@@ -7325,6 +7325,7 @@ const idbCache = {
 
 const mediaValues = new Map();
 const mediaRequests = new Map();
+let mediaRerenderTimer = null;
 const getMediaPlaceholder = (tableName) => tableName === 'adversarios'
     ? DEFAULT_CLUB_PHOTO
     : tableName === 'jogadores'
@@ -7333,7 +7334,16 @@ const getMediaPlaceholder = (tableName) => tableName === 'adversarios'
 
 const rerenderAfterMediaLoad = () => {
     // Formulários de cadastro preservam texto e imagem ainda não salvos.
-    if (!state.isFormActive && !isCadastroFormOpen()) window.dispatchEvent(new Event('hashchange'));
+    if (state.isFormActive || isCadastroFormOpen()) return;
+    if (mediaRerenderTimer) clearTimeout(mediaRerenderTimer);
+    mediaRerenderTimer = setTimeout(() => {
+        mediaRerenderTimer = null;
+        if (mediaRequests.size) {
+            rerenderAfterMediaLoad();
+            return;
+        }
+        if (!state.isFormActive && !isCadastroFormOpen()) window.dispatchEvent(new Event('hashchange'));
+    }, 100);
 };
 
 const requestMedia = async (tableName, id) => {
@@ -7366,7 +7376,7 @@ const requestMedia = async (tableName, id) => {
     try {
         return await request;
     } finally {
-        mediaRequests.delete(key);
+        if (mediaRequests.get(key) === request) mediaRequests.delete(key);
         rerenderAfterMediaLoad();
     }
 };
