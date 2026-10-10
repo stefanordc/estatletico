@@ -2817,3 +2817,35 @@ html, body {
         border-radius: 12px;
     }
 }
+:is(.referee-games-table, .referee-players-table, #cartoes-referees-table) th,
+#arbitragem-table th {
+    text-align: center;
+}
+.referee-games-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 680px;
+}
+.referee-games-table th, .referee-games-table td {
+    padding: 12px 8px;
+    overflow-wrap: anywhere;
+}
+.referee-game { cursor: pointer; }
+#arbitragem-table .tr-detail-container {
+    width: min(1100px, calc(100vw - 100px));
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.game-card-detail th { text-align: center; }
+.referee-game:hover, .referee-game:focus-visible { background: var(--hover-color, rgba(128, 128, 128, .15)); }
+.referee-name-button, .referee-players-table th button {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: bold;
+    cursor: pointer;
+}
+.referee-name-button:hover { text-decoration: underline; }
+.card-yellow { color: #f39c12; font-weight: bold; }
+.card-red { color: #e74c3c; font-weight: bold; }

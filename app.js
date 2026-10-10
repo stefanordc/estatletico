@@ -1900,10 +1900,81 @@ const renderSixPlusTab = () => {
 
 
 // CARTÕES FUNCTIONS
+const aggregateRefereeCards = (games, season = '') => {
+    const referees = new Map();
+    games.forEach(game => {
+        if (!game.arbitro || (season && game.temporada !== season)) return;
+        (game.cartoesGalo || []).forEach(card => {
+            const yellow = Math.max(0, parseInt(card.amarelo, 10) || 0);
+            const red = Math.max(0, parseInt(card.red, 10) || 0);
+            if (!yellow && !red) return;
+            if (!referees.has(game.arbitro)) referees.set(game.arbitro, { nome: game.arbitro, yellow: 0, red: 0, players: new Map() });
+            const referee = referees.get(game.arbitro);
+            const idJogador = getGamePlayerGlobalId(card);
+            const key = idJogador || `nome:${card.jogador}`;
+            if (!referee.players.has(key)) referee.players.set(key, { idJogador, nome: card.jogador || 'Jogador não identificado', yellow: 0, red: 0 });
+            const player = referee.players.get(key);
+            player.yellow += yellow;
+            player.red += red;
+            referee.yellow += yellow;
+            referee.red += red;
+        });
+    });
+    return Array.from(referees.values(), referee => ({ ...referee, total: referee.yellow + referee.red,
+        players: Array.from(referee.players.values(), player => ({ ...player, total: player.yellow + player.red }))
+            .sort((a, b) => b.total - a.total || b.yellow - a.yellow || a.nome.localeCompare(b.nome))
+    })).sort((a, b) => b.total - a.total || b.yellow - a.yellow || a.nome.localeCompare(b.nome));
+};
+
+const cardText = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
+window.changeCartoesTab = tab => {
+    state.cartoesTab = tab;
+    document.querySelectorAll('#cartoes-tabs button').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === tab);
+        button.setAttribute('aria-selected', String(button.dataset.tab === tab));
+    });
+    document.getElementById('cartoes-players-panel').classList.toggle('hidden', tab !== 'jogadores');
+    document.getElementById('cartoes-referees-panel').classList.toggle('hidden', tab !== 'arbitros');
+    ['cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id).closest('.form-group').classList.toggle('hidden', tab === 'arbitros'));
+    renderCartoes();
+};
+
+const renderRefereeCards = () => {
+    const ranking = aggregateRefereeCards(state.jogos, document.getElementById('cart-filter-temporada').value);
+    const tbody = document.querySelector('#cartoes-referees-table tbody');
+    tbody.innerHTML = ranking.length ? ranking.map((referee, index) => `<tr><td>${index + 1}</td><td><button type="button" class="referee-name-button">${cardText(referee.nome)}</button></td><td class="card-yellow">${referee.yellow}</td><td class="card-red">${referee.red}</td><td><strong>${referee.total}</strong></td></tr>`).join('') : '<tr><td colspan="5">Nenhum registro de cartão encontrado.</td></tr>';
+    tbody.querySelectorAll('button').forEach((button, index) => button.addEventListener('click', () => {
+        const row = button.closest('tr');
+        const existing = row.nextElementSibling?.classList.contains('referee-card-detail');
+        tbody.querySelectorAll('.referee-card-detail').forEach(detail => detail.remove());
+        if (existing) return;
+        const referee = ranking[index];
+        const detail = document.createElement('tr');
+        detail.className = 'referee-card-detail';
+        detail.innerHTML = `<td colspan="5"><div class="tr-detail-container"><h3>Cartões do Atlético: ${cardText(referee.nome)}</h3><div class="table-responsive"><table class="stats-table referee-players-table"><thead><tr><th>Jogador</th><th><button type="button" data-sort="yellow">Amarelos ↕</button></th><th><button type="button" data-sort="red">Vermelhos ↕</button></th><th><button type="button" data-sort="total">Total ↕</button></th></tr></thead><tbody></tbody></table></div></div></td>`;
+        const renderPlayers = key => {
+            const players = [...referee.players].sort((a, b) => b[key] - a[key] || b.total - a.total || a.nome.localeCompare(b.nome));
+            detail.querySelector('tbody').innerHTML = players.map(player => {
+                const registered = player.idJogador ? getPlayerByGlobalId(player.idJogador, document.getElementById('cart-filter-temporada').value) : null;
+                return `<tr><td>${cardText(registered?.nome_guerra || player.nome)}</td><td class="card-yellow">${player.yellow}</td><td class="card-red">${player.red}</td><td>${player.total}</td></tr>`;
+            }).join('');
+        };
+        detail.querySelectorAll('[data-sort]').forEach(sort => sort.addEventListener('click', () => renderPlayers(sort.dataset.sort)));
+        row.after(detail);
+        renderPlayers('total');
+    }));
+};
+
 const renderCartoes = () => {
     updateCartoesFilters();
     const detail = document.getElementById('cartoes-detail-container');
     if (detail) detail.classList.add('hidden');
+
+    if (state.cartoesTab === 'arbitros') {
+        renderRefereeCards();
+        return;
+    }
 
     const fTemp = document.getElementById('cart-filter-temporada').value;
     const fTime = document.getElementById('cart-filter-time').value; // 'Atlético' ou 'Adversário'
@@ -1961,6 +2032,7 @@ const updateCartoesFilters = () => {
 
     const getFilteredData = (exclude) => state.jogos.filter(j => {
         if (exclude !== 'temporada' && fTemp && j.temporada !== fTemp) return false;
+        if (state.cartoesTab === 'arbitros') return Boolean(j.arbitro) && (j.cartoesGalo || []).some(c => Number(c.amarelo) > 0 || Number(c.red) > 0);
         
         // Verifica se há cartões para o time/posição selecionada neste jogo
         const list = fTime === 'Atlético' ? (j.cartoesGalo || []) : (j.cartoesAdv || []);
@@ -2286,17 +2358,18 @@ window.showArbitragemJogos = (arbNome, event) => {
     detailRow.id = `detail-arb-${arbNome.replace(/\s/g,'')}`;
     detailRow.className = 'tr-detail-row';
     detailRow.innerHTML = `
-        <td colspan="15">
+        <td colspan="17">
             <div class="tr-detail-container">
                 <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
                     <h3>Jogos do Atlético: ${arbNome} (${state.arbTab.charAt(0).toUpperCase() + state.arbTab.slice(1)})</h3>
                     <button class="btn-icon" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button>
                 </div>
-                <table class="stats-table">
+                <div class="table-responsive"><table class="stats-table referee-games-table">
+                    <colgroup><col style="width:13%"><col style="width:23%"><col style="width:23%"><col style="width:9%"><col style="width:23%"><col style="width:9%"></colgroup>
                     <thead><tr><th>Data</th><th>Campeonato</th><th>Casa</th><th>Placar</th><th>Fora</th><th>Público</th></tr></thead>
                     <tbody>
                         ${jogosArb.map(j => `
-                            <tr>
+                            <tr class="referee-game" data-game-index="${jogosArb.indexOf(j)}" tabindex="0" role="button" aria-expanded="false" title="Ver jogadores do Atlético que receberam cartões">
                                 <td>${j.data.split('-').reverse().join('/')}</td>
                                 <td>${j.campeonato}</td>
                                  <td>${j.casa}</td>
@@ -2306,11 +2379,37 @@ window.showArbitragemJogos = (arbNome, event) => {
                              </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                </table></div>
             </div>
         </td>
     `;
     row.after(detailRow);
+    detailRow.querySelectorAll('.referee-game').forEach(gameRow => {
+        const toggle = () => {
+            const opened = gameRow.nextElementSibling?.classList.contains('game-card-detail');
+            detailRow.querySelectorAll('.game-card-detail').forEach(detail => detail.remove());
+            detailRow.querySelectorAll('.referee-game').forEach(item => item.setAttribute('aria-expanded', 'false'));
+            if (opened) return;
+            const game = jogosArb[Number(gameRow.dataset.gameIndex)];
+            const cards = (game.cartoesGalo || []).filter(card => Number(card.amarelo) > 0 || Number(card.red) > 0);
+            const cardRow = document.createElement('tr');
+            cardRow.className = 'game-card-detail';
+            cardRow.innerHTML = `<td colspan="6"><div class="tr-detail-container"><h4>Jogadores do Atlético que receberam cartões</h4><table class="stats-table"><thead><tr><th>Jogador</th><th>Tipo de cartão</th></tr></thead><tbody>${cards.length ? cards.map(card => {
+                const id = getGamePlayerGlobalId(card);
+                const player = id ? getPlayerByGlobalId(id, game.temporada) : null;
+                const types = [];
+                if (Number(card.amarelo) > 0) types.push(`<span class="card-yellow">Amarelo (${Number(card.amarelo)})</span>`);
+                if (Number(card.red) > 0) types.push(`<span class="card-red">Vermelho (${Number(card.red)})</span>`);
+                return `<tr><td>${cardText(player?.nome_guerra || card.jogador)}</td><td>${types.join(' · ')}</td></tr>`;
+            }).join('') : '<tr><td colspan="2">Nenhum jogador do Atlético recebeu cartão neste jogo.</td></tr>'}</tbody></table></div></td>`;
+            gameRow.after(cardRow);
+            gameRow.setAttribute('aria-expanded', 'true');
+        };
+        gameRow.addEventListener('click', toggle);
+        gameRow.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+        });
+    });
 };
 
 // EQUIPE DE ARBITRAGEM FUNCTIONS

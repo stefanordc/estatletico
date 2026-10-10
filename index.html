@@ -737,11 +737,15 @@
         </section>
 
         <section id="cartoes-section" class="page-section hidden">
+            <div class="tabs-container" id="cartoes-tabs" role="tablist" aria-label="Ranking de cartões">
+                <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="jogadores" onclick="changeCartoesTab('jogadores')">Jogadores</button>
+                <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="arbitros" onclick="changeCartoesTab('arbitros')">Árbitros</button>
+            </div>
             <div class="page-header">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <div>
                         <h2 style="margin:0;">Ranking de Cartões</h2>
-                        <p style="margin:0;">Jogadores com mais cartões amarelos e vermelhos</p>
+                        <p style="margin:0;">Ranking de cartões amarelos e vermelhos</p>
                     </div>
                 </div>
             </div>
@@ -778,7 +782,7 @@
             </div>
 
             <div class="list-container table-responsive">
-                <table class="data-table" id="cartoes-table">
+                <div id="cartoes-players-panel"><table class="data-table" id="cartoes-table">
                     <thead>
                         <tr>
                             <th>Foto</th>
@@ -791,7 +795,13 @@
                     <tbody>
                         <!-- Ranking de Cartões renderizado aqui -->
                     </tbody>
-                </table>
+                </table></div>
+                <div id="cartoes-referees-panel" class="hidden">
+                    <table class="data-table" id="cartoes-referees-table">
+                        <thead><tr><th>Posição</th><th>Árbitro</th><th>Amarelos ATL</th><th>Vermelhos ATL</th><th>Total</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Detalhes do Jogador (Hidden by default) -->
