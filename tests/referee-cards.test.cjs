@@ -28,6 +28,8 @@ test('ranking soma somente cartões do Atlético e respeita temporada', () => {
     assert.equal(ranking[0].players.length, 2);
     assert.equal(ranking[0].players[0].yellow, 3);
     assert.equal(ranking[0].players[0].red, 1);
+    assert.equal(ranking[0].players[0].games.length, 2);
+    assert.equal(ranking[0].players[0].games[0].yellow, 2);
     assert.equal(aggregate(games)[0].nome, 'B');
 });
 
@@ -46,6 +48,8 @@ test('combina campeonato, adversário, árbitro e jogador contando apenas seus c
     const ranking = aggregate(games, '2025', { campeonato: 'Copa', adversario: 'cruze', arbitro: 'arbitro a', jogador: 'hulk' });
     assert.equal(ranking[0].total, 2);
     assert.equal(ranking[0].players.length, 1);
+    assert.equal(ranking[0].players[0].games.length, 1);
+    assert.equal(ranking[0].players[0].games[0].game.campeonato, 'Copa');
     assert.equal(aggregate(games, '', { adversario: 'Flamengo' }).length, 0);
     assert.equal(aggregate(games, '2025', { jogadorId: '2' })[0].total, 3);
 });
@@ -99,6 +103,16 @@ test('cliques abrem jogadores do árbitro, ordenam vermelhos e fecham o detalhe'
     assert.equal(dom.window.document.querySelector('#cartoes-referees-table > tbody > tr img').getAttribute('src'), 'arbitro.jpg');
     assert.equal(dom.window.document.querySelector('.referee-players-table img').getAttribute('src'), 'jogador.jpg');
     assert.match(dom.window.document.querySelector('.referee-players-table tbody tr').textContent, /Um/);
+    dom.window.document.querySelector('.referee-players-table tbody tr').click();
+    const matches = dom.window.document.querySelector('.player-card-games');
+    assert.ok(matches, 'clicar no jogador abre seus jogos');
+    assert.equal(matches.querySelectorAll('th').length, 8);
+    assert.equal(matches.querySelector('tbody tr td:nth-child(7)').textContent, '5');
+    assert.equal(matches.querySelector('tbody tr td:nth-child(8)').textContent, '0');
+    dom.window.renderRanking();
+    assert.ok(dom.window.document.querySelector('.player-card-games'), 'detalhe permanece aberto ao carregar fotos');
+    dom.window.document.querySelector('.referee-players-table tbody tr').click();
+    assert.equal(dom.window.document.querySelector('.player-card-games'), null);
     dom.window.document.querySelector('[data-sort="red"]').click();
     assert.match(dom.window.document.querySelector('.referee-players-table tbody tr').textContent, /Dois/);
     dom.window.renderRanking();

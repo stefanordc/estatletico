@@ -1920,16 +1920,19 @@ const aggregateRefereeCards = (games, season = '', filters = {}) => {
             const referee = referees.get(game.arbitro);
             const idJogador = getGamePlayerGlobalId(card);
             const key = idJogador || `nome:${card.jogador}`;
-            if (!referee.players.has(key)) referee.players.set(key, { idJogador, nome: card.jogador || 'Jogador não identificado', yellow: 0, red: 0 });
+            if (!referee.players.has(key)) referee.players.set(key, { idJogador, nome: card.jogador || 'Jogador não identificado', yellow: 0, red: 0, games: new Map() });
             const player = referee.players.get(key);
             player.yellow += yellow;
             player.red += red;
+            if (!player.games.has(game)) player.games.set(game, { game, yellow: 0, red: 0 });
+            player.games.get(game).yellow += yellow;
+            player.games.get(game).red += red;
             referee.yellow += yellow;
             referee.red += red;
         });
     });
     return Array.from(referees.values(), referee => ({ ...referee, total: referee.yellow + referee.red,
-        players: Array.from(referee.players.values(), player => ({ ...player, total: player.yellow + player.red }))
+        players: Array.from(referee.players.values(), player => ({ ...player, total: player.yellow + player.red, games: Array.from(player.games.values()).sort((a, b) => String(b.game.data || '').localeCompare(String(a.game.data || ''))) }))
             .sort((a, b) => b.total - a.total || b.yellow - a.yellow || a.nome.localeCompare(b.nome))
     })).sort((a, b) => b.total - a.total || b.yellow - a.yellow || a.nome.localeCompare(b.nome));
 };
@@ -2004,8 +2007,30 @@ const renderRefereeCards = () => {
             const players = [...referee.players].sort((a, b) => b[key] - a[key] || b.total - a.total || a.nome.localeCompare(b.nome));
             detail.querySelector('tbody').innerHTML = players.map(player => {
                 const registered = player.idJogador ? getPlayerByGlobalId(player.idJogador, document.getElementById('cart-filter-temporada').value) : null;
-                return `<tr><td>${cardPhoto(registered, player.nome)}</td><td>${cardText(registered?.nome_guerra || player.nome)}</td><td class="card-yellow">${player.yellow}</td><td class="card-red">${player.red}</td><td>${player.total}</td></tr>`;
+                return `<tr class="referee-card-player" tabindex="0" role="button" aria-expanded="false" title="Clique para ver os jogos em que recebeu cartões"><td>${cardPhoto(registered, player.nome)}</td><td>${cardText(registered?.nome_guerra || player.nome)}</td><td class="card-yellow">${player.yellow}</td><td class="card-red">${player.red}</td><td>${player.total}</td></tr>`;
             }).join('');
+            const playerRows = detail.querySelectorAll('.referee-card-player');
+            playerRows.forEach((playerRow, playerIndex) => {
+                const player = players[playerIndex];
+                const playerKey = `${referee.nome}:${player.idJogador || player.nome}`;
+                const toggleGames = () => {
+                    const opened = playerRow.nextElementSibling?.classList.contains('player-card-game-detail');
+                    detail.querySelectorAll('.player-card-game-detail').forEach(item => item.remove());
+                    playerRows.forEach(item => item.setAttribute('aria-expanded', 'false'));
+                    if (opened) { state.cardPlayerOpen = null; return; }
+                    state.cardPlayerOpen = playerKey;
+                    const gamesRow = document.createElement('tr');
+                    gamesRow.className = 'player-card-game-detail';
+                    gamesRow.innerHTML = `<td colspan="5"><div class="tr-detail-container"><h4>Jogos com cartões: ${cardText(player.nome)}</h4><div class="table-responsive"><table class="stats-table player-card-games"><thead><tr><th>Data</th><th>Competição</th><th>Mandante</th><th>Gols casa</th><th>Gols fora</th><th>Visitante</th><th>Cartão amarelo</th><th>Cartão vermelho</th></tr></thead><tbody>${player.games.map(({ game, yellow, red }) => `<tr><td>${cardText(game.data ? game.data.split('-').reverse().join('/') : '-')}</td><td>${cardText(game.campeonato)}</td><td>${cardText(game.casa)}</td><td>${cardText(game.golsCasa ?? '-')}</td><td>${cardText(game.golsFora ?? '-')}</td><td>${cardText(game.fora)}</td><td class="card-yellow">${yellow}</td><td class="card-red">${red}</td></tr>`).join('')}</tbody></table></div></div></td>`;
+                    playerRow.after(gamesRow);
+                    playerRow.setAttribute('aria-expanded', 'true');
+                };
+                playerRow.addEventListener('click', toggleGames);
+                playerRow.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleGames(); }
+                });
+                if (state.cardPlayerOpen === playerKey) toggleGames();
+            });
         };
         detail.querySelectorAll('[data-sort]').forEach(sort => sort.addEventListener('click', () => renderPlayers(sort.dataset.sort)));
         row.after(detail);
@@ -8188,6 +8213,7 @@ window.clearCartoesFilters = () => {
     });
     document.getElementById('cart-filter-time').value = 'Atlético';
     state.cardRefereeOpen = null;
+    state.cardPlayerOpen = null;
     document.querySelectorAll('#cartoes-section .autocomplete-results').forEach(dropdown => dropdown.remove());
     renderCartoes();
 };

@@ -2860,3 +2860,7 @@ html, body {
     vertical-align: middle;
 }
 .card-ranking-placeholder { background: var(--bg-highlight); color: var(--text-muted); }
+.referee-card-player { cursor: pointer; }
+.referee-card-player:focus-visible { outline: 2px solid var(--primary-color); }
+.player-card-games th { text-align: center; }
+.player-card-games { min-width: 850px; }
