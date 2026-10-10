@@ -4415,6 +4415,26 @@ let compChartGS = null;
 
 const renderComparativoCharts = (dsGM, dsGS) => {
     const bins = ["0-15", "16-30", "31-45", "46-60", "61-75", "76-90"];
+    const valueLabels = {
+        id: 'comparativo-values',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            ctx.save();
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 12px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                if (!chart.isDatasetVisible(datasetIndex)) return;
+                chart.getDatasetMeta(datasetIndex).data.forEach((bar, index) => {
+                    const value = dataset.data[index];
+                    if (value === null || value === undefined) return;
+                    ctx.fillText(String(value), bar.x, Math.max(chart.chartArea.top + 14, bar.y - 5));
+                });
+            });
+            ctx.restore();
+        }
+    };
     
     if (compChartGM) compChartGM.destroy();
     if (compChartGS) compChartGS.destroy();
@@ -4423,14 +4443,16 @@ const renderComparativoCharts = (dsGM, dsGS) => {
     compChartGM = new Chart(ctxGM, {
         type: 'bar',
         data: { labels: bins, datasets: dsGM },
-        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        plugins: [valueLabels],
+        options: { responsive: true, scales: { y: { beginAtZero: true, grace: '10%', ticks: { stepSize: 1 } } } }
     });
 
     const ctxGS = document.getElementById('chart-comp-goals-conceded').getContext('2d');
     compChartGS = new Chart(ctxGS, {
         type: 'bar',
         data: { labels: bins, datasets: dsGS },
-        options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        plugins: [valueLabels],
+        options: { responsive: true, scales: { y: { beginAtZero: true, grace: '10%', ticks: { stepSize: 1 } } } }
     });
 };
 // ESTATESTICAS FUNCTIONS

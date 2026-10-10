@@ -2864,3 +2864,4 @@ html, body {
 .referee-card-player:focus-visible { outline: 2px solid var(--primary-color); }
 .player-card-games th { text-align: center; }
 .player-card-games { min-width: 850px; }
+#comparativo-charts-container .chart-box h3 { color: #333333; }
