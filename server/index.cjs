@@ -7,7 +7,7 @@ const { root, source, port, publicConfig } = require('./config.cjs');
 const { openMysql, lock, unlock } = require('../database/connections.cjs');
 const { readManifest } = require('../database/schema.cjs');
 const { execute } = require('../database/repository.cjs');
-const assets = new Set(['index.html', 'app.js', 'data-provider.js', 'data-sync-utils.js', 'player-autofill-utils.js', 'style.css', 'favicon.svg', 'favicon.png.png']);
+const assets = new Set(['index.html', 'app.js', 'settings.js', 'data-provider.js', 'data-sync-utils.js', 'player-autofill-utils.js', 'style.css', 'favicon.svg', 'favicon.png.png']);
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const email = 'stefanobrunofaria@gmail.com';
 const sessions = new Map(), streams = new Set();

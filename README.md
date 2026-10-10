@@ -169,3 +169,8 @@ As verificações cobrem tipos, PK/FK, trigger, consultas/escritas da API, auten
 Arquivos centrais: `server/config.cjs`, `server/index.cjs`, `database/schema.cjs`, `database/records.cjs`, `database/repository.cjs`, `database/player-triggers.cjs`, `database/connections.cjs`, `data-provider.js`, `runtime-config.js`, `scripts/copy-supabase-to-mysql.cjs`, `scripts/sync-mysql-to-supabase.cjs`, `scripts/verify-mysql.cjs`, `scripts/create-mysql.cjs`, `scripts/build.cjs`, `.env.example`, `.gitignore`, `package.json`, `package-lock.json`, `netlify.toml` e os testes. `app.js` e `index.html` receberam a integração do provider. O relatório de consultas está em [docs/auditoria-dados.md](docs/auditoria-dados.md).
 
 Referências consultadas: [conexões PostgreSQL do Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres), [MySQL2](https://sidorares.github.io/node-mysql2/docs) e [tipos no node-postgres](https://node-postgres.com/features/types).
+# Configurações da conta
+
+A última página do menu permite alterar nome, e-mail e senha no site Supabase. A troca de e-mail segue a confirmação do Supabase. Apenas `stefanobrunofaria@gmail.com` possui acesso administrativo; ao confirmar outro e-mail, a conta perde esse acesso.
+
+A aba **Usuários** mostra nome, e-mail, cadastro e último login registrados no Supabase Auth. A consulta exige o e-mail administrativo confirmado no banco, independentemente da interface. Para instalar ou atualizar a função, execute `node scripts/deploy-account-settings.cjs` com `SUPABASE_DB_URL` configurado. O script valida o acesso administrativo e a rejeição de usuários comuns. O modo local MySQL mantém a conta única configurada pelo ambiente; edição de conta e listagem de usuários estão disponíveis no site Supabase.

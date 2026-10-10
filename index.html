@@ -151,6 +151,9 @@
                 <i class="fas fa-balance-scale"></i>
                 <span>Comparativo</span>
             </li>
+            <li class="nav-item" data-page="configuracoes">
+                <i class="fas fa-cog"></i><span>Configurações</span>
+            </li>
         </ul>
 
         <button class="theme-toggle" id="theme-toggle" onclick="window.toggleTheme()">
@@ -734,6 +737,29 @@
             </div>
             
             <div id="equipe-arbitragem-detail-container"></div>
+        </section>
+
+        <section id="configuracoes-section" class="page-section hidden">
+            <div class="page-header"><h2>Configurações</h2></div>
+            <div class="tabs-container" role="tablist" aria-label="Configurações da conta">
+                <button type="button" id="settings-account-tab" class="tab-btn active" role="tab" aria-selected="true">Minha conta</button>
+                <button type="button" id="settings-users-tab" class="tab-btn hidden" role="tab" aria-selected="false">Usuários</button>
+            </div>
+            <div id="settings-account-panel" class="filters-card">
+                <form id="settings-account-form">
+                    <div class="form-grid">
+                        <div class="form-group"><label for="settings-name">Nome</label><input id="settings-name" type="text" autocomplete="name" maxlength="150" required></div>
+                        <div class="form-group"><label for="settings-email">E-mail</label><input id="settings-email" type="email" autocomplete="email" required></div>
+                        <div class="form-group"><label for="settings-password">Nova senha</label><input id="settings-password" type="password" autocomplete="new-password" minlength="6"><small>Deixe em branco para manter a senha atual.</small></div>
+                        <div class="form-group"><label for="settings-password-confirm">Confirmar nova senha</label><input id="settings-password-confirm" type="password" autocomplete="new-password" minlength="6"></div>
+                    </div>
+                    <button id="settings-save" type="submit" class="btn-primary">Salvar alterações</button>
+                    <p id="settings-message" class="auth-message" aria-live="polite"></p>
+                </form>
+            </div>
+            <div id="settings-users-panel" class="list-container table-responsive hidden">
+                <table class="data-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Data de cadastro</th><th>Último acesso</th></tr></thead><tbody id="settings-users-body"></tbody></table>
+            </div>
         </section>
 
         <section id="cartoes-section" class="page-section hidden">
@@ -1364,6 +1390,7 @@
     <script src="runtime-config.js"></script>
     <script src="data-provider.js"></script>
     <script src="data-sync-utils.js"></script>
+    <script src="settings.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

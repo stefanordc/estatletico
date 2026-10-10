@@ -238,7 +238,7 @@ const syncAuthUI = () => {
     const roleEl = document.getElementById('user-profile-role');
     const avatarEl = document.getElementById('user-avatar');
 
-    if (nameEl) nameEl.textContent = admin ? 'Administrador' : 'Usuário';
+    if (nameEl) nameEl.textContent = state.auth.user?.user_metadata?.name || state.auth.user?.user_metadata?.full_name || (admin ? 'Administrador' : 'Usuário');
     if (emailEl) emailEl.textContent = email;
     if (roleEl) roleEl.textContent = admin ? 'Admin' : 'Usuário';
     if (avatarEl) avatarEl.textContent = getInitials(email);
@@ -251,6 +251,7 @@ const syncAuthUI = () => {
     }
 
     applyPermissionUI();
+    window.EstatleticoSettings?.syncPermissions();
 };
 
 const setAuthMode = (mode) => {
@@ -893,6 +894,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     if (sectionId === 'equipe-arbitragem') renderEquipeArbitragem();
     if (sectionId === 'artilheiros') renderArtilheiros();
     if (sectionId === 'cartoes') renderCartoes();
+    if (sectionId === 'configuracoes') window.EstatleticoSettings?.render();
     if (sectionId === 'adversarios') {
         // Garante que a aba correta fique visível ao navegar para Adversários
         window.changeAdvTab(state.advTab || 'clubes');
@@ -7812,7 +7814,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const parts = hash.split('/');
         const page = parts[0];
         const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo', 'curiosidades'];
+        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo', 'curiosidades', 'configuracoes'];
         const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
         
         if (page && validPages.includes(page)) {
@@ -7886,6 +7888,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         supabaseClient = window.EstatleticoData.createClient(supabaseUrl, supabaseKey);
+        window.EstatleticoSettings.init({
+            client: supabaseClient,
+            source: window.EstatleticoData.source,
+            getUser: () => state.auth.user,
+            isAdmin,
+            onUserUpdated: user => updateAuthSession({ ...state.auth.session, user })
+        });
         const { data: authData, error: authError } = await supabaseClient.auth.getSession();
         if (authError) throw authError;
 

@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { root, source, publicConfig } = require('../server/config.cjs');
-const assets = ['index.html', 'style.css', 'app.js', 'player-autofill-utils.js', 'data-provider.js', 'data-sync-utils.js', 'favicon.svg', 'favicon.png.png'];
+const assets = ['index.html', 'style.css', 'app.js', 'settings.js', 'player-autofill-utils.js', 'data-provider.js', 'data-sync-utils.js', 'favicon.svg', 'favicon.png.png'];
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 for (const file of assets) fs.copyFileSync(path.join(root, file), path.join(root, 'dist', file));
 fs.writeFileSync(path.join(root, 'dist/runtime-config.js'), `window.ESTATLETICO_CONFIG = ${JSON.stringify(publicConfig())};\n`);
