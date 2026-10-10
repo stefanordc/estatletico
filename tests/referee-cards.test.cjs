@@ -105,6 +105,13 @@ test('cliques abrem jogadores do árbitro, ordenam vermelhos e fecham o detalhe'
     assert.match(dom.window.document.querySelector('.referee-players-table tbody tr').textContent, /Dois/);
     dom.window.document.querySelector('.referee-name-button').click();
     assert.equal(dom.window.document.querySelector('.referee-card-detail'), null);
+    const refereeRow = dom.window.document.querySelector('#cartoes-referees-table > tbody > tr');
+    for (const cell of refereeRow.querySelectorAll('td')) {
+        cell.click();
+        assert.ok(dom.window.document.querySelector('.referee-card-detail'), 'qualquer coluna deve abrir os detalhes');
+        cell.click();
+        assert.equal(dom.window.document.querySelector('.referee-card-detail'), null);
+    }
     dom.window.close();
 });
 

@@ -1985,7 +1985,11 @@ const renderRefereeCards = () => {
     const ranking = aggregateRefereeCards(state.jogos, document.getElementById('cart-filter-temporada').value, filters);
     const tbody = document.querySelector('#cartoes-referees-table tbody');
     tbody.innerHTML = ranking.length ? ranking.map((referee, index) => `<tr><td>${index + 1}</td><td>${cardPhoto(state.arbitros?.find(item => item.nome === referee.nome), referee.nome)}</td><td><button type="button" class="referee-name-button">${cardText(referee.nome)}</button></td><td class="card-yellow">${referee.yellow}</td><td class="card-red">${referee.red}</td><td><strong>${referee.total}</strong></td></tr>`).join('') : '<tr><td colspan="6">Nenhum registro de cartão encontrado.</td></tr>';
-    tbody.querySelectorAll('button').forEach((button, index) => button.addEventListener('click', () => {
+    tbody.querySelectorAll('.referee-name-button').forEach((button, index) => {
+        const refereeRow = button.closest('tr');
+        refereeRow.style.cursor = 'pointer';
+        refereeRow.title = 'Clique para ver os jogadores que receberam cartões';
+        refereeRow.addEventListener('click', () => {
         const row = button.closest('tr');
         const existing = row.nextElementSibling?.classList.contains('referee-card-detail');
         tbody.querySelectorAll('.referee-card-detail').forEach(detail => detail.remove());
@@ -2006,7 +2010,8 @@ const renderRefereeCards = () => {
         detail.querySelectorAll('[data-sort]').forEach(sort => sort.addEventListener('click', () => renderPlayers(sort.dataset.sort)));
         row.after(detail);
         renderPlayers(state.cardRefereeSort || 'total');
-    }));
+        });
+    });
     if (state.cardRefereeOpen) {
         const index = ranking.findIndex(referee => referee.nome === state.cardRefereeOpen);
         if (index >= 0) tbody.querySelectorAll('.referee-name-button')[index].click();
