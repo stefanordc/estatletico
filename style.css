@@ -2849,3 +2849,14 @@ html, body {
 .referee-name-button:hover { text-decoration: underline; }
 .card-yellow { color: #f39c12; font-weight: bold; }
 .card-red { color: #e74c3c; font-weight: bold; }
+.card-ranking-photo, .card-ranking-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+.card-ranking-placeholder { background: var(--bg-highlight); color: var(--text-muted); }

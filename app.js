@@ -1900,11 +1900,19 @@ const renderSixPlusTab = () => {
 
 
 // CARTÕES FUNCTIONS
-const aggregateRefereeCards = (games, season = '') => {
+const aggregateRefereeCards = (games, season = '', filters = {}) => {
+    const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const matches = (value, query) => !query || normalize(value).includes(normalize(query));
     const referees = new Map();
     games.forEach(game => {
         if (!game.arbitro || (season && game.temporada !== season)) return;
+        if (filters.campeonato && game.campeonato !== filters.campeonato) return;
+        if (!matches(game.arbitro, filters.arbitro)) return;
+        const opponent = ['atletico', 'atletico-mg'].includes(normalize(game.casa)) ? game.fora : game.casa;
+        if (!matches(opponent, filters.adversario)) return;
         (game.cartoesGalo || []).forEach(card => {
+            if (filters.jogadorId && getGamePlayerGlobalId(card) !== String(filters.jogadorId)) return;
+            if (!filters.jogadorId && !matches(card.jogador, filters.jogador)) return;
             const yellow = Math.max(0, parseInt(card.amarelo, 10) || 0);
             const red = Math.max(0, parseInt(card.red, 10) || 0);
             if (!yellow && !red) return;
@@ -1937,33 +1945,73 @@ window.changeCartoesTab = tab => {
     document.getElementById('cartoes-players-panel').classList.toggle('hidden', tab !== 'jogadores');
     document.getElementById('cartoes-referees-panel').classList.toggle('hidden', tab !== 'arbitros');
     ['cart-filter-time', 'cart-filter-posicao'].forEach(id => document.getElementById(id).closest('.form-group').classList.toggle('hidden', tab === 'arbitros'));
+    document.querySelectorAll('.cart-referee-filter').forEach(group => group.classList.toggle('hidden', tab !== 'arbitros'));
     renderCartoes();
 };
 
+const getRefereeCardFilters = () => Object.fromEntries(['campeonato', 'adversario', 'arbitro', 'jogador'].map(key => [key, document.getElementById(`cart-ref-filter-${key}`)?.value || '']));
+
+const setupRefereeCardFilters = () => {
+    const games = state.jogos.filter(game => game.arbitro && (game.cartoesGalo || []).some(card => Number(card.amarelo) > 0 || Number(card.red) > 0));
+    populateFilter('cart-filter-temporada', games.map(game => game.temporada));
+    populateFilter('cart-ref-filter-campeonato', games.map(game => game.campeonato).filter(Boolean));
+    const schedule = () => scheduleInputRender('cartoes', renderCartoes);
+    const sources = [['adversario', 'adversarios', 'clube'], ['arbitro', 'arbitros', 'nome'], ['jogador', 'jogadores', 'nome_guerra']];
+    sources.forEach(([key, source, field]) => {
+        const input = document.getElementById(`cart-ref-filter-${key}`);
+        setupAutocomplete(input.id, source, field, null, selected => {
+            if (key === 'jogador') input.dataset.playerId = selected.id_jogador || '';
+            schedule();
+        }, false);
+        if (!input.dataset.cardsBound) {
+            input.dataset.cardsBound = 'true';
+            input.addEventListener('input', () => { delete input.dataset.playerId; schedule(); });
+        }
+    });
+    const competition = document.getElementById('cart-ref-filter-campeonato');
+    if (!competition.dataset.cardsBound) {
+        competition.dataset.cardsBound = 'true';
+        competition.addEventListener('change', renderCartoes);
+    }
+};
+
+const cardPhoto = (record, name) => record?.foto
+    ? `<img src="${cardText(record.foto)}" alt="${cardText(name)}" class="mini-foto card-ranking-photo">`
+    : '<span class="card-ranking-placeholder" aria-label="Sem foto"><i class="fas fa-user"></i></span>';
+
 const renderRefereeCards = () => {
-    const ranking = aggregateRefereeCards(state.jogos, document.getElementById('cart-filter-temporada').value);
+    const filters = getRefereeCardFilters();
+    filters.jogadorId = document.getElementById('cart-ref-filter-jogador')?.dataset.playerId || '';
+    const ranking = aggregateRefereeCards(state.jogos, document.getElementById('cart-filter-temporada').value, filters);
     const tbody = document.querySelector('#cartoes-referees-table tbody');
-    tbody.innerHTML = ranking.length ? ranking.map((referee, index) => `<tr><td>${index + 1}</td><td><button type="button" class="referee-name-button">${cardText(referee.nome)}</button></td><td class="card-yellow">${referee.yellow}</td><td class="card-red">${referee.red}</td><td><strong>${referee.total}</strong></td></tr>`).join('') : '<tr><td colspan="5">Nenhum registro de cartão encontrado.</td></tr>';
+    tbody.innerHTML = ranking.length ? ranking.map((referee, index) => `<tr><td>${index + 1}</td><td>${cardPhoto(state.arbitros?.find(item => item.nome === referee.nome), referee.nome)}</td><td><button type="button" class="referee-name-button">${cardText(referee.nome)}</button></td><td class="card-yellow">${referee.yellow}</td><td class="card-red">${referee.red}</td><td><strong>${referee.total}</strong></td></tr>`).join('') : '<tr><td colspan="6">Nenhum registro de cartão encontrado.</td></tr>';
     tbody.querySelectorAll('button').forEach((button, index) => button.addEventListener('click', () => {
         const row = button.closest('tr');
         const existing = row.nextElementSibling?.classList.contains('referee-card-detail');
         tbody.querySelectorAll('.referee-card-detail').forEach(detail => detail.remove());
-        if (existing) return;
+        if (existing) { state.cardRefereeOpen = null; return; }
         const referee = ranking[index];
+        state.cardRefereeOpen = referee.nome;
         const detail = document.createElement('tr');
         detail.className = 'referee-card-detail';
-        detail.innerHTML = `<td colspan="5"><div class="tr-detail-container"><h3>Cartões do Atlético: ${cardText(referee.nome)}</h3><div class="table-responsive"><table class="stats-table referee-players-table"><thead><tr><th>Jogador</th><th><button type="button" data-sort="yellow">Amarelos ↕</button></th><th><button type="button" data-sort="red">Vermelhos ↕</button></th><th><button type="button" data-sort="total">Total ↕</button></th></tr></thead><tbody></tbody></table></div></div></td>`;
+        detail.innerHTML = `<td colspan="6"><div class="tr-detail-container"><h3>Cartões do Atlético: ${cardText(referee.nome)}</h3><div class="table-responsive"><table class="stats-table referee-players-table"><thead><tr><th>Foto</th><th>Jogador</th><th><button type="button" data-sort="yellow">Amarelos ↕</button></th><th><button type="button" data-sort="red">Vermelhos ↕</button></th><th><button type="button" data-sort="total">Total ↕</button></th></tr></thead><tbody></tbody></table></div></div></td>`;
         const renderPlayers = key => {
+            state.cardRefereeSort = key;
             const players = [...referee.players].sort((a, b) => b[key] - a[key] || b.total - a.total || a.nome.localeCompare(b.nome));
             detail.querySelector('tbody').innerHTML = players.map(player => {
                 const registered = player.idJogador ? getPlayerByGlobalId(player.idJogador, document.getElementById('cart-filter-temporada').value) : null;
-                return `<tr><td>${cardText(registered?.nome_guerra || player.nome)}</td><td class="card-yellow">${player.yellow}</td><td class="card-red">${player.red}</td><td>${player.total}</td></tr>`;
+                return `<tr><td>${cardPhoto(registered, player.nome)}</td><td>${cardText(registered?.nome_guerra || player.nome)}</td><td class="card-yellow">${player.yellow}</td><td class="card-red">${player.red}</td><td>${player.total}</td></tr>`;
             }).join('');
         };
         detail.querySelectorAll('[data-sort]').forEach(sort => sort.addEventListener('click', () => renderPlayers(sort.dataset.sort)));
         row.after(detail);
-        renderPlayers('total');
+        renderPlayers(state.cardRefereeSort || 'total');
     }));
+    if (state.cardRefereeOpen) {
+        const index = ranking.findIndex(referee => referee.nome === state.cardRefereeOpen);
+        if (index >= 0) tbody.querySelectorAll('.referee-name-button')[index].click();
+        else state.cardRefereeOpen = null;
+    }
 };
 
 const renderCartoes = () => {
@@ -2026,6 +2074,10 @@ const renderCartoes = () => {
 
 const updateCartoesFilters = () => {
     if (state.isUpdating) return;
+    if (state.cartoesTab === 'arbitros' && document.getElementById('cart-ref-filter-campeonato')) {
+        setupRefereeCardFilters();
+        return;
+    }
     const fTemp = document.getElementById('cart-filter-temporada').value;
     const fTime = document.getElementById('cart-filter-time').value;
     const fPos = document.getElementById('cart-filter-posicao').value;
@@ -8125,10 +8177,13 @@ window.clearArtilheirosFilters = () => {
 };
 
 window.clearCartoesFilters = () => {
-    ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao'].forEach(id => {
+    ['cart-filter-temporada', 'cart-filter-time', 'cart-filter-posicao', 'cart-ref-filter-campeonato', 'cart-ref-filter-adversario', 'cart-ref-filter-arbitro', 'cart-ref-filter-jogador'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.value = '';
+        if (el) { el.value = ''; delete el.dataset.playerId; }
     });
+    document.getElementById('cart-filter-time').value = 'Atlético';
+    state.cardRefereeOpen = null;
+    document.querySelectorAll('#cartoes-section .autocomplete-results').forEach(dropdown => dropdown.remove());
     renderCartoes();
 };
 
