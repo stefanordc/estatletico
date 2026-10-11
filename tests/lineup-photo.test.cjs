@@ -1,0 +1,31 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { JSDOM } = require('jsdom');
+
+test('foto carregada depois atualiza a escalação sem alterar o formulário ou outra seleção', async () => {
+    const dom = new JSDOM('<table><tbody><tr><td><img class="mini-foto"><input class="line-player-inp" data-jogador-id="michel" value="Michel"></td></tr></tbody></table>', { runScripts: 'outside-only' });
+    const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+    const helper = source.slice(source.indexOf('const updateLineupPlayerPhoto = '), source.indexOf('const addLineupRow = '));
+    let resolvePhoto;
+    dom.window.requestMedia = () => new Promise(resolve => { resolvePhoto = resolve; });
+    dom.window.EstatleticoSync = { MEDIA_COLUMN: { jogadores: 'foto' } };
+    dom.window.eval(`const DEFAULT_PLAYER_PHOTO = 'placeholder.png'; ${helper}; window.updatePhoto = updateLineupPlayerPhoto;`);
+    const row = dom.window.document.querySelector('tr');
+    const input = row.querySelector('input');
+    const image = row.querySelector('img');
+    dom.window.updatePhoto(row, { id: 'michel' });
+    resolvePhoto('michel.jpg');
+    await Promise.resolve();
+    assert.equal(image.getAttribute('src'), 'michel.jpg');
+    assert.equal(input.value, 'Michel');
+    dom.window.updatePhoto(row, { id: 'michel' });
+    input.dataset.jogadorId = 'outro';
+    image.src = 'outro.jpg';
+    resolvePhoto('michel.jpg');
+    await Promise.resolve();
+    assert.equal(image.getAttribute('src'), 'outro.jpg');
+    dom.window.close();
+});

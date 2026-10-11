@@ -3014,6 +3014,7 @@ const hydratePlayersForSeason = async (season, term) => {
                 return [];
             }
 
+            attachMediaAccessors('jogadores', data);
             data.forEach(jogador => {
                 const index = state.jogadores.findIndex(item => String(item.id) === String(jogador.id));
                 if (index >= 0) state.jogadores[index] = jogador;
@@ -3880,6 +3881,18 @@ const addCardRow = (team, data = null) => {
     tbody.appendChild(row);
 };
 
+const updateLineupPlayerPhoto = (row, player) => {
+    const image = row.querySelector('.mini-foto');
+    const input = row.querySelector('.line-player-inp');
+    if (!image || !input || !player) return;
+    image.src = player.foto || DEFAULT_PLAYER_PHOTO;
+    if (!window.EstatleticoSync?.MEDIA_COLUMN?.jogadores) return;
+    const playerId = String(player.id);
+    void requestMedia('jogadores', player.id).then(photo => {
+        if (row.isConnected && input.dataset.jogadorId === playerId) image.src = photo;
+    }).catch(error => console.warn('Não foi possível carregar a foto do jogador.', error));
+};
+
 const addLineupRow = (team, data = null) => {
     const isAdv = team === 'adv';
     const tbody = document.getElementById(`lineup-${team}-body`);
@@ -3951,6 +3964,7 @@ const addLineupRow = (team, data = null) => {
                     inp.dataset.jogadorId = String(res.id);
                     inp.dataset.globalJogadorId = String(res.id_jogador || '');
                     setSelectedLineupPlayerKey(inp, res);
+                    updateLineupPlayerPhoto(row, res);
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.line-player-inp');
@@ -3996,13 +4010,14 @@ const addLineupRow = (team, data = null) => {
                     inp.dataset.jogadorId = String(p.id);
                     inp.dataset.globalJogadorId = String(p.id_jogador || '');
                     setSelectedLineupPlayerKey(inp, p);
-                    row.querySelector('.mini-foto').src = p.foto || DEFAULT_PLAYER_PHOTO;
+                    updateLineupPlayerPhoto(row, p);
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
             }); 
         }, 10); 
     }
     tbody.appendChild(row);
+    if (selectedPlayer) updateLineupPlayerPhoto(row, selectedPlayer);
 };
 
 const removeLineupRow = (btn) => {
