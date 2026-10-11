@@ -111,6 +111,7 @@ const state = {
 // quando a resposta antiga chegar ao navegador.
 const tableDataVersions = Object.fromEntries(MUTABLE_TABLES.map(table => [table, 0]));
 const markTableDataChanged = (table) => {
+    window._autocompleteLookupCache?.delete(state[table]);
     if (table === 'jogadores') {
         playerSeasonLookups.clear();
         playerGlobalIndex = null;
@@ -3019,6 +3020,7 @@ const hydratePlayersForSeason = async (season, term) => {
                 else state.jogadores.push(jogador);
             });
             playerGlobalIndex = null;
+            window._autocompleteLookupCache?.delete(state.jogadores);
             return data;
         })
         .catch(error => {
@@ -3069,6 +3071,7 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
     let selectedIndex = -1;
 
     inp.addEventListener('input', (e) => {
+        inp._autocompleteInputVersion = (inp._autocompleteInputVersion || 0) + 1;
         const val = e.target.value.toLowerCase(); 
         const old = cont.querySelector('.autocomplete-results'); 
         if (old) old.remove();
@@ -3093,18 +3096,30 @@ const setupAutocomplete = (id, sourceKey, field, filterFn = null, onSelect = nul
                     .filter(Boolean)
             )
             : null;
-        const textMatches = ds
-            .filter(item => normalizeString(item[currentField]).includes(normVal))
-            .sort((a,b) => a[currentField].localeCompare(b[currentField]));
+        // Prepara cada fonte uma vez; digitar não renormaliza nem ordena o
+        // histórico inteiro de jogadores e jogos novamente.
+        window._autocompleteLookupCache ||= new WeakMap();
+        let sourceCache = window._autocompleteLookupCache.get(ds);
+        if (!sourceCache || sourceCache.length !== ds.length) {
+            sourceCache = { length: ds.length, fields: new Map() };
+            window._autocompleteLookupCache.set(ds, sourceCache);
+        }
+        if (!sourceCache.fields.has(currentField)) {
+            sourceCache.fields.set(currentField, ds.map(item => ({ item, text: normalizeString(item[currentField]), label: String(item[currentField] || '') }))
+                .sort((a, b) => a.label.localeCompare(b.label)));
+        }
+        const textMatches = sourceCache.fields.get(currentField);
 
         // O filtro encadeado pode consultar todos os jogos para cada candidato.
         // Interromper após preencher o dropdown mantém o custo limitado por tecla.
         const resultNameCounts = new Map();
         const results = [];
         const seen = new Set();
-        for (const item of textMatches) {
+        for (const entry of textMatches) {
+            if (!entry.text.includes(normVal)) continue;
+            const item = entry.item;
             if (typeof currentFilterFn === 'function' && !currentFilterFn(item)) continue;
-            if (selectedLineupNames?.has(normalizeString(item[currentField]).trim())) continue;
+            if (selectedLineupNames?.has(entry.text.trim())) continue;
             if (currentSourceKey !== 'jogadores' && seen.has(item[currentField])) continue;
             seen.add(item[currentField]);
             results.push(item);
@@ -3807,22 +3822,29 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
+            let selectedPlayerKeys = new Set();
+            let selectedDisplayKeys = new Set();
+            let selectionVersion = -1;
             setupAutocomplete(id, 'jogadores', 'nome_guerra', 
                 p => {
                     const gS = document.getElementById('game-temporada')?.value?.trim();
                     const pS = String(p.temporada || '').trim();
-                    const selectedPlayerKeys = new Set(
+                    if ((gS && pS !== gS) || p.posicao === 'Técnico') return false;
+                    if (selectionVersion !== inp._autocompleteInputVersion) {
+                    selectionVersion = inp._autocompleteInputVersion;
+                    selectedPlayerKeys = new Set(
                         Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
                             .filter(otherInput => otherInput !== inp)
                             .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
                             .filter(Boolean)
                     );
-                    const selectedDisplayKeys = new Set(
+                    selectedDisplayKeys = new Set(
                         Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
                             .filter(otherInput => otherInput !== inp)
                             .map(getLineupPlayerDisplayKey)
                             .filter(Boolean)
                     );
+                    }
                     return (!gS || pS === gS)
                         && p.posicao !== 'Técnico'
                         && !selectedPlayerKeys.has(getPlayerSelectionKey(p))
@@ -4181,6 +4203,7 @@ const saveNewJogo = () => {
             } else {
                 state.jogos = state.jogos.filter(j => String(j.id) !== String(jogo.id));
             }
+            markTableDataChanged('jogos');
             void saveTableSnapshotToCache('jogos');
             renderJogos();
             // A mensagem Já foi exibida pelo saveData, mas podemos tratar casos específicos:

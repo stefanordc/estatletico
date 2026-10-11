@@ -18,6 +18,36 @@ const sourceBetween = (start, end) => {
   return source.slice(from, to);
 };
 
+test('autocomplete reaproveita nomes preparados entre teclas sem renormalizar o elenco inteiro', () => {
+  const dom = new JSDOM('<input id="fast-club">', { runScripts: 'outside-only' });
+  dom.window.__normalizations = 0;
+  const source = sourceBetween('const setupAutocomplete = ', 'const openQuickAddModal = ');
+  const invalidation = sourceBetween('const markTableDataChanged = ', '// Cache para estatísticas');
+  dom.window.eval(`
+    const state = { adversarios: Array.from({length: 5000}, (_, i) => ({clube: 'Clube ' + String(i).padStart(4, '0')})) };
+    const tableDataVersions = { adversarios: 0 };
+    const normalizeString = value => { window.__normalizations++; return String(value || '').toLowerCase(); };
+    window._autocompleteFilters = {};
+    ${invalidation}
+    window.__renameClub = () => { state.adversarios[0].clube = 'Nome atualizado'; markTableDataChanged('adversarios'); };
+    ${source}
+    setupAutocomplete('fast-club', 'adversarios', 'clube', null, null, false);
+  `);
+  const input = dom.window.document.getElementById('fast-club');
+  input.value = 'cl';
+  input.dispatchEvent(new dom.window.Event('input'));
+  dom.window.__normalizations = 0;
+  input.value = 'clu';
+  input.dispatchEvent(new dom.window.Event('input'));
+  assert.ok(dom.window.__normalizations < 10, 'nova tecla não deve preparar novamente cinco mil nomes');
+  assert.equal(dom.window.document.querySelectorAll('.autocomplete-item').length, 20);
+  dom.window.__renameClub();
+  input.value = 'Nome atualizado';
+  input.dispatchEvent(new dom.window.Event('input'));
+  assert.equal(dom.window.document.querySelector('.autocomplete-item').textContent, 'Nome atualizado');
+  dom.window.close();
+});
+
 test('autocomplete limita o DOM a vinte sugestoes durante a digitacao', () => {
   const dom = new JSDOM('<div><input id="player-filter"></div>', { runScripts: 'outside-only' });
   const players = Array.from({ length: 300 }, (_, index) => ({
