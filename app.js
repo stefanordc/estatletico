@@ -608,11 +608,15 @@ const convertMatchTime = (inputVal) => {
     return { min: m, tempo: 1 };
 };
 
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const attendanceFormatter = new Intl.NumberFormat('pt-BR');
+const revenueFormatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const formatCurrency = (val) => {
     if (val === 'N/I' || val === null || val === undefined) return 'N/I';
     const num = parseFloat(val);
     if (isNaN(num)) return 'N/I';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+    return currencyFormatter.format(num);
 };
 
 const formatPublico = (val) => {
@@ -624,14 +628,14 @@ const formatPublico = (val) => {
         const clean = String(val).replace(/\./g, '').replace(',', '.').replace(/[^\d]/g, '');
         num = parseInt(clean) || 0;
     }
-    return num.toLocaleString('pt-BR');
+    return attendanceFormatter.format(num);
 };
 
 const formatRenda = (val) => {
     if (val === 'N/I' || val === null || val === undefined || val === '') return 'N/I';
     const num = parseCurrency(val);
     if (isNaN(num)) return 'N/I';
-    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return revenueFormatter.format(num);
 };
 
 const renderTableLegend = (siglas = []) => {
@@ -3755,7 +3759,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
             inP.addEventListener('input', (e) => {
                 let val = e.target.value.replace(/\D/g, '');
                 if (val) {
-                    e.target.value = Number(val).toLocaleString('pt-BR');
+                    e.target.value = attendanceFormatter.format(Number(val));
                 }
             });
         }
@@ -3765,7 +3769,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 let val = e.target.value.replace(/\D/g, '');
                 if (val) {
                     const num = parseInt(val) / 100;
-                    e.target.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    e.target.value = revenueFormatter.format(num);
                 }
             });
         }
@@ -7812,15 +7816,14 @@ const enrichJogos = () => {
         // houver homônimos, o jogo deve ser aberto e o atleta escolhido de novo.
         adversarioId,
         lineupGalo: (jogo.lineupGalo || []).map(l => {
-            const player = resolveLegacyPlayer(l);
+            const player = l.idJogador ? null : resolveLegacyPlayer(l);
             return {
                 ...l,
-                ...(player && !l.idJogador ? { idJogador: player.id_jogador } : {}),
-                foto: player?.foto || l.foto || 'https://via.placeholder.com/35'
+                ...(player && !l.idJogador ? { idJogador: player.id_jogador } : {})
             };
         }),
         cartoesGalo: (jogo.cartoesGalo || []).map(c => {
-            const player = resolveLegacyPlayer(c);
+            const player = c.idJogador ? null : resolveLegacyPlayer(c);
             return {
                 ...c,
                 ...(player && !c.idJogador ? { idJogador: player.id_jogador } : {})
