@@ -215,6 +215,7 @@ const applyPermissionUI = () => {
 };
 
 const updateAuthSession = (session) => {
+    if (!session) window.EstatleticoVisits?.reset();
     state.auth.session = session || null;
     state.auth.user = session?.user || null;
     state.auth.role = state.auth.user ? (isAdmin() ? 'admin' : 'user') : 'guest';
@@ -872,6 +873,7 @@ const showSection = (sectionId, skipHashUpdate = false) => {
     document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
     const section = document.getElementById(`${sectionId}-section`);
     if (section) section.classList.remove('hidden');
+    if (section) void window.EstatleticoVisits?.record(sectionId);
 
     document.querySelectorAll('.nav-item').forEach(i => {
         i.classList.toggle('active', i.dataset.page === sectionId);
@@ -7836,7 +7838,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const parts = hash.split('/');
         const page = parts[0];
         const tab  = parts[1];
-        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo', 'curiosidades', 'configuracoes'];
+        const validPages = ['dashboard','cadastros','jogos','elenco','jogadores-page','artilheiros','cartoes','adversarios','arbitragem','equipe-arbitragem','estatisticas','comparativo','novo-jogo', 'curiosidades', 'configuracoes', 'publico-renda'];
         const validTabs  = ['adversarios','estadios','competicoes','arbitros','jogadores'];
         
         if (page && validPages.includes(page)) {
@@ -7910,6 +7912,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         supabaseClient = window.EstatleticoData.createClient(supabaseUrl, supabaseKey);
+        window.EstatleticoVisits.init({ client: supabaseClient, source: window.EstatleticoData.source, getUser: () => state.auth.user });
         window.EstatleticoSettings.init({
             client: supabaseClient,
             source: window.EstatleticoData.source,

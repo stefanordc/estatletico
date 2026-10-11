@@ -760,6 +760,12 @@
             <div id="settings-users-panel" class="list-container table-responsive hidden">
                 <table class="data-table"><thead><tr><th>Nome</th><th>E-mail</th><th>Data de cadastro</th><th>Último acesso</th></tr></thead><tbody id="settings-users-body"></tbody></table>
             </div>
+            <div id="settings-access-panel" class="filters-card hidden">
+                <h3 id="settings-access-title">Acessos por página</h3>
+                <div class="form-group"><label for="settings-access-month">Mês</label><input type="month" id="settings-access-month"></div>
+                <p>Contagem disponível a partir da implantação do histórico.</p>
+                <div class="table-responsive"><table class="data-table"><thead><tr><th>Página</th><th>Acessos</th></tr></thead><tbody id="settings-access-body"></tbody></table></div>
+            </div>
         </section>
 
         <section id="cartoes-section" class="page-section hidden">
@@ -1391,6 +1397,7 @@
     <script src="data-provider.js"></script>
     <script src="data-sync-utils.js"></script>
     <script src="settings.js"></script>
+    <script src="page-visits.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

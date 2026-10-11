@@ -5,6 +5,9 @@
     let requestVersion = 0;
     let saving = false;
     let loadedUserId = null;
+    let selectedAccessUser = null;
+    let accessVersion = 0;
+    const pageNames = { dashboard: 'Dashboard', cadastros: 'Cadastros', jogos: 'Jogos', elenco: 'Elenco', 'jogadores-page': 'Jogadores', artilheiros: 'Artilheiros', cartoes: 'Cartões', adversarios: 'Adversários', arbitragem: 'Arbitragem', 'equipe-arbitragem': 'Comissão de Arbitragem', estatisticas: 'Estatísticas', comparativo: 'Comparativo', 'novo-jogo': 'Novo jogo', curiosidades: 'Curiosidades', configuracoes: 'Configurações', 'publico-renda': 'Público e renda' };
     const el = id => document.getElementById(id);
     const message = (text, error = false) => {
         el('settings-message').textContent = text;
@@ -21,12 +24,16 @@
         }
         el('settings-users-tab')?.classList.toggle('hidden', !admin);
         if (!admin) {
+            accessVersion++;
+            selectedAccessUser = null;
+            el('settings-access-body')?.replaceChildren();
             requestVersion++;
             el('settings-users-body')?.replaceChildren();
             activeTab = 'account';
         }
         el('settings-account-panel')?.classList.toggle('hidden', activeTab !== 'account');
         el('settings-users-panel')?.classList.toggle('hidden', activeTab !== 'users' || !admin);
+        el('settings-access-panel')?.classList.toggle('hidden', activeTab !== 'users' || !admin || !selectedAccessUser);
         ['account', 'users'].forEach(tab => {
             el(`settings-${tab}-tab`)?.classList.toggle('active', activeTab === tab);
             el(`settings-${tab}-tab`)?.setAttribute('aria-selected', String(activeTab === tab));
@@ -53,6 +60,13 @@
             body.replaceChildren();
             users.forEach(user => {
                 const row = document.createElement('tr');
+                row.className = 'settings-user-row';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.title = 'Ver acessos por página';
+                const open = () => void showAccesses(user);
+                row.addEventListener('click', open);
+                row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
                 [user.nome || 'Não informado', user.email || '-', formatDate(user.created_at), formatDate(user.last_sign_in_at)].forEach(value => {
                     const cell = document.createElement('td');
                     cell.textContent = value;
@@ -63,6 +77,35 @@
             if (!users.length) body.textContent = 'Nenhum usuário cadastrado.';
         } catch (error) {
             if (version === requestVersion && dependencies.isAdmin()) body.textContent = `Não foi possível carregar os usuários: ${error.message || 'tente novamente.'}`;
+        }
+    }
+    async function showAccesses(user = selectedAccessUser) {
+        if (!user?.id || !dependencies?.isAdmin() || !el('settings-access-panel')) return;
+        selectedAccessUser = user;
+        const version = ++accessVersion;
+        syncPermissions();
+        el('settings-access-title').textContent = `Acessos por página: ${user.nome || user.email}`;
+        const month = el('settings-access-month');
+        if (!month.value) {
+            const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+            month.value = `${parts.find(part => part.type === 'year').value}-${parts.find(part => part.type === 'month').value}`;
+        }
+        if (!/^\d{4}-\d{2}$/.test(month.value)) { el('settings-access-body').textContent = 'Selecione um mês.'; return; }
+        const body = el('settings-access-body');
+        body.textContent = 'Carregando acessos…';
+        try {
+            const { data, error } = await dependencies.client.rpc('estatletico_user_page_accesses', { target_user: user.id, selected_month: `${month.value}-01` });
+            if (error) throw error;
+            if (version !== accessVersion || !dependencies.isAdmin()) return;
+            const counts = new Map((data || []).map(item => [item.page, item.accesses]));
+            body.replaceChildren();
+            Object.entries(pageNames).forEach(([page, name]) => {
+                const row = document.createElement('tr');
+                [name, String(counts.get(page) || 0)].forEach(value => { const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell); });
+                body.appendChild(row);
+            });
+        } catch (error) {
+            if (version === accessVersion && dependencies.isAdmin()) body.textContent = `Não foi possível carregar os acessos: ${error.message || 'tente novamente.'}`;
         }
     }
     function render() {
@@ -121,6 +164,7 @@
             el('settings-account-form').addEventListener('submit', event => { event.preventDefault(); void save(); });
             el('settings-account-tab').addEventListener('click', () => void showTab('account'));
             el('settings-users-tab').addEventListener('click', () => void showTab('users'));
-        }, render, save, showTab, syncPermissions
+            el('settings-access-month')?.addEventListener('change', () => void showAccesses());
+        }, render, save, showTab, showAccesses, syncPermissions
     };
 })(window);

@@ -93,3 +93,20 @@ test('Configurações é o último item do menu e o módulo carrega antes do app
     assert.ok(scripts.indexOf('settings.js') < scripts.indexOf('app.js'));
     dom.window.close();
 });
+
+test('admin seleciona usuário e mês para consultar acessos por página', async () => {
+    const { dom, calls, client } = setup(true);
+    const doc = dom.window.document;
+    const panel = doc.createElement('div');
+    panel.id = 'settings-access-panel';
+    panel.innerHTML = '<h3 id="settings-access-title"></h3><input type="month" id="settings-access-month" value="2026-09"><table><tbody id="settings-access-body"></tbody></table>';
+    doc.body.appendChild(panel);
+    client.rpc = async (name, args) => { calls.push({ name, args }); return { data: [{ page: 'cartoes', accesses: 7 }], error: null }; };
+    await dom.window.EstatleticoSettings.showTab('users');
+    await dom.window.EstatleticoSettings.showAccesses({ id: 'target', nome: 'Usuário' });
+    const call = calls.find(item => item.name === 'estatletico_user_page_accesses');
+    assert.equal(call.args.target_user, 'target');
+    assert.equal(call.args.selected_month, '2026-09-01');
+    assert.match(doc.getElementById('settings-access-body').textContent, /Cartões7/);
+    dom.window.close();
+});

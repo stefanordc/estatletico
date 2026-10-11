@@ -2865,3 +2865,54 @@ html, body {
 .player-card-games th { text-align: center; }
 .player-card-games { min-width: 850px; }
 #comparativo-charts-container .chart-box h3 { color: #333333; }
+.settings-user-row { cursor: pointer; }
+.settings-user-row:focus-visible { outline: 2px solid var(--primary-color); }
+#settings-access-panel { margin-top: 1rem; }
+
+@media (max-width: 1024px) {
+    body { display: block; }
+    .mobile-header { width: 100%; }
+}
+
+@media (max-width: 768px) {
+    .main-content { width: 100%; box-sizing: border-box; margin-left: 0 !important; }
+    .page-section { width: 100%; max-width: 100%; }
+    .page-header > div, .list-header > div { flex-wrap: wrap; gap: .75rem; min-width: 0; }
+    .page-header > div > div { min-width: 0; flex: 1 1 100%; }
+    .page-header button, .list-header button { white-space: normal; }
+    .dashboard-grid, .stats-grid, .cartoes-grid, .artilheiros-grid, .elenco-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 1rem;
+    }
+    .form-group { min-width: 0; }
+    .dash-filter-item { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+    .dash-select-wrapper { width: 100%; min-width: 0; flex-wrap: wrap; }
+    .dash-select-wrapper input { width: auto !important; min-width: 0; flex: 1 1 80px; }
+    .dashboard-header { flex-wrap: wrap; }
+    .dash-filter-item:has(> input[type="checkbox"]) { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .5rem; }
+    .dash-top-grid, .dash-middle-grid { gap: 1rem; }
+    .dash-top-grid > .card, .dash-middle-grid > .card, .dashboard-grid > .card { margin-bottom: 0; }
+    .filters-card .form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    .chart-box, .chart-container { box-sizing: border-box; min-width: 0; padding: 1rem !important; }
+    .chart-box h3 { font-size: 1rem; overflow-wrap: anywhere; }
+    .chart-box canvas, .chart-container canvas { max-width: 100%; }
+    .list-container, .stats-section, .table-responsive, .table-wrapper, .table-container {
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+    }
+    .table-responsive .data-table, .table-wrapper .data-table { min-width: 560px; }
+    #cartoes-referees-table, #settings-users-panel .data-table { min-width: 650px; }
+    #settings-access-panel .data-table { min-width: 0; width: 100%; }
+    .tr-detail-container { padding: .75rem; box-sizing: border-box; }
+    #arbitragem-table .tr-detail-container { width: calc(100vw - 56px); }
+    .tabs-container { max-width: 100%; box-sizing: border-box; }
+    .sidebar { width: min(280px, 85vw); height: 100dvh; z-index: 1100; }
+    .sidebar .nav-menu { min-height: 0; overflow-y: auto; }
+    .modal-content { box-sizing: border-box; }
+    .auth-panel { width: 100%; box-sizing: border-box; padding: 1.25rem; }
+    input, select, textarea { font-size: 16px; }
+    button, .nav-item { touch-action: manipulation; }
+}
