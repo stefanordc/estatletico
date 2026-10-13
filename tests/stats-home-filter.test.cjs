@@ -12,7 +12,8 @@ test('estatísticas coletivas combinam mandante com temporada e campeonato', () 
     const filter = source.slice(start, end) + '\nreturn filteredJogos; }; globalThis.filterGames = renderStatsColetivas;';
     let selected = '';
     const context = {
-        document: { getElementById: id => ({ value: id === 'stc-filter-mandante' ? selected : id.endsWith('-de') ? '2004' : '2004' }) },
+        populateFilter: () => {},
+        document: { getElementById: id => id === 'stc-filter-estadio' ? null : ({ value: id === 'stc-filter-mandante' ? selected : id.endsWith('-de') ? '2004' : '2004' }) },
         isAtletico: name => ['Atlético', 'Atlético-MG'].includes(name),
         state: {
             statsMultiFilters: { 'col-campeonato': ['Brasileiro'], 'col-tecnico': ['Todos'], 'col-tipo': ['Todos'] },

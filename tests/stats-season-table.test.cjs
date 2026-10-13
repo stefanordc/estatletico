@@ -6,18 +6,19 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
 test('tabela por temporada soma campeonatos e respeita o filtro de mandante', () => {
-    const dom = new JSDOM('<input id="stc-filter-temporada-de"><input id="stc-filter-temporada-ate"><select id="stc-filter-mandante"><option value="">Todos</option><option>Atlético</option></select><div id="content"></div>', { runScripts: 'outside-only' });
+    const dom = new JSDOM('<input id="stc-filter-temporada-de"><input id="stc-filter-temporada-ate"><select id="stc-filter-mandante"><option value="">Todos</option><option>Atlético</option></select><select id="stc-filter-estadio"><option value="">Todos</option></select><div id="content"></div>', { runScripts: 'outside-only' });
     const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
     const start = source.indexOf('const renderStatsColetivas = ');
     const end = source.indexOf('let goalsMarkedChart = ', start);
     dom.window.eval(`
         const state = { sortConfig: {}, competicoes: [], statsMultiFilters: { 'col-campeonato': ['Todos'], 'col-tecnico': ['Todos'], 'col-tipo': ['Todos'] }, jogos: [
-            { temporada: '2004', campeonato: 'Mineiro', casa: 'Atlético', fora: 'Cruzeiro', golsCasa: 2, golsFora: 0, cartoesGalo: [{ amarelo: 2, red: 1 }] },
+            { temporada: '2004', estadio: 'Mineirão', campeonato: 'Mineiro', casa: 'Atlético', fora: 'Cruzeiro', golsCasa: 2, golsFora: 0, cartoesGalo: [{ amarelo: 2, red: 1 }] },
             { temporada: '2004', campeonato: 'Brasileiro', casa: 'Cruzeiro', fora: 'Atlético', golsCasa: 1, golsFora: 1 },
-            { temporada: '2005', campeonato: 'Mineiro', casa: 'Atlético', fora: 'Cruzeiro', golsCasa: 0, golsFora: 1 }
+            { temporada: '2005', estadio: 'Independência', campeonato: 'Mineiro', casa: 'Atlético', fora: 'Cruzeiro', golsCasa: 0, golsFora: 1 }
         ] };
         const isAtletico = team => team === 'Atlético';
         const initMultiSelect = () => {};
+        ${source.slice(source.indexOf('const populateFilter = '), source.indexOf('const playerSeasonLookups = '))}
         const renderTableLegend = () => '';
         const renderGoalDistributionCharts = games => { window.chartGames = games.length; };
         const sortInternal = (rows) => rows.sort((a, b) => a[state.sortConfig.column] - b[state.sortConfig.column]);
@@ -44,5 +45,12 @@ test('tabela por temporada soma campeonatos e respeita o filtro de mandante', ()
     dom.window.render();
     assert.equal(dom.window.chartGames, 2);
     assert.equal(dom.window.document.querySelector('#table-stats-temporadas tbody tr:nth-child(2)').cells[2].textContent, '1');
+    const stadium = dom.window.document.getElementById('stc-filter-estadio');
+    assert.deepEqual(Array.from(stadium.options).map(option => option.textContent), ['Todos', 'Independência', 'Mineirão']);
+    stadium.value = 'Mineirão';
+    stadium.dispatchEvent(new dom.window.Event('change'));
+    assert.equal(dom.window.chartGames, 1);
+    assert.equal(dom.window.document.querySelector('#table-stats-temporadas tbody tr').cells[0].textContent, '2004');
+    assert.equal(dom.window.document.querySelector('#table-stats-coletivas tbody tr').cells[0].textContent, 'Mineiro');
     dom.window.close();
 });
