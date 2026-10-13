@@ -5044,6 +5044,7 @@ const renderStatsPorFaseCharts = (data) => {
 const renderStatsColetivas = (container) => {
     const fTempDe = parseInt(document.getElementById('stc-filter-temporada-de').value) || 0;
     const fTempAte = parseInt(document.getElementById('stc-filter-temporada-ate').value) || 9999;
+    const mandante = document.getElementById('stc-filter-mandante')?.value || '';
 
     // Obtém filtros multi
     const selectedCamps = state.statsMultiFilters['col-campeonato'] || [];
@@ -5051,6 +5052,8 @@ const renderStatsColetivas = (container) => {
     const selectedTipos = state.statsMultiFilters['col-tipo'] || [];
 
     const filteredJogos = state.jogos.filter(j => {
+        if (mandante === 'Atlético' && !isAtletico(j.casa)) return false;
+        if (mandante === 'Adversários' && !isAtletico(j.fora)) return false;
         const anoJogo = parseInt(j.temporada || j.data.substring(0, 4)) || 0;
         if (fTempDe > 0 && anoJogo < fTempDe) return false;
         if (fTempAte < 9999 && anoJogo > fTempAte) return false;
@@ -5075,7 +5078,7 @@ const renderStatsColetivas = (container) => {
 
     // Bind listeners
     if (!container.dataset.boundColetivas) {
-        ['stc-filter-temporada-de', 'stc-filter-temporada-ate'].forEach(id => {
+        ['stc-filter-temporada-de', 'stc-filter-temporada-ate', 'stc-filter-mandante'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => renderStatsColetivas(container));
         });
@@ -8318,6 +8321,8 @@ window.clearEquipeArbitragemFilters = () => {
 };
 
 window.clearEstatisticasGeraisFilters = () => {
+    const mandante = document.getElementById('stc-filter-mandante');
+    if (mandante) mandante.value = '';
     // Reset numeric/select inputs
     ['stc-filter-temporada-de', 'stc-filter-temporada-ate', 'stt-filter-temporada-de', 'stt-filter-temporada-ate', 'spf-filter-temporada-de', 'spf-filter-temporada-ate', 'spf-filter-rodada-de', 'spf-filter-rodada-ate'].forEach(id => {
         const el = document.getElementById(id);
