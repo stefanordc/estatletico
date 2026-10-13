@@ -5099,11 +5099,12 @@ const renderStatsColetivas = (container) => {
     initMultiSelect('stc-multi-tipo', availableTipos, 'col-tipo', () => renderStatsColetivas(container));
 
     const stats = {};
+    const seasonStats = {};
     filteredJogos.forEach(j => {
-
-        if (!stats[j.campeonato]) stats[j.campeonato] = { nome: j.campeonato, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0, cs: 0, cg: 0 };
-        
-        const s = stats[j.campeonato];
+        const season = String(j.temporada || j.data.substring(0, 4));
+        for (const [groups, key] of [[stats, j.campeonato], [seasonStats, season]]) {
+        if (!groups[key]) groups[key] = { nome: key, pontos: 0, jogos: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, yellowAtl: 0, redAtl: 0, yellowAdv: 0, redAdv: 0, cs: 0, cg: 0 };
+        const s = groups[key];
         s.jogos++;
         
         const galoGols = j.casa === 'Atlético' || j.casa === 'Atlético-MG' ? parseInt(j.golsCasa) : parseInt(j.golsFora);
@@ -5122,10 +5123,13 @@ const renderStatsColetivas = (container) => {
 
         (j.cartoesGalo || []).forEach(c => { s.yellowAtl += parseInt(c.amarelo || 0); s.redAtl += parseInt(c.red || 0); });
         (j.cartoesAdv || []).forEach(c => { s.yellowAdv += parseInt(c.amarelo || 0); s.redAdv += parseInt(c.red || 0); });
+        }
     });
 
-    for (let jId in stats) {
-        const s = stats[jId];
+    for (const s of [...Object.values(stats), ...Object.values(seasonStats)]) {
+        s.sg = s.gp - s.gc;
+        s.mgm = s.jogos > 0 ? s.gp / s.jogos : 0;
+        s.mgs = s.jogos > 0 ? s.gc / s.jogos : 0;
         s.aproveitamento = s.jogos > 0 ? ((s.pontos / (s.jogos * 3)) * 100).toFixed(2) : "0.00";
     }
 
@@ -5137,13 +5141,6 @@ const renderStatsColetivas = (container) => {
     } else {
         list.sort((a,b) => b.pontos - a.pontos || b.gp - a.gp);
     }
-
-    const getSortIcon = (col) => {
-        if (state.sortConfig.tableId === 'table-stats-coletivas' && state.sortConfig.column === col) {
-            return state.sortConfig.direction === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
-        }
-        return '<i class="fas fa-sort" style="opacity:0.3;"></i>';
-    };
 
     const total = list.reduce((acc, c) => {
         acc.pontos += c.pontos; acc.jogos += c.jogos; acc.v += c.v; acc.e += c.e; acc.d += c.d; acc.gp += c.gp; acc.gc += c.gc;
@@ -5161,11 +5158,19 @@ const renderStatsColetivas = (container) => {
         return `<tr ${style}><td style="text-align:left;"><strong>${s.nome}</strong></td><td>${s.pontos}</td><td>${s.jogos}</td><td>${s.v}</td><td>${s.e}</td><td>${s.d}</td><td>${s.gp}</td><td>${s.gc}</td><td>${sg}</td><td>${s.aproveitamento}%</td><td>${mgm}</td><td>${mgs}</td><td style="color:var(--primary-color); font-weight:bold;">${s.cs}</td><td style="color:#e67e22; font-weight:bold;">${s.cg}</td><td style="color:#f39c12;">${s.yellowAtl}</td><td style="color:#e74c3c;">${s.redAtl}</td><td style="color:#f39c12; border-left:1px solid #eee;">${s.yellowAdv}</td><td style="color:#e74c3c;">${s.redAdv}</td></tr>`;
     };
 
-    container.innerHTML = `
-        <table class="data-table" id="table-stats-coletivas" style="text-align:center;">
+    const renderCollectiveTable = (rows, tableId, label) => {
+        const list = rows;
+        const getSortIcon = col => {
+            if (state.sortConfig.tableId === tableId && state.sortConfig.column === col) {
+                return state.sortConfig.direction === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+            }
+            return '<i class="fas fa-sort" style="opacity:0.3;"></i>';
+        };
+        return `
+        <table class="data-table" id="${tableId}" style="text-align:center;">
             <thead>
                 <tr>
-                    <th style="text-align:left; cursor:pointer;" onclick="sortTable(event, 'nome')">Campeonato ${getSortIcon('nome')}</th>
+                    <th style="text-align:left; cursor:pointer;" onclick="sortTable(event, 'nome')">${label} ${getSortIcon('nome')}</th>
                     <th style="cursor:pointer;" onclick="sortTable(event, 'pontos')">Pts ${getSortIcon('pontos')}</th>
                     <th style="cursor:pointer;" onclick="sortTable(event, 'jogos')">J ${getSortIcon('jogos')}</th>
                     <th style="cursor:pointer;" onclick="sortTable(event, 'v')">V ${getSortIcon('v')}</th>
@@ -5192,6 +5197,14 @@ const renderStatsColetivas = (container) => {
         </table>
         ${renderTableLegend(['Pts', 'J', 'V', 'E', 'D', 'GP', 'GC', 'SG', 'MGm', 'MGs', 'CS', 'CG', 'CA(G)', 'CV(G)', 'CA(A)', 'CV(A)'])}
     `;
+    };
+    let seasons = Object.values(seasonStats);
+    seasons = state.sortConfig.tableId === 'table-stats-temporadas'
+        ? sortInternal(seasons, 'table-stats-temporadas')
+        : seasons.sort((a, b) => Number(b.nome) - Number(a.nome));
+    container.innerHTML = renderCollectiveTable(seasons, 'table-stats-temporadas', 'Temporada')
+        + '<div style="margin-top:2rem;"></div>'
+        + renderCollectiveTable(list, 'table-stats-coletivas', 'Campeonato');
 
     // Render Charts
     renderGoalDistributionCharts(filteredJogos);
@@ -7448,7 +7461,7 @@ function sortTable(event, column, type) {
     else if (tableId === 'table-tecnicos-adv') renderTecnicoStats();
     else if (tableId === 'table-atletico-tecnicos') renderAtleticoTecnicos(document.getElementById('stats-content-container'));
     else if (tableId === 'table-stats-fase') renderStatsPorFase(document.getElementById('stats-content-container'));
-    else if (tableId === 'table-stats-coletivas') renderStatsColetivas(document.getElementById('stats-content-container'));
+    else if (tableId === 'table-stats-coletivas' || tableId === 'table-stats-temporadas') renderStatsColetivas(document.getElementById('stats-content-container'));
 };
 
 
