@@ -4482,6 +4482,42 @@ const removeLineupRow = (btn) => {
     }
 };
 
+const formatJogoDateBr = (isoDate) => {
+    const raw = String(isoDate || '').trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+    return raw || '-';
+};
+
+const findJogosOnSameDate = (dataIso, excludeId = null) => {
+    const target = String(dataIso || '').trim();
+    if (!target) return [];
+    return state.jogos.filter(j =>
+        String(j.data || '').trim() === target
+        && (excludeId == null || String(j.id) !== String(excludeId))
+    );
+};
+
+const confirmDuplicateGameDate = (dataIso, excludeId = null) => {
+    const duplicates = findJogosOnSameDate(dataIso, excludeId);
+    if (!duplicates.length) return true;
+
+    const details = duplicates.map(j => {
+        const data = formatJogoDateBr(j.data);
+        const campeonato = j.campeonato || '-';
+        const mandante = j.casa || '-';
+        const visitante = j.fora || '-';
+        const placar = `${j.golsCasa ?? 0} x ${j.golsFora ?? 0}`;
+        return `• Data: ${data}\n  Campeonato: ${campeonato}\n  Mandante: ${mandante}\n  Visitante: ${visitante}\n  Placar: ${placar}`;
+    }).join('\n\n');
+
+    return confirm(
+        `Já existe ${duplicates.length === 1 ? 'um jogo cadastrado' : 'jogos cadastrados'} nesta data.\n\n`
+        + `${details}\n\n`
+        + 'Deseja continuar mesmo assim?'
+    );
+};
+
 const saveNewJogo = () => {
     if (!requireAdmin('Apenas o administrador pode salvar jogos.')) return;
 
@@ -4502,6 +4538,12 @@ const saveNewJogo = () => {
 
     const fd = new FormData(document.getElementById('multi-step-form'));
     const jogo = { id: state.editingJogoId || Date.now() }; fd.forEach((v, k) => jogo[k] = v);
+
+    if (!confirmDuplicateGameDate(jogo.data, state.editingJogoId)) {
+        resetBtn();
+        return;
+    }
+
     if (shouldSkipPenaltyBlock()) {
         jogo.penaltis = 'Não';
         jogo.penaltisCasa = 0;
