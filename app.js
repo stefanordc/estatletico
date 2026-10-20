@@ -457,12 +457,21 @@ const calculateAgeAtEndOfYear = (birthDate, year) => {
 
 const isAtletico = (teamName) => ['atlético', 'atletico', 'atlético-mg', 'atletico-mg'].includes(String(teamName || '').trim().toLowerCase());
 
+const isUsableMediaSrc = (src) => {
+    if (!src) return false;
+    const value = String(src);
+    return !value.includes('via.placeholder.com')
+        && value !== DEFAULT_CLUB_PHOTO
+        && value !== DEFAULT_REF_PHOTO
+        && value !== DEFAULT_PLAYER_PHOTO;
+};
+
 const getClubCrest = (clubName) => {
     // O SVG do projeto é apenas o ícone do portal; o PNG contém o escudo
     // completo do Atlético e é a fonte correta para esta exibição.
     if (isAtletico(clubName)) return 'favicon.png.png';
     const club = state.adversarios.find(item => normalizeString(item.clube) === normalizeString(clubName));
-    return club?.escudo && club.escudo !== DEFAULT_CLUB_PHOTO ? club.escudo : '';
+    return isUsableMediaSrc(club?.escudo) ? club.escudo : '';
 };
 
 const updateGameClubCrest = (inputId) => {
@@ -470,9 +479,29 @@ const updateGameClubCrest = (inputId) => {
     const crest = document.getElementById(`${inputId}-crest`);
     if (!input || !crest) return;
 
-    const src = getClubCrest(input.value);
-    crest.hidden = !src;
-    if (src) crest.src = src;
+    const clubName = input.value;
+    if (isAtletico(clubName)) {
+        crest.hidden = false;
+        crest.src = 'favicon.png.png';
+        return;
+    }
+
+    const club = state.adversarios.find(item => normalizeString(item.clube) === normalizeString(clubName));
+    const cachedSrc = getClubCrest(clubName);
+    crest.hidden = !cachedSrc;
+    if (cachedSrc) crest.src = cachedSrc;
+    else crest.removeAttribute('src');
+
+    // Com o formulário aberto o reload global de mídia é bloqueado; por isso
+    // buscamos o escudo do cadastro e atualizamos o preview localmente.
+    if (club?.id != null && window.EstatleticoSync?.MEDIA_COLUMN?.adversarios) {
+        void requestMedia('adversarios', club.id).then(photo => {
+            if (!input.isConnected || normalizeString(input.value) !== normalizeString(clubName)) return;
+            if (!isUsableMediaSrc(photo)) return;
+            crest.hidden = false;
+            crest.src = photo;
+        }).catch(error => console.warn('Não foi possível carregar o escudo do clube.', error));
+    }
 };
 
 const updateGameClubCrests = () => {
@@ -485,10 +514,27 @@ const updateGameStadiumPhoto = () => {
     const photo = document.getElementById('game-estadio-photo');
     if (!input || !photo) return;
 
-    const stadium = state.estadios.find(item => normalizeString(item.nome) === normalizeString(input.value));
-    const src = stadium?.foto && stadium.foto !== 'https://via.placeholder.com/40' ? stadium.foto : '';
-    photo.hidden = !src;
-    if (src) photo.src = src;
+    const stadiumName = input.value;
+    const stadium = state.estadios.find(item => normalizeString(item.nome) === normalizeString(stadiumName));
+    if (!stadium) {
+        photo.hidden = true;
+        photo.removeAttribute('src');
+        return;
+    }
+
+    const cachedSrc = isUsableMediaSrc(stadium.foto) ? stadium.foto : '';
+    photo.hidden = !cachedSrc;
+    if (cachedSrc) photo.src = cachedSrc;
+    else photo.removeAttribute('src');
+
+    if (stadium.id != null && window.EstatleticoSync?.MEDIA_COLUMN?.estadios) {
+        void requestMedia('estadios', stadium.id).then(loaded => {
+            if (!input.isConnected || normalizeString(input.value) !== normalizeString(stadiumName)) return;
+            if (!isUsableMediaSrc(loaded)) return;
+            photo.hidden = false;
+            photo.src = loaded;
+        }).catch(error => console.warn('Não foi possível carregar a foto do estádio.', error));
+    }
 };
 
 // O ID é a referência canônica nos dados de jogo. O nome continua salvo apenas
@@ -596,7 +642,9 @@ const getPlayerByGlobalId = (idJogador, season = null) => {
 
 const getAdversarioDoJogo = (casa, fora) => {
     const adversarioNome = isAtletico(casa) ? fora : casa;
-    return state.adversarios.find(a => a.clube === adversarioNome) || null;
+    return state.adversarios.find(a => a.clube === adversarioNome)
+        || state.adversarios.find(a => normalizeString(a.clube) === normalizeString(adversarioNome))
+        || null;
 };
 
 const convertMatchTime = (inputVal) => {
@@ -3454,10 +3502,11 @@ const applyResolvedGameCsvToForm = (resolved) => {
     }
 
     // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora).
-    // O mandante do cadastro do estádio, quando existir, já veio em mandanteResolved.
+    // Usamos o nome exato do cadastro para o save resolver adversarioId corretamente.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;
+        if (match.estadioId != null) estInp.dataset.estadioId = String(match.estadioId);
         if (match.estadioEstado !== undefined) {
             document.getElementById('game-estadio-estado').value = match.estadioEstado || '';
         }
@@ -3468,11 +3517,15 @@ const applyResolvedGameCsvToForm = (resolved) => {
     }
 
     if (match.mandanteResolved) {
-        document.getElementById('game-casa').value = match.mandanteResolved;
+        const casaInp = document.getElementById('game-casa');
+        casaInp.value = match.mandanteResolved;
+        if (match.mandanteId != null) casaInp.dataset.adversarioId = String(match.mandanteId);
         updateGameClubCrest('game-casa');
     }
     if (match.visitanteResolved) {
-        document.getElementById('game-fora').value = match.visitanteResolved;
+        const foraInp = document.getElementById('game-fora');
+        foraInp.value = match.visitanteResolved;
+        if (match.visitanteId != null) foraInp.dataset.adversarioId = String(match.visitanteId);
         updateGameClubCrest('game-fora');
     }
 

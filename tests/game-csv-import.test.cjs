@@ -100,8 +100,8 @@ test('técnico adversário só preenche se já existir no histórico', () => {
 test('mandante do estádio prevalece sobre o mandante do CSV', () => {
     const parsed = parseGameCsv(SAMPLE_CSV);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
-        adversarios: [{ clube: 'Atlético' }, { clube: 'Atlético-PR' }],
-        estadios: [{ nome: 'Mineirão', estado: 'MG', pais: 'Brasil', mandante: 'Atlético' }],
+        adversarios: [{ id: 1, clube: 'Atlético' }, { id: 2, clube: 'Atlético-PR' }],
+        estadios: [{ id: 9, nome: 'Mineirão', estado: 'MG', pais: 'Brasil', mandante: 'Atlético' }],
         arbitros: [],
         jogadores: [],
         tecnicosAdversarios: [],
@@ -110,8 +110,11 @@ test('mandante do estádio prevalece sobre o mandante do CSV', () => {
 
     assert.equal(resolved.match.mandanteFromStadium, true);
     assert.equal(resolved.match.mandanteResolved, 'Atlético');
+    assert.equal(resolved.match.mandanteId, 1);
+    assert.equal(resolved.match.estadioId, 9);
     assert.equal(resolved.filled.Mandante, 'Atlético');
     assert.equal(resolved.match.visitanteResolved, 'Atlético-PR');
+    assert.equal(resolved.match.visitanteId, 2);
 });
 
 test('estádio com mandante adversário coloca Atlético como visitante', () => {
