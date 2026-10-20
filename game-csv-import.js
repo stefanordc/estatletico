@@ -304,28 +304,56 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
         }
     };
 
-    tryFill('Mandante', parsed.match.mandante, (value) => {
-        const club = findUniqueByNormalizedName(catalogs.adversarios, 'clube', value, { clubStyle: true });
-        if (!club) return null;
-        resolved.match.mandanteResolved = club.clube;
-        return club.clube;
-    });
+    const isAtleticoClub = (name) => {
+        const norm = normalizeClubLookup(name);
+        return norm === 'atletico' || norm === 'atletico mg' || norm === 'atletico mineiro';
+    };
 
-    tryFill('Visitante', parsed.match.visitante, (value) => {
-        const club = findUniqueByNormalizedName(catalogs.adversarios, 'clube', value, { clubStyle: true });
-        if (!club) return null;
-        resolved.match.visitanteResolved = club.clube;
-        return club.clube;
-    });
-
+    let stadium = null;
     tryFill('Estádio', parsed.match.estadio, (value) => {
-        const stadium = findUniqueByNormalizedName(catalogs.estadios, 'nome', value);
+        stadium = findUniqueByNormalizedName(catalogs.estadios, 'nome', value);
         if (!stadium) return null;
         resolved.match.estadioResolved = stadium.nome;
         resolved.match.estadioEstado = stadium.estado || '';
         resolved.match.estadioPais = stadium.pais || '';
+        resolved.match.estadioMandante = stadium.mandante || '';
         return stadium.nome;
     });
+
+    // Se o estádio já tem clube mandante cadastrado, ele prevalece sobre o CSV.
+    const stadiumHome = String(stadium?.mandante || '').trim();
+    if (stadiumHome) {
+        resolved.match.mandanteResolved = stadiumHome;
+        resolved.match.mandanteFromStadium = true;
+        resolved.filled.Mandante = stadiumHome;
+
+        if (isAtleticoClub(stadiumHome)) {
+            tryFill('Visitante', parsed.match.visitante, (value) => {
+                const club = findUniqueByNormalizedName(catalogs.adversarios, 'clube', value, { clubStyle: true });
+                if (!club) return null;
+                resolved.match.visitanteResolved = club.clube;
+                return club.clube;
+            });
+        } else {
+            const atletico = findUniqueByNormalizedName(catalogs.adversarios, 'clube', 'Atlético', { clubStyle: true });
+            resolved.match.visitanteResolved = atletico?.clube || 'Atlético';
+            resolved.filled.Visitante = resolved.match.visitanteResolved;
+        }
+    } else {
+        tryFill('Mandante', parsed.match.mandante, (value) => {
+            const club = findUniqueByNormalizedName(catalogs.adversarios, 'clube', value, { clubStyle: true });
+            if (!club) return null;
+            resolved.match.mandanteResolved = club.clube;
+            return club.clube;
+        });
+
+        tryFill('Visitante', parsed.match.visitante, (value) => {
+            const club = findUniqueByNormalizedName(catalogs.adversarios, 'clube', value, { clubStyle: true });
+            if (!club) return null;
+            resolved.match.visitanteResolved = club.clube;
+            return club.clube;
+        });
+    }
 
     tryFill('Árbitro', parsed.match.arbitro, (value) => {
         const referee = findUniqueByNormalizedName(catalogs.arbitros, 'nome', value);

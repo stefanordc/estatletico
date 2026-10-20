@@ -3453,8 +3453,8 @@ const applyResolvedGameCsvToForm = (resolved) => {
         document.getElementById('game-data').dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Casa/fora antes do estádio: o change do estádio sobrescreve mandante/visitante.
-    // Por isso preenchemos o estádio sem disparar change e depois aplicamos os clubes.
+    // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora).
+    // O mandante do cadastro do estádio, quando existir, já veio em mandanteResolved.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;
