@@ -4083,8 +4083,10 @@ const addCardRow = (team, data = null) => {
         const id = 'cq-'+Date.now()+Math.random(); 
         inp.id = id; 
         setTimeout(() => { 
-            let selectedPlayerKeys = new Set();
-            let selectedDisplayKeys = new Set();
+            let selectedCardPlayerKeys = new Set();
+            let selectedCardDisplayKeys = new Set();
+            let lineupPlayerKeys = new Set();
+            let lineupDisplayKeys = new Set();
             let selectionVersion = -1;
             setupAutocomplete(id, 'jogadores', 'nome_guerra', 
                 p => {
@@ -4092,28 +4094,51 @@ const addCardRow = (team, data = null) => {
                     const pS = String(p.temporada || '').trim();
                     if ((gS && pS !== gS) || p.posicao === 'Técnico') return false;
                     if (selectionVersion !== inp._autocompleteInputVersion) {
-                    selectionVersion = inp._autocompleteInputVersion;
-                    selectedPlayerKeys = new Set(
-                        Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
-                            .filter(otherInput => otherInput !== inp)
-                            .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
-                            .filter(Boolean)
-                    );
-                    selectedDisplayKeys = new Set(
-                        Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
-                            .filter(otherInput => otherInput !== inp)
-                            .map(getLineupPlayerDisplayKey)
-                            .filter(Boolean)
-                    );
+                        selectionVersion = inp._autocompleteInputVersion;
+                        // Evita o mesmo jogador em duas linhas de cartão — não na escalação.
+                        selectedCardPlayerKeys = new Set(
+                            Array.from(document.querySelectorAll('#cards-galo-body .card-player-inp'))
+                                .filter(otherInput => otherInput !== inp)
+                                .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
+                                .filter(Boolean)
+                        );
+                        selectedCardDisplayKeys = new Set(
+                            Array.from(document.querySelectorAll('#cards-galo-body .card-player-inp'))
+                                .filter(otherInput => otherInput !== inp)
+                                .map(otherInput => {
+                                    const name = normalizeString(otherInput.value);
+                                    const position = normalizeString(otherInput.closest('tr')?.querySelector('.pos-inp')?.value);
+                                    return name && position && position !== '-' ? `${name}|${position}` : null;
+                                })
+                                .filter(Boolean)
+                        );
+                        lineupPlayerKeys = new Set(
+                            Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
+                                .map(otherInput => getSelectedLineupPlayerKey(otherInput, gS))
+                                .filter(Boolean)
+                        );
+                        lineupDisplayKeys = new Set(
+                            Array.from(document.querySelectorAll('#lineup-galo-body .line-player-inp'))
+                                .map(getLineupPlayerDisplayKey)
+                                .filter(Boolean)
+                        );
                     }
-                    return (!gS || pS === gS)
-                        && p.posicao !== 'Técnico'
-                        && !selectedPlayerKeys.has(getPlayerSelectionKey(p))
-                        && !selectedDisplayKeys.has(getPlayerDisplayKey(p));
+                    const playerKey = getPlayerSelectionKey(p);
+                    const displayKey = getPlayerDisplayKey(p);
+                    if (selectedCardPlayerKeys.has(playerKey) || selectedCardDisplayKeys.has(displayKey)) {
+                        return false;
+                    }
+                    // Se a escalação já tem jogadores, prioriza quem está nela (ex.: Adriano).
+                    if (lineupPlayerKeys.size > 0 || lineupDisplayKeys.size > 0) {
+                        return lineupPlayerKeys.has(playerKey) || lineupDisplayKeys.has(displayKey);
+                    }
+                    return true;
                 },
                 (res) => {
                     inp.dataset.jogadorId = String(res.id);
                     inp.dataset.globalJogadorId = String(res.id_jogador || '');
+                    const posInp = row.querySelector('.pos-inp');
+                    if (posInp) posInp.value = res.posicao || '-';
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.card-player-inp');
