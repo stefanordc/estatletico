@@ -3733,10 +3733,11 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                                         <th class="col-mini">Foto</th>
                                         <th class="col-player">Jogador *</th>
                                         <th class="col-med">Posição *</th>
+                                        <th class="col-mini">Idade</th>
                                         <th class="col-mini" title="Gols Marcados">Gols *</th>
-                                        <th class="col-small">Minuto Gol</th>
+                                        <th class="col-minuto">Minuto Gol</th>
                                         <th class="col-mini" title="Gols Sofridos">Gol Sofrido *</th>
-                                        <th class="col-small">Minuto Gol Sofrido</th>
+                                        <th class="col-minuto">Minuto Gol Sofrido</th>
                                         <th class="col-mini">Titular</th>
                                         <th class="col-mini">Substituído</th>
                                         <th class="col-mini"></th>
@@ -3802,7 +3803,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     setupAutocomplete('game-tecnico-adv', 'jogos', 'tecnicoAdv', null, null, false);
     setupAutocomplete('game-arbitro', 'arbitros', 'nome');
     document.getElementById('game-arbitro').addEventListener('blur', updateRefereeInfo);
-    document.getElementById('game-data').addEventListener('change', updateRefereeInfo);
+    document.getElementById('game-data').addEventListener('change', () => {
+        updateRefereeInfo();
+        refreshAllLineupAges();
+    });
 
     // Sync the year in game-data when temporada changes
     document.getElementById('game-temporada').addEventListener('input', () => {
@@ -4149,6 +4153,22 @@ const updateLineupPlayerPhoto = (row, player) => {
     }).catch(error => console.warn('Não foi possível carregar a foto do jogador.', error));
 };
 
+const getGameDateForAge = () => document.getElementById('game-data')?.value || new Date().toISOString().split('T')[0];
+
+const updateLineupPlayerAge = (row, player = null) => {
+    const ageInp = row?.querySelector('.age-inp');
+    if (!ageInp) return;
+    const season = document.getElementById('game-temporada')?.value;
+    const resolved = player || getSelectedPlayer(row.querySelector('.line-player-inp'), season);
+    ageInp.value = resolved?.nascimento
+        ? calculateAge(resolved.nascimento, getGameDateForAge())
+        : '';
+};
+
+const refreshAllLineupAges = () => {
+    document.querySelectorAll('#lineup-galo-body tr').forEach(row => updateLineupPlayerAge(row));
+};
+
 // Reserva que entra no jogo (titular desmarcado) marca automaticamente
 // o jogador da linha de cima como substituído.
 const syncLineupSubstitutionsFromEntries = () => {
@@ -4171,14 +4191,19 @@ const addLineupRow = (team, data = null) => {
         ? getPlayerSelectionKey(selectedPlayer)
         : data?.idJogador ? `global:${data.idJogador}` : data?.jogadorId ? `registro:${data.jogadorId}` : '';
 
+    const initialAge = selectedPlayer?.nascimento
+        ? calculateAge(selectedPlayer.nascimento, getGameDateForAge())
+        : '';
+
     row.innerHTML = `
         <td class="col-mini"><div class="player-photo-td"><img src="${data?.foto || 'https://via.placeholder.com/35'}" class="mini-foto"></div></td>
         <td class="col-player">${isAdv ? `<input type="text" placeholder="Jogador" value="${data?.jogador || ''}" required>` : `<div class="autocomplete-container"><input type="text" placeholder="Jogador" class="line-player-inp" data-jogador-id="${selectedPlayer?.id || ''}" data-global-jogador-id="${data?.idJogador || selectedPlayer?.id_jogador || ''}" data-selected-player-key="${selectedPlayerKey}" value="${data?.jogador || ''}" required></div>`}</td>
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
+        <td class="col-mini"><input type="text" class="age-inp" readonly value="${initialAge}" title="Idade na data do jogo"></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
-        <td class="min-goals-td col-small"></td>
+        <td class="min-goals-td col-minuto"></td>
         <td class="col-mini"><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;" required></td>
-        <td class="min-gs-td col-small"></td>
+        <td class="min-gs-td col-minuto"></td>
         <td class="col-mini"><input type="checkbox" class="titular-ck" ${(data ? data.titular : true) ? 'checked' : ''}></td>
         <td class="col-mini"><input type="checkbox" class="sub-ck" ${(data ? data.substituido : false) ? 'checked' : ''}></td>
         <td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-user-minus" style="color:#7f8c8d;"></i></button></td>
@@ -4247,6 +4272,8 @@ const addLineupRow = (team, data = null) => {
                     inp.dataset.globalJogadorId = String(res.id_jogador || '');
                     setSelectedLineupPlayerKey(inp, res);
                     updateLineupPlayerPhoto(row, res);
+                    updateLineupPlayerAge(row, res);
+                    row.querySelector('.pos-inp').value = res.posicao || '-';
                     const nextTr = row.nextElementSibling;
                     if (nextTr) {
                         const nextInp = nextTr.querySelector('.line-player-inp');
@@ -4284,6 +4311,8 @@ const addLineupRow = (team, data = null) => {
                 delete inp.dataset.jogadorId;
                 delete inp.dataset.globalJogadorId;
                 delete inp.dataset.selectedPlayerKey;
+                const ageInp = row.querySelector('.age-inp');
+                if (ageInp) ageInp.value = '';
             });
             inp.addEventListener('blur', () => { 
                 const currentSeason = document.getElementById('game-temporada').value;
@@ -4293,13 +4322,17 @@ const addLineupRow = (team, data = null) => {
                     inp.dataset.globalJogadorId = String(p.id_jogador || '');
                     setSelectedLineupPlayerKey(inp, p);
                     updateLineupPlayerPhoto(row, p);
+                    updateLineupPlayerAge(row, p);
                     row.querySelector('.pos-inp').value = p.posicao; 
                 } 
             }); 
         }, 10); 
     }
     tbody.appendChild(row);
-    if (selectedPlayer) updateLineupPlayerPhoto(row, selectedPlayer);
+    if (selectedPlayer) {
+        updateLineupPlayerPhoto(row, selectedPlayer);
+        updateLineupPlayerAge(row, selectedPlayer);
+    }
 };
 
 const removeLineupRow = (btn) => {

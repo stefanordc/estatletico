@@ -1256,6 +1256,28 @@ td.actions .action-btn {
 .stats-table .col-med { width: 120px; }
 .stats-table .col-player { min-width: 180px; }
 
+/* Escalação: nome mais estreito e minutos legíveis. */
+#block-5 .stats-table .col-player {
+    width: 130px;
+    min-width: 110px;
+    max-width: 150px;
+}
+
+#block-5 .stats-table .col-player .line-player-inp {
+    width: 100%;
+    max-width: 140px;
+}
+
+#block-5 .stats-table .col-minuto {
+    width: 150px;
+    min-width: 140px;
+}
+
+#block-5 .stats-table .age-inp {
+    width: 48px;
+    text-align: center;
+}
+
 /* Premium List Style (Print 4) */
 .premium-table {
     width: 100%;
@@ -1673,13 +1695,25 @@ td.actions .action-btn {
 .minuto-gol-wrap {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.35rem;
     margin-bottom: 0.2rem;
 }
 
 .minuto-gol-wrap input,
 .minuto-gol-wrap select {
     min-width: 0;
+}
+
+.minuto-gol-wrap .min-g-inp,
+.minuto-gol-wrap .min-gs-inp {
+    width: 58px !important;
+    min-width: 58px;
+}
+
+.minuto-gol-wrap .tempo-g-sel,
+.minuto-gol-wrap .tempo-gs-sel {
+    width: 62px !important;
+    min-width: 62px;
 }
 
 .data-table td:last-child,
