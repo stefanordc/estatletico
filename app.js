@@ -4236,6 +4236,60 @@ const syncFirstLineupGoalsConceded = () => {
     gsInp.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+// Tab nas colunas de minuto sobe/desce entre os campos de minuto,
+// sem ir para o select de tempo ao lado nem para Titular.
+const bindMinuteColumnTabNavigation = (element) => {
+    if (!element || element.dataset.minuteTabBound) return;
+    element.dataset.minuteTabBound = 'true';
+
+    element.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab') return;
+
+        const cell = element.closest('td');
+        const row = element.closest('tr');
+        if (!cell || !row) return;
+
+        const minuteSelector = cell.classList.contains('min-goals-td')
+            ? '.min-g-inp'
+            : '.min-gs-inp';
+        const minutesInCell = Array.from(cell.querySelectorAll(minuteSelector));
+        if (!minutesInCell.length) return;
+
+        // Se o foco está no select de tempo, trata como o minuto do mesmo wrap.
+        const currentMinute = element.matches(minuteSelector)
+            ? element
+            : element.closest('.minuto-gol-wrap')?.querySelector(minuteSelector);
+        if (!currentMinute) return;
+
+        event.preventDefault();
+        const index = minutesInCell.indexOf(currentMinute);
+        const nextIndex = event.shiftKey ? index - 1 : index + 1;
+
+        if (nextIndex >= 0 && nextIndex < minutesInCell.length) {
+            const target = minutesInCell[nextIndex];
+            target.focus();
+            if (target.select) target.select();
+            return;
+        }
+
+        const colIndex = Array.from(row.children).indexOf(cell);
+        let targetRow = event.shiftKey ? row.previousElementSibling : row.nextElementSibling;
+        while (targetRow) {
+            const targetCell = targetRow.children[colIndex];
+            const targetMinutes = Array.from(targetCell?.querySelectorAll(minuteSelector) || []);
+            if (targetMinutes.length) {
+                const target = event.shiftKey
+                    ? targetMinutes[targetMinutes.length - 1]
+                    : targetMinutes[0];
+                target.focus();
+                if (target.select) target.select();
+                return;
+            }
+            targetRow = event.shiftKey ? targetRow.previousElementSibling : targetRow.nextElementSibling;
+        }
+    });
+};
+
 const addLineupRow = (team, data = null) => {
     const isAdv = team === 'adv';
     const tbody = document.getElementById(`lineup-${team}-body`);
@@ -4292,6 +4346,8 @@ const addLineupRow = (team, data = null) => {
             const mi = document.createElement('input'); mi.type = 'number'; mi.placeholder = 'Min'; mi.className = 'min-g-inp'; mi.value = data?.golsMin?.[i] || '';
             const ts = document.createElement('select'); ts.className = 'tempo-g-sel'; ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1';
             mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if (t.tempo === 2) { e.target.value = t.min; ts.value = '2'; } });
+            bindMinuteColumnTabNavigation(mi);
+            bindMinuteColumnTabNavigation(ts);
             wrap.appendChild(mi); wrap.appendChild(ts); minCont.appendChild(wrap);
         }
     };
@@ -4306,6 +4362,8 @@ const addLineupRow = (team, data = null) => {
             const mi = document.createElement('input'); mi.type = 'number'; mi.placeholder = 'Min'; mi.className = 'min-gs-inp'; mi.value = data?.gsMin?.[i] || '';
             const ts = document.createElement('select'); ts.className = 'tempo-gs-sel'; ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.gsTempo?.[i] || '1';
             mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if (t.tempo === 2) { e.target.value = t.min; ts.value = '2'; } });
+            bindMinuteColumnTabNavigation(mi);
+            bindMinuteColumnTabNavigation(ts);
             wrap.appendChild(mi); wrap.appendChild(ts); minGsCont.appendChild(wrap);
         }
     };
