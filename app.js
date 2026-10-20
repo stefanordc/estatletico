@@ -3528,8 +3528,8 @@ const applyResolvedGameCsvToForm = (resolved) => {
         document.getElementById('game-data').dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora).
-    // Usamos o nome exato do cadastro para o save resolver adversarioId corretamente.
+    // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora
+    // com o mandante cadastrado no estádio). Casa/Fora vêm do CSV.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;

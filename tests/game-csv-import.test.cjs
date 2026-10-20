@@ -97,37 +97,39 @@ test('técnico adversário só preenche se já existir no histórico', () => {
     assert.equal(findRegisteredCoachName(['Muricy Ramalho'], 'Levir Culpi'), null);
 });
 
-test('mandante do estádio prevalece sobre o mandante do CSV', () => {
+test('ignora mandante do estádio e usa o adversário extraído do CSV', () => {
     const parsed = parseGameCsv(SAMPLE_CSV);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
         adversarios: [{ id: 1, clube: 'Atlético' }, { id: 2, clube: 'Atlético-PR' }],
-        estadios: [{ id: 9, nome: 'Mineirão', estado: 'MG', pais: 'Brasil', mandante: 'Atlético' }],
+        estadios: [{ id: 9, nome: 'Mineirão', estado: 'MG', pais: 'Brasil', mandante: 'Cruzeiro' }],
         arbitros: [],
         jogadores: [],
         tecnicosAdversarios: [],
         tecnicosAtletico: []
     });
 
-    assert.equal(resolved.match.mandanteFromStadium, true);
+    assert.equal(resolved.match.mandanteFromStadium, false);
     assert.equal(resolved.match.mandanteResolved, 'Atlético');
-    assert.equal(resolved.match.mandanteId, 1);
-    assert.equal(resolved.match.estadioId, 9);
-    assert.equal(resolved.filled.Mandante, 'Atlético');
     assert.equal(resolved.match.visitanteResolved, 'Atlético-PR');
-    assert.equal(resolved.match.visitanteId, 2);
+    assert.equal(resolved.match.adversarioResolved, 'Atlético-PR');
+    assert.equal(resolved.match.estadioId, 9);
 });
 
-test('estádio com mandante adversário coloca Atlético como visitante', () => {
-    const parsed = parseGameCsv(SAMPLE_CSV.replaceAll('Mineirão', 'Arena da Baixada'));
+test('quando o Atlético é visitante no CSV, o mandante extraído é o adversário', () => {
+    const csv = SAMPLE_CSV
+        .replaceAll('Atlético\t0\t1\tAtlético PR', 'Cruzeiro\t1\t0\tAtlético')
+        .replaceAll('Mineirão', 'Mineirão');
+    const parsed = parseGameCsv(csv);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
-        adversarios: [{ clube: 'Atlético' }, { clube: 'Atlético-PR' }],
-        estadios: [{ nome: 'Arena da Baixada', estado: 'PR', pais: 'Brasil', mandante: 'Atlético-PR' }],
+        adversarios: [{ clube: 'Atlético' }, { clube: 'Cruzeiro' }],
+        estadios: [{ nome: 'Mineirão', estado: 'MG', pais: 'Brasil', mandante: 'Atlético' }],
         arbitros: [],
         jogadores: [],
         tecnicosAdversarios: [],
         tecnicosAtletico: []
     });
 
-    assert.equal(resolved.match.mandanteResolved, 'Atlético-PR');
+    assert.equal(resolved.match.mandanteResolved, 'Cruzeiro');
     assert.equal(resolved.match.visitanteResolved, 'Atlético');
+    assert.equal(resolved.match.adversarioResolved, 'Cruzeiro');
 });
