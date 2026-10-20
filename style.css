@@ -1648,6 +1648,40 @@ td.actions .action-btn {
     vertical-align: middle;
 }
 
+/* Alinha cabeçalho e células da tabela Jogos na mesma direção por coluna. */
+#jogos-table.data-table th,
+#jogos-table.data-table td {
+    text-align: left;
+}
+
+#jogos-table.data-table th:nth-child(4),
+#jogos-table.data-table td:nth-child(4) {
+    text-align: center; /* Placar */
+}
+
+#jogos-table.data-table th:nth-child(7),
+#jogos-table.data-table td:nth-child(7),
+#jogos-table.data-table th:nth-child(8),
+#jogos-table.data-table td:nth-child(8),
+#jogos-table.data-table th:nth-child(9),
+#jogos-table.data-table td:nth-child(9),
+#jogos-table.data-table th:nth-child(10),
+#jogos-table.data-table td:nth-child(10) {
+    text-align: right; /* Público, Renda, Ticket Médio, Ações */
+}
+
+.minuto-gol-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.2rem;
+}
+
+.minuto-gol-wrap input,
+.minuto-gol-wrap select {
+    min-width: 0;
+}
+
 .data-table td:last-child,
 .data-table th:last-child {
     white-space: nowrap;

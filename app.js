@@ -3531,6 +3531,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
             if (titular) titular.checked = false;
         }
     }
+    syncLineupSubstitutionsFromEntries();
 };
 
 const applyGameCsvImportAndAdvance = () => {
@@ -3679,15 +3680,12 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                                         <th class="col-mini">Foto</th>
                                         <th class="col-player">Jogador *</th>
                                         <th class="col-med">Posição *</th>
-                                        <th class="col-mini">Idade</th>
-                                        <th class="col-mini" title="Gols Marcados">GM *</th>
-                                        <th class="col-small">Min. GM</th>
-                                        <th class="col-small">T. GM</th>
-                                        <th class="col-mini" title="Gols Sofridos">GS *</th>
-                                        <th class="col-small">Min. GS</th>
-                                        <th class="col-small">T. GS</th>
+                                        <th class="col-mini" title="Gols Marcados">Gols *</th>
+                                        <th class="col-small">Minuto Gol</th>
+                                        <th class="col-mini" title="Gols Sofridos">Gol Sofrido *</th>
+                                        <th class="col-small">Minuto Gol Sofrido</th>
                                         <th class="col-mini">Titular</th>
-                                        <th class="col-mini">Subst.</th>
+                                        <th class="col-mini">Substituído</th>
                                         <th class="col-mini"></th>
                                     </tr>
                                 </thead>
@@ -3990,6 +3988,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         jogoToEdit.cartoesGalo?.forEach(c => addCardRow('galo', c));
         jogoToEdit.cartoesAdv?.forEach(c => addCardRow('adv', c));
         jogoToEdit.lineupGalo?.forEach(l => addLineupRow('galo', l));
+        syncLineupSubstitutionsFromEntries();
         updTicket();
         updWinner();
     }
@@ -4097,6 +4096,18 @@ const updateLineupPlayerPhoto = (row, player) => {
     }).catch(error => console.warn('Não foi possível carregar a foto do jogador.', error));
 };
 
+// Reserva que entra no jogo (titular desmarcado) marca automaticamente
+// o jogador da linha de cima como substituído.
+const syncLineupSubstitutionsFromEntries = () => {
+    document.querySelectorAll('#lineup-galo-body tr').forEach(row => {
+        const titular = row.querySelector('.titular-ck');
+        const playerName = row.querySelector('.line-player-inp')?.value?.trim();
+        if (!titular || titular.checked || !playerName) return;
+        const prevSub = row.previousElementSibling?.querySelector('.sub-ck');
+        if (prevSub) prevSub.checked = true;
+    });
+};
+
 const addLineupRow = (team, data = null) => {
     const isAdv = team === 'adv';
     const tbody = document.getElementById(`lineup-${team}-body`);
@@ -4113,15 +4124,20 @@ const addLineupRow = (team, data = null) => {
         <td class="col-med"><input type="text" class="pos-inp" ${isAdv ? '' : 'readonly'} value="${data?.posicao || '-'}" required></td>
         <td class="col-mini"><input type="number" class="goals-inp" value="${data?.golsCount || 0}" style="width:40px;" required></td>
         <td class="min-goals-td col-small"></td>
-        <td class="tempo-goals-td col-small"></td>
         <td class="col-mini"><input type="number" class="gs-inp" value="${data?.gsCount || 0}" style="width:40px;" required></td>
         <td class="min-gs-td col-small"></td>
-        <td class="tempo-gs-td col-small"></td>
         <td class="col-mini"><input type="checkbox" class="titular-ck" ${(data ? data.titular : true) ? 'checked' : ''}></td>
         <td class="col-mini"><input type="checkbox" class="sub-ck" ${(data ? data.substituido : false) ? 'checked' : ''}></td>
         <td class="col-mini"><button type="button" class="btn-icon" onclick="removeLineupRow(this)" title="Remover da lista"><i class="fas fa-user-minus" style="color:#7f8c8d;"></i></button></td>
     `;
-    
+
+    const markPreviousAsSubstituted = () => {
+        const playerName = row.querySelector('.line-player-inp')?.value?.trim();
+        if (!playerName) return;
+        const prevSub = row.previousElementSibling?.querySelector('.sub-ck');
+        if (prevSub) prevSub.checked = true;
+    };
+
     row.querySelector('.sub-ck').addEventListener('change', event => {
         if (!event.target.checked) return;
 
@@ -4129,29 +4145,38 @@ const addLineupRow = (team, data = null) => {
         if (nextTitular) nextTitular.checked = false;
     });
 
-    const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td'), tempoCont = row.querySelector('.tempo-goals-td');
-    const updateGoals = () => { 
-        minCont.innerHTML = ''; tempoCont.innerHTML = ''; 
-        for(let i=0; i<parseInt(gInp.value || 0); i++) { 
-            const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-g-inp'; mi.value = data?.golsMin?.[i] || ''; 
-            const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1'; 
-            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }}); 
-            minCont.appendChild(mi); tempoCont.appendChild(ts); 
-        } 
-    };
-    gInp.addEventListener('input', updateGoals); if(data?.golsCount > 0) updateGoals();
+    row.querySelector('.titular-ck').addEventListener('change', event => {
+        // Quem entra durante o jogo (titular desmarcado) marca o da linha de cima como substituído.
+        if (!event.target.checked) markPreviousAsSubstituted();
+    });
 
-    const gsInp = row.querySelector('.gs-inp'), minGsCont = row.querySelector('.min-gs-td'), tempoGsCont = row.querySelector('.tempo-gs-td');
-    const updateGS = () => {
-        minGsCont.innerHTML = ''; tempoGsCont.innerHTML = '';
-        for(let i=0; i<parseInt(gsInp.value || 0); i++) {
-            const mi = document.createElement('input'); mi.type='number'; mi.placeholder='Min'; mi.className='min-gs-inp'; mi.value = data?.gsMin?.[i] || '';
-            const ts = document.createElement('select'); ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.gsTempo?.[i] || '1';
-            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if(t.tempo === 2) { e.target.value = t.min; ts.value = '2'; }});
-            minGsCont.appendChild(mi); tempoGsCont.appendChild(ts);
+    const gInp = row.querySelector('.goals-inp'), minCont = row.querySelector('.min-goals-td');
+    const updateGoals = () => {
+        minCont.innerHTML = '';
+        for (let i = 0; i < parseInt(gInp.value || 0); i++) {
+            const wrap = document.createElement('div');
+            wrap.className = 'minuto-gol-wrap';
+            const mi = document.createElement('input'); mi.type = 'number'; mi.placeholder = 'Min'; mi.className = 'min-g-inp'; mi.value = data?.golsMin?.[i] || '';
+            const ts = document.createElement('select'); ts.className = 'tempo-g-sel'; ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.golsTempo?.[i] || '1';
+            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if (t.tempo === 2) { e.target.value = t.min; ts.value = '2'; } });
+            wrap.appendChild(mi); wrap.appendChild(ts); minCont.appendChild(wrap);
         }
     };
-    gsInp.addEventListener('input', updateGS); if(data?.gsCount > 0) updateGS();
+    gInp.addEventListener('input', updateGoals); if (data?.golsCount > 0) updateGoals();
+
+    const gsInp = row.querySelector('.gs-inp'), minGsCont = row.querySelector('.min-gs-td');
+    const updateGS = () => {
+        minGsCont.innerHTML = '';
+        for (let i = 0; i < parseInt(gsInp.value || 0); i++) {
+            const wrap = document.createElement('div');
+            wrap.className = 'minuto-gol-wrap';
+            const mi = document.createElement('input'); mi.type = 'number'; mi.placeholder = 'Min'; mi.className = 'min-gs-inp'; mi.value = data?.gsMin?.[i] || '';
+            const ts = document.createElement('select'); ts.className = 'tempo-gs-sel'; ts.innerHTML = '<option value="1">1T</option><option value="2">2T</option>'; ts.value = data?.gsTempo?.[i] || '1';
+            mi.addEventListener('input', (e) => { const t = convertMatchTime(e.target.value); if (t.tempo === 2) { e.target.value = t.min; ts.value = '2'; } });
+            wrap.appendChild(mi); wrap.appendChild(ts); minGsCont.appendChild(wrap);
+        }
+    };
+    gsInp.addEventListener('input', updateGS); if (data?.gsCount > 0) updateGS();
 
     if(!isAdv) { 
         const inp = row.querySelector('.line-player-inp'); 
@@ -4334,10 +4359,10 @@ const saveNewJogo = () => {
             posicao: r.querySelector('.pos-inp')?.value || '-',
             golsCount: parseInt(r.querySelector('.goals-inp')?.value || 0),
             golsMin: Array.from(r.querySelectorAll('.min-g-inp')).map(i => i.value),
-            golsTempo: Array.from(r.querySelectorAll('.tempo-goals-td select')).map(i => i.value),
+            golsTempo: Array.from(r.querySelectorAll('.tempo-g-sel')).map(i => i.value),
             gsCount: gsCnt,
             gsMin: Array.from(r.querySelectorAll('.min-gs-inp')).map(i => i.value),
-            gsTempo: Array.from(r.querySelectorAll('.tempo-gs-td select')).map(i => i.value),
+            gsTempo: Array.from(r.querySelectorAll('.tempo-gs-sel')).map(i => i.value),
             titular: r.querySelector('.titular-ck')?.checked || false,
             substituido: r.querySelector('.sub-ck')?.checked || false
         });
