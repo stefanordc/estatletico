@@ -3407,6 +3407,176 @@ const updateRefereeInfo = () => {
     });
 };
 
+const showGameCsvMissingPopup = (missing) => {
+    if (!missing?.length) return;
+    const lines = missing.map(item => `• ${item.campo}: ${item.valor}`).join('\n');
+    alert(
+        'Alguns dados do CSV não foram encontrados no cadastro e não foram preenchidos.\n'
+        + 'Você pode completar manualmente nas próximas telas.\n\n'
+        + lines
+    );
+};
+
+const setFormattedPublicoInput = (value) => {
+    const input = document.getElementById('game-publico');
+    if (!input || value === null || value === undefined || value === '') return;
+    input.disabled = false;
+    input.parentElement?.classList.remove('disabled');
+    const ni = document.getElementById('game-pub-ni');
+    if (ni) ni.checked = false;
+    input.value = formatPublico(value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+const setFormattedRendaInput = (value) => {
+    const input = document.getElementById('game-renda');
+    if (!input || value === null || value === undefined || value === '') return;
+    input.disabled = false;
+    input.parentElement?.classList.remove('disabled');
+    const ni = document.getElementById('game-ren-ni');
+    if (ni) ni.checked = false;
+    input.value = formatRenda(value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+};
+
+const applyResolvedGameCsvToForm = (resolved) => {
+    const match = resolved.match || {};
+
+    // Não dispara input em temporada aqui: o listener recria a escalação vazia
+    // e apagaria os jogadores que acabamos de importar do CSV.
+    if (match.temporada) {
+        document.getElementById('game-temporada').value = match.temporada;
+    }
+
+    if (match.dataIso) {
+        document.getElementById('game-data').value = match.dataIso;
+        document.getElementById('game-data').dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Casa/fora antes do estádio: o change do estádio sobrescreve mandante/visitante.
+    // Por isso preenchemos o estádio sem disparar change e depois aplicamos os clubes.
+    if (match.estadioResolved) {
+        const estInp = document.getElementById('game-estadio');
+        estInp.value = match.estadioResolved;
+        if (match.estadioEstado !== undefined) {
+            document.getElementById('game-estadio-estado').value = match.estadioEstado || '';
+        }
+        if (match.estadioPais !== undefined) {
+            document.getElementById('game-estadio-pais').value = match.estadioPais || '';
+        }
+        updateGameStadiumPhoto();
+    }
+
+    if (match.mandanteResolved) {
+        document.getElementById('game-casa').value = match.mandanteResolved;
+        updateGameClubCrest('game-casa');
+    }
+    if (match.visitanteResolved) {
+        document.getElementById('game-fora').value = match.visitanteResolved;
+        updateGameClubCrest('game-fora');
+    }
+
+    document.getElementById('game-gols-casa').value = match.golsMandante ?? 0;
+    document.getElementById('game-gols-fora').value = match.golsVisitante ?? 0;
+    document.getElementById('game-gols-casa').dispatchEvent(new Event('input', { bubbles: true }));
+
+    if (match.arbitroResolved) {
+        const arb = document.getElementById('game-arbitro');
+        const arbNi = document.getElementById('game-arb-ni');
+        if (arbNi) {
+            arbNi.checked = false;
+            arb.disabled = false;
+            arb.parentElement?.classList.remove('disabled');
+        }
+        arb.value = match.arbitroResolved;
+        if (match.arbitroFederacao) {
+            document.getElementById('game-arbitro-federacao').value = match.arbitroFederacao;
+        }
+        updateRefereeInfo();
+    }
+
+    setFormattedPublicoInput(match.publico);
+    setFormattedRendaInput(match.renda);
+
+    if (resolved.tecnicoAtletico) {
+        document.getElementById('game-tecnico-galo').value = resolved.tecnicoAtletico;
+    }
+    if (resolved.tecnicoAdversario) {
+        document.getElementById('game-tecnico-adv').value = resolved.tecnicoAdversario;
+    }
+
+    const season = document.getElementById('game-temporada').value.trim();
+    const targetCount = (Number.parseInt(season, 10) || 0) <= 2019 ? 14 : 16;
+    const lineupBody = document.getElementById('lineup-galo-body');
+    lineupBody.innerHTML = '';
+
+    const lineupData = resolved.players.map(item => ({
+        jogador: item.jogador,
+        jogadorId: item.id,
+        idJogador: item.idJogador,
+        posicao: item.posicao,
+        titular: item.titular,
+        golsCount: item.golsCount || 0,
+        gsCount: 0,
+        substituido: false,
+        foto: item.player?.foto || DEFAULT_PLAYER_PHOTO
+    }));
+
+    const rowsToCreate = Math.max(targetCount, lineupData.length);
+    for (let i = 0; i < rowsToCreate; i++) {
+        addLineupRow('galo', lineupData[i] || null);
+        if (!lineupData[i]) {
+            const row = lineupBody.lastElementChild;
+            const titular = row?.querySelector('.titular-ck');
+            if (titular) titular.checked = false;
+        }
+    }
+};
+
+const applyGameCsvImportAndAdvance = () => {
+    if (typeof parseGameCsv !== 'function' || typeof resolveGameCsvAgainstCatalogs !== 'function') {
+        showToast('Módulo de importação CSV não carregado.', 'error');
+        return;
+    }
+
+    const textarea = document.getElementById('game-csv-paste');
+    const status = document.getElementById('game-csv-status');
+    const parsed = parseGameCsv(textarea?.value || '');
+    if (!parsed.ok) {
+        if (status) status.textContent = parsed.error;
+        showToast(parsed.error, 'error');
+        return;
+    }
+
+    const catalogs = {
+        adversarios: state.adversarios,
+        estadios: state.estadios,
+        arbitros: state.arbitros,
+        jogadores: state.jogadores,
+        tecnicosAdversarios: state.jogos.map(j => j.tecnicoAdv).filter(Boolean),
+        tecnicosAtletico: state.jogos.map(j => j.tecnicoGalo).filter(Boolean)
+    };
+    const resolved = resolveGameCsvAgainstCatalogs(parsed, catalogs);
+    applyResolvedGameCsvToForm(resolved);
+
+    const foundPlayers = resolved.players.length;
+    const skippedPlayers = resolved.skippedPlayers.length;
+    if (status) {
+        status.textContent = `CSV processado: ${foundPlayers} jogador(es) reconhecido(s)`
+            + (skippedPlayers ? `, ${skippedPlayers} ignorado(s)` : '')
+            + (resolved.missing.length ? `, ${resolved.missing.length} dado(s) sem cadastro` : '')
+            + '.';
+    }
+
+    showGameCsvMissingPopup(resolved.missing);
+    if (foundPlayers || Object.keys(resolved.filled).length) {
+        showToast('CSV aplicado. Revise os campos nas próximas telas.', 'success');
+    } else {
+        showToast('Nenhum dado do CSV foi reconhecido no cadastro. Preencha manualmente.', 'error');
+    }
+    nextBlock(1);
+};
+
 const renderNovoJogoPage = (jogoToEdit = null) => {
     if (!requireAdmin('Apenas o administrador pode cadastrar ou editar jogos.')) return;
 
@@ -3424,13 +3594,35 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                 </div>
             </div>
             <form id="multi-step-form">
-                <div class="form-block active" id="block-1">
+                ${jogoToEdit ? '' : `
+                <div class="form-block active" id="block-0">
+                    <div class="stats-section">
+                        <div class="stats-section-title">Importar CSV do Jogo</div>
+                        <div class="p-4">
+                            <p style="margin:0 0 1rem 0; color:#555; line-height:1.5;">
+                                Cole abaixo o CSV (ou a planilha copiada) com as colunas
+                                <strong>Data, Mandante, Gols do mandante, Gols do visitante, Visitante, Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário</strong>.
+                                Só preenchemos o que já estiver cadastrado; o restante fica para você completar manualmente.
+                            </p>
+                            <div class="form-group">
+                                <label for="game-csv-paste">CSV do jogo</label>
+                                <textarea id="game-csv-paste" rows="14" placeholder="Cole aqui o CSV completo do jogo..." style="width:100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:0.85rem;"></textarea>
+                            </div>
+                            <p id="game-csv-status" style="margin:0.75rem 0 0 0; color:#666; font-size:0.9rem;"></p>
+                        </div>
+                    </div>
+                    <div class="flex-end">
+                        <button type="button" class="btn-secondary" id="btn-skip-game-csv">Pular e preencher manualmente</button>
+                        <button type="button" class="btn-primary" id="btn-apply-game-csv">Processar CSV e avançar <i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>`}
+                <div class="form-block ${jogoToEdit ? 'active' : ''}" id="block-1">
                     <div class="stats-section"><div class="stats-section-title">Dados Básicos do Jogo</div><div class="p-4">
                         <div class="form-grid"><div class="form-group"><label>Temporada *</label><input type="text" name="temporada" id="game-temporada" required value="${jogoToEdit?.temporada || state.fixedSeason || new Date().getFullYear()}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-season" ${state.isSeasonFixed ? 'checked' : ''}> Fixar Temporada</label></div><div class="form-group"><label>Data *</label><input type="date" name="data" id="game-data" required value="${jogoToEdit?.data || (state.fixedSeason ? `${state.fixedSeason}-01-01` : `${new Date().getFullYear()}-01-01`)}"></div><div class="form-group"><label>Rodada *</label><input type="text" name="rodada" placeholder="Ex: 1ª rodada" required value="${jogoToEdit?.rodada || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>Campeonato *</label><input type="text" name="campeonato" id="game-campeonato" required value="${jogoToEdit?.campeonato || state.fixedCampeonato}"><label class="checkbox-inline"><input type="checkbox" id="fix-game-camp" ${state.isCampeonatoFixed ? 'checked' : ''}> Fixar Campeonato</label></div><div class="form-group"><label>Estádio *</label><div class="stadium-input-with-photo"><img id="game-estadio-photo" class="stadium-photo-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="estadio" id="game-estadio" required value="${jogoToEdit?.estadio || ''}"></div></div></div><div class="form-group"><label>Estado do Estádio</label><input type="text" name="estadioEstado" id="game-estadio-estado" readonly value="${jogoToEdit?.estadioEstado || ''}"></div></div>
                         <div class="form-grid"><div class="form-group"><label>País do Estádio</label><input type="text" name="estadioPais" id="game-estadio-pais" readonly value="${jogoToEdit?.estadioPais || ''}"></div><div class="form-group"><label>Casa *</label><div class="club-input-with-crest"><img id="game-casa-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="casa" id="game-casa" required value="${jogoToEdit?.casa || ''}"></div></div></div><div class="form-group"><label>Fora *</label><div class="club-input-with-crest"><img id="game-fora-crest" class="club-crest-preview" alt="" hidden><div class="autocomplete-container"><input type="text" name="fora" id="game-fora" required value="${jogoToEdit?.fora || ''}"></div></div></div></div>
                         <div class="form-grid"><div class="form-group"><label>Gols Casa *</label><input type="number" name="golsCasa" id="game-gols-casa" required value="${jogoToEdit?.golsCasa ?? 0}"></div><div class="form-group"><label>Gols Fora *</label><input type="number" name="golsFora" id="game-gols-fora" required value="${jogoToEdit?.golsFora ?? 0}"></div><div class="form-group"><label>Vencedor</label><input type="text" name="vencedor" id="game-vencedor" readonly value="${jogoToEdit?.vencedor || (jogoToEdit ? '' : 'Empate')}"></div></div>
-                    </div></div><div class="flex-end"><button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
+                    </div></div><div class="flex-end">${jogoToEdit ? '' : '<button type="button" class="btn-secondary" onclick="nextBlock(0)">Voltar</button>'}<button type="button" class="btn-primary" onclick="nextBlock(2)">Avançar <i class="fas fa-chevron-right"></i></button></div>
                 </div>
                 <div class="form-block" id="block-2">
                     <div class="stats-section"><div class="stats-section-title">Arbitragem e Público</div><div class="p-4">
@@ -3532,9 +3724,13 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
         const activeBlock = multiStepForm.querySelector('.form-block.active');
         const currentBlock = Number.parseInt(activeBlock?.id.split('-')[1], 10);
-        if (!currentBlock) return;
+        if (Number.isNaN(currentBlock)) return;
 
         event.preventDefault();
+        if (currentBlock === 0) {
+            applyGameCsvImportAndAdvance();
+            return;
+        }
         if (currentBlock < 5) {
             // nextBlock já confere os campos obrigatórios da etapa atual.
             nextBlock(currentBlock + 1);
@@ -3544,6 +3740,9 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         // A última etapa usa as validações próprias da escalação antes de salvar.
         saveNewJogo();
     });
+
+    document.getElementById('btn-skip-game-csv')?.addEventListener('click', () => nextBlock(1));
+    document.getElementById('btn-apply-game-csv')?.addEventListener('click', () => applyGameCsvImportAndAdvance());
 
     // Clubes, estádios e arbitragem usam busca normalizada: maiúsculas,
     // minúsculas e acentos não alteram os resultados.
@@ -3646,7 +3845,8 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     document.getElementById('btn-back-form').onclick = () => {
         const activeBlock = document.querySelector('.form-block.active');
         const blockNum = parseInt(activeBlock?.id.split('-')[1] || 1);
-        if (blockNum > 1) {
+        const firstBlock = document.getElementById('block-0') ? 0 : 1;
+        if (blockNum > firstBlock) {
             nextBlock(blockNum - 1);
         } else {
             state.isFormActive = false; // Desativa trava ao cancelar/voltar
@@ -5494,7 +5694,8 @@ const shouldSkipPenaltyBlock = () => {
 
 const nextBlock = (n) => {
     const current = parseInt(document.querySelector('.form-block.active').id.split('-')[1]);
-    if (n > current && !validateBlock(current)) return;
+    // A etapa 0 (CSV) não tem campos required; o processamento valida o conteúdo.
+    if (n > current && current > 0 && !validateBlock(current)) return;
 
     // O Brasileirão desde 2003, a Série B e a primeira fase do Mineiro não têm pênaltis.
     // Faz o salto nas duas direções para que o fluxo permaneça consistente.
@@ -5502,9 +5703,12 @@ const nextBlock = (n) => {
         if (current === 2 && n === 3) n = 4;
         if (current === 4 && n === 3) n = 2;
     }
+
+    const target = document.getElementById(`block-${n}`);
+    if (!target) return;
     
     document.querySelectorAll('.form-block').forEach(b => b.classList.remove('active'));
-    document.getElementById(`block-${n}`).classList.add('active');
+    target.classList.add('active');
     window.scrollTo(0,0);
 };
 
@@ -5522,9 +5726,13 @@ document.addEventListener('keydown', event => {
 
     const activeBlock = form.querySelector('.form-block.active');
     const currentBlock = Number.parseInt(activeBlock?.id.split('-')[1], 10);
-    if (!currentBlock) return;
+    if (Number.isNaN(currentBlock)) return;
 
     event.preventDefault();
+    if (currentBlock === 0) {
+        applyGameCsvImportAndAdvance();
+        return;
+    }
     if (currentBlock < 5) nextBlock(currentBlock + 1);
     else saveNewJogo();
 });
