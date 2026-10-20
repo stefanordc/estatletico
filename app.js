@@ -3585,6 +3585,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
         }
     }
     syncLineupSubstitutionsFromEntries();
+    syncFirstLineupGoalsConceded();
 };
 
 const applyGameCsvImportAndAdvance = () => {
@@ -3881,7 +3882,10 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
     estInp.addEventListener('input', updateGameStadiumPhoto);
     estInp.addEventListener('blur', updateGameStadiumPhoto);
     const updWinner = () => { const c = parseInt(document.getElementById('game-gols-casa').value)||0, f = parseInt(document.getElementById('game-gols-fora').value)||0; const casa = document.getElementById('game-casa').value, fora = document.getElementById('game-fora').value; const venced = document.getElementById('game-vencedor'); if (c > f) venced.value = casa || 'Casa'; else if (f > c) venced.value = fora || 'Fora'; else venced.value = 'Empate'; };
-    ['game-gols-casa', 'game-gols-fora', 'game-casa', 'game-fora'].forEach(id => document.getElementById(id).addEventListener('input', updWinner));
+    ['game-gols-casa', 'game-gols-fora', 'game-casa', 'game-fora'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+        updWinner();
+        syncFirstLineupGoalsConceded();
+    }));
     const updTicket = () => { 
         const renCk = document.getElementById('game-ren-ni').checked; 
         const pubCk = document.getElementById('game-pub-ni').checked; 
@@ -4041,11 +4045,13 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         const seasonVal = parseInt(document.getElementById('game-temporada').value) || 2026;
         const initialRows = seasonVal <= 2019 ? 14 : 16;
         for(let i=0; i<initialRows; i++) addLineupRow('galo');
+        syncFirstLineupGoalsConceded();
     } else {
         jogoToEdit.cartoesGalo?.forEach(c => addCardRow('galo', c));
         jogoToEdit.cartoesAdv?.forEach(c => addCardRow('adv', c));
         jogoToEdit.lineupGalo?.forEach(l => addLineupRow('galo', l));
         syncLineupSubstitutionsFromEntries();
+        syncFirstLineupGoalsConceded();
         updTicket();
         updWinner();
     }
@@ -4204,6 +4210,30 @@ const syncLineupSubstitutionsFromEntries = () => {
         const prevSub = row.previousElementSibling?.querySelector('.sub-ck');
         if (prevSub) prevSub.checked = true;
     });
+};
+
+const getAdversarioGoalsAgainstAtletico = () => {
+    const casa = document.getElementById('game-casa')?.value;
+    const fora = document.getElementById('game-fora')?.value;
+    const golsCasa = Number.parseInt(document.getElementById('game-gols-casa')?.value, 10) || 0;
+    const golsFora = Number.parseInt(document.getElementById('game-gols-fora')?.value, 10) || 0;
+    if (isAtletico(casa)) return golsFora;
+    if (isAtletico(fora)) return golsCasa;
+    return null;
+};
+
+// O primeiro da escalação (goleiro) recebe os gols marcados pelo adversário.
+const syncFirstLineupGoalsConceded = () => {
+    const firstRow = document.querySelector('#lineup-galo-body tr');
+    const gsInp = firstRow?.querySelector('.gs-inp');
+    if (!gsInp) return;
+
+    const advGols = getAdversarioGoalsAgainstAtletico();
+    if (advGols === null) return;
+    if (String(gsInp.value) === String(advGols)) return;
+
+    gsInp.value = advGols;
+    gsInp.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
 const addLineupRow = (team, data = null) => {
