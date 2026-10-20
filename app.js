@@ -3603,7 +3603,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
         titular: item.titular,
         golsCount: item.golsCount || 0,
         gsCount: 0,
-        substituido: false,
+        substituido: Boolean(item.substituido),
         foto: item.player?.foto || DEFAULT_PLAYER_PHOTO
     }));
 

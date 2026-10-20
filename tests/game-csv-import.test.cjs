@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
     parseGameCsv,
     parseBrazilianDateToIso,
+    expandPlayerSubstitutionChain,
     resolveGameCsvAgainstCatalogs,
     findUniquePlayerForSeason,
     findRegisteredCoachName
@@ -212,4 +213,86 @@ test('campeonato ausente no cadastro vai para missing', () => {
     });
     assert.equal(resolved.match.campeonatoResolved, undefined);
     assert.ok(resolved.missing.some(item => item.campo === 'Campeonato' && item.valor === 'Mineiro'));
+});
+
+test('casa Campeonato Mineiro com cadastro Mineiro', () => {
+    const csv = SAMPLE_CSV.replaceAll('\tMineiro\t', '\tCampeonato Mineiro\t');
+    const parsed = parseGameCsv(csv);
+    const resolved = resolveGameCsvAgainstCatalogs(parsed, {
+        competicoes: [{ campeonato: 'Mineiro' }],
+        adversarios: [{ clube: 'Atlético' }, { clube: 'Tupi' }],
+        estadios: [{ nome: 'Mario Helênio', mandante: 'Atlético' }],
+        arbitros: [],
+        jogadores: [],
+        tecnicosAdversarios: [],
+        tecnicosAtletico: []
+    });
+    assert.equal(resolved.match.campeonatoResolved, 'Mineiro');
+    assert.equal(resolved.filled.Campeonato, 'Mineiro');
+});
+
+test('expande titular (sub1) (sub2) em cadeia de substituições', () => {
+    const chain = expandPlayerSubstitutionChain('Kim (Gutierrez) (Marquinhos)', {
+        titular: true,
+        gols: 1,
+        lineNumber: 4
+    });
+    assert.equal(chain.length, 3);
+    assert.deepEqual(chain.map(p => p.jogador), ['Kim', 'Gutierrez', 'Marquinhos']);
+    assert.equal(chain[0].titular, true);
+    assert.equal(chain[0].substituido, true);
+    assert.equal(chain[0].gols, 1);
+    assert.equal(chain[1].titular, false);
+    assert.equal(chain[1].substituido, true);
+    assert.equal(chain[1].gols, 0);
+    assert.equal(chain[2].titular, false);
+    assert.equal(chain[2].substituido, false);
+});
+
+test('expande forma truncada Gutierrez) (Marquinhos em dois reservas', () => {
+    const chain = expandPlayerSubstitutionChain('Gutierrez) (Marquinhos', {
+        titular: false,
+        gols: 0,
+        lineNumber: 8
+    });
+    assert.equal(chain.length, 2);
+    assert.equal(chain[0].jogador, 'Gutierrez');
+    assert.equal(chain[0].titular, false);
+    assert.equal(chain[0].substituido, true);
+    assert.equal(chain[1].jogador, 'Marquinhos');
+    assert.equal(chain[1].titular, false);
+    assert.equal(chain[1].substituido, false);
+});
+
+test('CSV com cadeia de substituições resolve jogadores separados', () => {
+    const csv = `Data\tCampeonato\tAdversário\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
+09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tNem\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tGutierrez) (Marquinhos\tJogador\t0\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
+    const parsed = parseGameCsv(csv);
+    assert.equal(parsed.players.length, 3);
+    assert.deepEqual(parsed.players.map(p => p.jogador), ['Nem', 'Gutierrez', 'Marquinhos']);
+
+    const resolved = resolveGameCsvAgainstCatalogs(parsed, {
+        competicoes: [{ campeonato: 'Mineiro' }],
+        adversarios: [{ clube: 'Atlético' }, { clube: 'Tupi' }],
+        estadios: [{ nome: 'Mario Helênio', mandante: 'Atlético' }],
+        arbitros: [],
+        jogadores: [
+            { id: 1, id_jogador: 11, nome_guerra: 'Nem', posicao: 'Zagueiro', temporada: '2003' },
+            { id: 2, id_jogador: 22, nome_guerra: 'Gutierrez', posicao: 'Meia', temporada: '2003' },
+            { id: 3, id_jogador: 33, nome_guerra: 'Marquinhos', posicao: 'Atacante', temporada: '2003' }
+        ],
+        tecnicosAdversarios: [],
+        tecnicosAtletico: []
+    });
+
+    assert.equal(resolved.players.length, 3);
+    assert.equal(resolved.players[0].titular, true);
+    assert.equal(resolved.players[1].titular, false);
+    assert.equal(resolved.players[1].substituido, true);
+    assert.equal(resolved.players[2].titular, false);
+    assert.equal(resolved.players[2].substituido, false);
+    assert.equal(resolved.skippedPlayers.length, 0);
+    assert.ok(!resolved.missing.some(item => String(item.valor).includes('Gutierrez)')));
 });

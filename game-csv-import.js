@@ -166,6 +166,73 @@ const isAtleticoClub = (name) => {
     return norm === 'atletico' || norm === 'atletico mg' || norm === 'atletico mineiro';
 };
 
+/**
+ * Expande célula de jogador com cadeia de substituições entre parênteses.
+ *
+ * "Titular (Sub1) (Sub2)" = titular saiu, Sub1 entrou e também saiu, Sub2 entrou.
+ * "Gutierrez) (Marquinhos" = forma truncada da extração com os dois que entraram.
+ */
+const expandPlayerSubstitutionChain = (rawName, { titular = null, gols = 0, funcao = '', lineNumber } = {}) => {
+    const text = String(rawName || '').trim();
+    if (!text) return [];
+
+    const makeEntry = (jogador, opts = {}) => ({
+        jogador,
+        funcao: String(funcao || '').trim(),
+        titular: opts.titular ?? null,
+        gols: opts.gols ?? 0,
+        substituido: Boolean(opts.substituido),
+        lineNumber,
+        fromChain: Boolean(opts.fromChain)
+    });
+
+    const parenSubs = [...text.matchAll(/\(([^)]+)\)/g)]
+        .map(match => String(match[1] || '').trim())
+        .filter(Boolean);
+
+    let base = '';
+    let subs = [];
+
+    if (parenSubs.length >= 2) {
+        base = text.replace(/\([^)]*\)/g, '').replace(/[()]/g, '').trim();
+        subs = parenSubs;
+    } else {
+        // Extração truncada: "Gutierrez) (Marquinhos" ou "Gutierrez) (Marquinhos)"
+        const broken = text.match(/^([^()\n\t]+?)\)\s*\(([^)\n\t]+)\)?\s*$/);
+        if (broken) {
+            const first = broken[1].trim();
+            const second = broken[2].trim();
+            if (first && second) {
+                subs = [first, second];
+            }
+        }
+    }
+
+    if (subs.length < 2) {
+        return [makeEntry(text, { titular, gols, fromChain: false })];
+    }
+
+    const chain = [];
+    if (base) {
+        chain.push(makeEntry(base, {
+            titular: titular === null ? true : titular,
+            gols,
+            substituido: true,
+            fromChain: true
+        }));
+    }
+    subs.forEach((subName, index) => {
+        const isLast = index === subs.length - 1;
+        chain.push(makeEntry(subName, {
+            titular: false,
+            gols: base || index > 0 ? 0 : gols,
+            substituido: !isLast,
+            fromChain: true
+        }));
+    });
+    return chain;
+};
+
 const parseGameCsv = (text) => {
     const source = String(text || '').replace(/^\uFEFF/, '').trim();
     if (!source) {
@@ -263,13 +330,13 @@ const parseGameCsv = (text) => {
         }
         const name = String(row.jogador || '').trim();
         if (!name) return;
-        players.push({
-            jogador: name,
-            funcao: String(row.funcao || '').trim(),
+        const expanded = expandPlayerSubstitutionChain(name, {
             titular: parseTitularCell(row.titular),
             gols: parseIntegerCell(row.gols) ?? 0,
+            funcao: row.funcao,
             lineNumber: row.lineNumber
         });
+        players.push(...expanded);
     });
 
     return { ok: true, error: null, rows, match, players, coaches, delimiter };
@@ -326,7 +393,18 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
     };
 
     tryFill('Campeonato', parsed.match.campeonato, (value) => {
-        const competition = findUniqueByNormalizedName(catalogs.competicoes, 'campeonato', value);
+        const candidates = [value];
+        const stripped = String(value || '').replace(/^campeonato\s+/i, '').trim();
+        if (stripped && normalizeImportText(stripped) !== normalizeImportText(value)) {
+            candidates.push(stripped);
+        }
+        if (stripped) candidates.push(`Campeonato ${stripped}`);
+
+        let competition = null;
+        for (const candidate of candidates) {
+            competition = findUniqueByNormalizedName(catalogs.competicoes, 'campeonato', candidate);
+            if (competition) break;
+        }
         if (!competition) return null;
         resolved.match.campeonatoResolved = competition.campeonato;
         return competition.campeonato;
@@ -478,6 +556,7 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
             id: player.id,
             idJogador: player.id_jogador || null,
             titular: playerRow.titular === null ? true : playerRow.titular,
+            substituido: Boolean(playerRow.substituido),
             golsCount: playerRow.gols || 0
         });
     });
@@ -501,6 +580,7 @@ if (typeof module !== 'undefined') {
         parseGameCsv,
         parseBrazilianDateToIso,
         seasonFromIsoDate,
+        expandPlayerSubstitutionChain,
         findUniqueByNormalizedName,
         findUniquePlayerForSeason,
         findRegisteredCoachName,
