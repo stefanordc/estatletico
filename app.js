@@ -3528,8 +3528,12 @@ const applyResolvedGameCsvToForm = (resolved) => {
         document.getElementById('game-data').dispatchEvent(new Event('change', { bubbles: true }));
     }
 
+    if (match.campeonatoResolved) {
+        document.getElementById('game-campeonato').value = match.campeonatoResolved;
+    }
+
     // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora
-    // com o mandante cadastrado no estádio). Casa/Fora vêm do CSV.
+    // com o mandante cadastrado no estádio). Casa/Fora vêm do CSV / orientação do estádio.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;
@@ -3633,6 +3637,7 @@ const applyGameCsvImportAndAdvance = () => {
 
     const catalogs = {
         adversarios: state.adversarios,
+        competicoes: state.competicoes,
         estadios: state.estadios,
         arbitros: state.arbitros,
         jogadores: state.jogadores,
@@ -3684,7 +3689,9 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         <div class="p-4">
                             <p style="margin:0 0 1rem 0; color:#555; line-height:1.5;">
                                 Cole abaixo o CSV (ou a planilha copiada) com as colunas
-                                <strong>Data, Mandante, Gols do mandante, Gols do visitante, Visitante, Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário</strong>.
+                                <strong>Data, Campeonato, Adversário, Gols do mandante, Gols do visitante, Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário</strong>.
+                                Casa/Fora são definidos pelo adversário e pelo mandante do estádio.
+                                O formato antigo com Mandante/Visitante ainda é aceito.
                                 Só preenchemos o que já estiver cadastrado; o restante fica para você completar manualmente.
                             </p>
                             <div class="form-group">
