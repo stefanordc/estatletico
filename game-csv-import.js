@@ -368,6 +368,7 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
         const referee = findUniqueByNormalizedName(catalogs.arbitros, 'nome', value);
         if (!referee) return null;
         resolved.match.arbitroResolved = referee.nome;
+        resolved.match.arbitroId = referee.id;
         resolved.match.arbitroFederacao = referee.federacao || '';
         return referee.nome;
     });

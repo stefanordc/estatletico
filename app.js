@@ -3420,6 +3420,14 @@ window.saveQuickAdd = async (type, targetInputId) => {
     document.getElementById('quick-add-modal').remove();
 };
 
+const findRegisteredReferee = (rawName) => {
+    const name = String(rawName || '').trim();
+    if (!name || name === 'N/I') return null;
+    return state.arbitros.find(a => a.nome === name)
+        || state.arbitros.find(a => normalizeString(a.nome) === normalizeString(name))
+        || null;
+};
+
 const updateRefereeInfo = () => {
     const fields = [
         { nameId: 'game-arbitro', imgId: 'img-game-arbitro' },
@@ -3429,12 +3437,14 @@ const updateRefereeInfo = () => {
     ];
 
     fields.forEach(f => {
-        const name = document.getElementById(f.nameId)?.value || '';
+        const input = document.getElementById(f.nameId);
         const img = document.getElementById(f.imgId);
-        if (!img) return;
+        if (!input || !img) return;
 
+        const name = input.value || '';
         if (!name || name === 'N/I') {
             img.src = DEFAULT_REF_PHOTO;
+            delete input.dataset.arbitroId;
             if (f.nameId === 'game-arbitro') {
                 const fed = document.getElementById('game-arbitro-federacao');
                 if (fed) fed.value = '';
@@ -3442,15 +3452,32 @@ const updateRefereeInfo = () => {
             return;
         }
 
-        const arb = state.arbitros.find(a => a.nome === name);
-        if (arb) {
-            img.src = arb.foto || DEFAULT_REF_PHOTO;
-            if (f.nameId === 'game-arbitro') {
-                const fed = document.getElementById('game-arbitro-federacao');
-                if (fed) fed.value = arb.federacao || '';
-            }
-        } else {
+        const arb = findRegisteredReferee(name);
+        if (!arb) {
             img.src = DEFAULT_REF_PHOTO;
+            delete input.dataset.arbitroId;
+            return;
+        }
+
+        // Garante o nome exato do cadastro (mesmo padrão de clube/estádio).
+        if (input.value !== arb.nome) input.value = arb.nome;
+        input.dataset.arbitroId = String(arb.id);
+        if (f.nameId === 'game-arbitro') {
+            const fed = document.getElementById('game-arbitro-federacao');
+            if (fed) fed.value = arb.federacao || '';
+        }
+
+        const cached = isUsableMediaSrc(arb.foto) ? arb.foto : '';
+        img.src = cached || DEFAULT_REF_PHOTO;
+
+        // Com formulário aberto a mídia não recarrega sozinha — busca a foto do cadastro.
+        if (arb.id != null && window.EstatleticoSync?.MEDIA_COLUMN?.arbitros) {
+            const expectedName = arb.nome;
+            void requestMedia('arbitros', arb.id).then(photo => {
+                if (!input.isConnected || normalizeString(input.value) !== normalizeString(expectedName)) return;
+                if (!isUsableMediaSrc(photo)) return;
+                img.src = photo;
+            }).catch(error => console.warn('Não foi possível carregar a foto do árbitro.', error));
         }
     });
 };
@@ -3542,6 +3569,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
             arb.parentElement?.classList.remove('disabled');
         }
         arb.value = match.arbitroResolved;
+        if (match.arbitroId != null) arb.dataset.arbitroId = String(match.arbitroId);
         if (match.arbitroFederacao) {
             document.getElementById('game-arbitro-federacao').value = match.arbitroFederacao;
         }
