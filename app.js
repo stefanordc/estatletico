@@ -6811,9 +6811,19 @@ const renderDashboard = () => {
     let gm = 0, gs = 0;
     let cs = 0, cg = 0;
     
-    let artilheirosMap = {};
-    let amarelosMap = {};
-    let vermelhosMap = {};
+    const rankHelpers = {
+        getGlobalId: getGamePlayerGlobalId,
+        resolveById: getPlayerByGlobalId,
+        resolveByReference: getPlayerFromGameReference,
+        normalizeName: normalizeString
+    };
+    const {
+        artilheirosMap,
+        amarelosMap,
+        vermelhosMap
+    } = typeof buildDashboardPlayerRankMaps === 'function'
+        ? buildDashboardPlayerRankMaps(jogos, rankHelpers)
+        : { artilheirosMap: {}, amarelosMap: {}, vermelhosMap: {} };
 
     jogos.forEach(j => {
         // V, E, D
@@ -6861,30 +6871,6 @@ const renderDashboard = () => {
                 if (rValue > 0) { rendaTotal += rValue; jogosComRenda++; }
             }
         }
-        
-        // Artilheiros
-        if(Array.isArray(j.lineupGalo)) {
-            j.lineupGalo.forEach(x => {
-                const gCount = parseInt(x.golsCount) || 0;
-                if(gCount > 0) {
-                    artilheirosMap[x.jogador] = (artilheirosMap[x.jogador] || 0) + gCount;
-                }
-            });
-        }
-        
-        // Cartões
-        if(Array.isArray(j.cartoesGalo)) {
-            j.cartoesGalo.forEach(c => {
-                const pNome = c.jogador;
-                if(!pNome || pNome === 'Adversário') return;
-                
-                const yellow = parseInt(c.amarelo) || 0;
-                const red = parseInt(c.red) || 0;
-                
-                if(yellow > 0) amarelosMap[pNome] = (amarelosMap[pNome] || 0) + yellow;
-                if(red > 0) vermelhosMap[pNome] = (vermelhosMap[pNome] || 0) + red;
-            });
-        }
     });
 
     // Top Cards
@@ -6909,23 +6895,26 @@ const renderDashboard = () => {
     document.getElementById('dash-mgm').innerText = jogosTotal > 0 ? (gm / jogosTotal).toFixed(2) : '0.00';
     document.getElementById('dash-mgs').innerText = jogosTotal > 0 ? (gs / jogosTotal).toFixed(2) : '0.00';
     
-    const totaisAmarelos = Object.values(amarelosMap).reduce((a, b) => a + b, 0);
-    const totaisVermelhos = Object.values(vermelhosMap).reduce((a, b) => a + b, 0);
+    const totaisAmarelos = Object.values(amarelosMap).reduce((a, b) => a + b.count, 0);
+    const totaisVermelhos = Object.values(vermelhosMap).reduce((a, b) => a + b.count, 0);
     document.getElementById('dash-ca').innerText = totaisAmarelos.toLocaleString('pt-BR');
     document.getElementById('dash-cv').innerText = totaisVermelhos.toLocaleString('pt-BR');
 
     // Helper for Rankings
     const renderRank = (mapHash, containerId, colorCount) => {
-        let sorted = Object.entries(mapHash).sort((a,b) => b[1] - a[1]);
+        let sorted = Object.values(mapHash).sort((a, b) =>
+            b.count - a.count || String(a.nome).localeCompare(String(b.nome))
+        );
         
         if (apenasEstrangeiros) {
             const normalize = (str) => (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
             sorted = sorted.filter(item => {
-                const nomeItem = normalize(item[0]);
-                // Coleta TODOS os registros do jogador (pode ter um por temporada)
-                const registros = state.jogadores.filter(p =>
-                    normalize(p.nome_guerra) === nomeItem || normalize(p.nome_completo) === nomeItem
-                );
+                const registros = item.idJogador
+                    ? state.jogadores.filter(p => String(p.id_jogador) === String(item.idJogador))
+                    : state.jogadores.filter(p =>
+                        normalize(p.nome_guerra) === normalize(item.nome)
+                        || normalize(p.nome_completo) === normalize(item.nome)
+                    );
                 // Se não encontrado no cadastro, inclui (não sabemos a nacionalidade)
                 if (registros.length === 0) return true;
                 // Inclui se QUALQUER registro indicar nacionalidade estrangeira (não-Brasil e não vazia)
@@ -6953,16 +6942,17 @@ const renderDashboard = () => {
         
         let htmlBuffer = '';
         sorted.forEach((item, index) => {
-            const player = state.jogadores.find(p => p.nome_guerra === item[0]);
+            const player = item.player || (item.idJogador ? getPlayerByGlobalId(item.idJogador) : null)
+                || state.jogadores.find(p => p.nome_guerra === item.nome);
             const photo = player?.foto ? `<img src="${player.foto}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">` : `<div style="width:30px;height:30px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:0.7rem;"><i class="fas fa-user"></i></div>`;
             htmlBuffer += `
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
                     <div style="display: flex; align-items: center; gap: 0.8rem;">
                         <span style="color: #bdc3c7; font-weight: bold; width: 20px;">#${index+1}</span>
                         ${photo}
-                        <span style="font-weight: 500; color: var(--text-main);">${item[0]}</span>
+                        <span style="font-weight: 500; color: var(--text-main);">${item.nome}</span>
                     </div>
-                    <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item[1].toLocaleString('pt-BR')}</span>
+                    <span style="font-weight: bold; font-size: 1.1rem; color: ${colorCount};">${item.count.toLocaleString('pt-BR')}</span>
                 </div>
             `;
         });
