@@ -3533,7 +3533,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
     }
 
     // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora
-    // com o mandante cadastrado no estádio). Casa/Fora vêm do CSV / orientação do estádio.
+    // com o mandante cadastrado no estádio). Casa/Fora vêm do Mando/CSV.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;
@@ -3689,8 +3689,8 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
                         <div class="p-4">
                             <p style="margin:0 0 1rem 0; color:#555; line-height:1.5;">
                                 Cole abaixo o CSV (ou a planilha copiada) com as colunas
-                                <strong>Data, Campeonato, Adversário, Gols do mandante, Gols do visitante, Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário</strong>.
-                                Casa/Fora são definidos pelo adversário e pelo mandante do estádio.
+                                <strong>Data, Campeonato, Adversário, Mando, Gols do mandante, Gols do visitante, Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário</strong>.
+                                <strong>Mando</strong> = Casa ou Fora (posição do Atlético): define Casa/Fora no formulário.
                                 O formato antigo com Mandante/Visitante ainda é aceito.
                                 Só preenchemos o que já estiver cadastrado; o restante fica para você completar manualmente.
                             </p>

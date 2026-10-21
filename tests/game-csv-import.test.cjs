@@ -4,6 +4,7 @@ const {
     parseGameCsv,
     parseBrazilianDateToIso,
     expandPlayerSubstitutionChain,
+    parseMandoCell,
     resolveGameCsvAgainstCatalogs,
     findUniquePlayerForSeason,
     findRegisteredCoachName
@@ -16,13 +17,17 @@ const SAMPLE_CSV_LEGACY = `Data\tMandante\tGols do mandante\tGols do visitante\t
 27/06/2004\tAtlético\t0\t1\tAtlético PR\tMineirão\t5973\t60089,00\tEdílson Soares da Silva\tAlex Mineiro\tJogador\t1\t1\tLevir Culpi
 27/06/2004\tAtlético\t0\t1\tAtlético PR\tMineirão\t5973\t60089,00\tEdílson Soares da Silva\tPaulo Bonamigo\tTécnico\t\t\tLevir Culpi`;
 
-const SAMPLE_CSV = `Data\tCampeonato\tAdversário\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tVelloso\tJogador\t1\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCicinho\tJogador\t1\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tNeguete\tJogador\t1\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tAlessandro\tJogador\t0\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tKim\tJogador\t1\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
+const SAMPLE_CSV = `Data\tCampeonato\tAdversário\tMando\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tVelloso\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCicinho\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tNeguete\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tAlessandro\tJogador\t0\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tKim\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
+
+const SAMPLE_CSV_MANDO_CASA = `Data\tCampeonato\tAdversário\tMando\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
+13/12/2003\tCampeonato Brasileiro\tGoiás\tCasa\t3\t2\tIpatingão\t7454\t37270,00\tEdílson Soares da Silva\tVelloso\tJogador\t1\t0\tCuca
+13/12/2003\tCampeonato Brasileiro\tGoiás\tCasa\t3\t2\tIpatingão\t7454\t37270,00\tEdílson Soares da Silva\tProcópio Cardoso\tTécnico\t\t\tCuca`;
 
 test('converte data brasileira para ISO', () => {
     assert.equal(parseBrazilianDateToIso('27/06/2004'), '2004-06-27');
@@ -30,7 +35,7 @@ test('converte data brasileira para ISO', () => {
     assert.equal(parseBrazilianDateToIso('2004-06-27'), '2004-06-27');
 });
 
-test('parseia CSV com Campeonato e Adversário', () => {
+test('parseia CSV com Campeonato, Adversário e Mando', () => {
     const parsed = parseGameCsv(SAMPLE_CSV);
     assert.equal(parsed.ok, true);
     assert.equal(parsed.match.format, 'adversario');
@@ -38,6 +43,8 @@ test('parseia CSV com Campeonato e Adversário', () => {
     assert.equal(parsed.match.temporada, '2003');
     assert.equal(parsed.match.campeonato, 'Mineiro');
     assert.equal(parsed.match.adversario, 'Tupi');
+    assert.equal(parsed.match.mando, 'Casa');
+    assert.equal(parsed.match.mandoResolved, 'casa');
     assert.equal(parsed.match.golsMandante, 1);
     assert.equal(parsed.match.golsVisitante, 1);
     assert.equal(parsed.match.estadio, 'Mario Helênio');
@@ -51,41 +58,57 @@ test('parseia CSV com Campeonato e Adversário', () => {
     assert.equal(parsed.coaches[0].tecnicoAdversario, 'José Ângelo');
 });
 
-test('resolve campeonato, adversário e casa/fora pelo mandante do estádio', () => {
-    const parsed = parseGameCsv(SAMPLE_CSV);
+test('Mando Casa coloca Atlético em Casa mesmo se o estádio for do adversário', () => {
+    const parsed = parseGameCsv(SAMPLE_CSV_MANDO_CASA);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
-        competicoes: [{ campeonato: 'Mineiro' }],
-        adversarios: [{ id: 1, clube: 'Atlético' }, { id: 2, clube: 'Tupi' }],
-        estadios: [{ id: 9, nome: 'Mario Helênio', estado: 'MG', pais: 'Brasil', mandante: 'Atlético' }],
-        arbitros: [{ nome: 'Alício Pena Junior', federacao: 'MG' }],
+        competicoes: [{ campeonato: 'Campeonato Brasileiro' }],
+        adversarios: [{ id: 1, clube: 'Atlético' }, { id: 2, clube: 'Goiás' }],
+        estadios: [{ id: 9, nome: 'Ipatingão', estado: 'MG', pais: 'Brasil', mandante: 'Goiás' }],
+        arbitros: [{ nome: 'Edílson Soares da Silva', federacao: 'MG' }],
         jogadores: [
-            { id: 1, id_jogador: 11, nome_guerra: 'Velloso', posicao: 'Goleiro', temporada: '2003' },
-            { id: 2, id_jogador: 22, nome_guerra: 'Cicinho', posicao: 'Lateral', temporada: '2003' },
-            { id: 3, id_jogador: 33, nome_guerra: 'Neguete', posicao: 'Zagueiro', temporada: '2003' },
-            { id: 4, id_jogador: 44, nome_guerra: 'Alessandro', posicao: 'Meia', temporada: '2003' },
-            { id: 5, id_jogador: 55, nome_guerra: 'Kim', posicao: 'Atacante', temporada: '2003' }
+            { id: 1, id_jogador: 11, nome_guerra: 'Velloso', posicao: 'Goleiro', temporada: '2003' }
         ],
-        tecnicosAdversarios: ['José Ângelo'],
-        tecnicosAtletico: ['Celso Roth']
+        tecnicosAdversarios: ['Cuca'],
+        tecnicosAtletico: ['Procópio Cardoso']
     });
 
-    assert.equal(resolved.filled.Campeonato, 'Mineiro');
-    assert.equal(resolved.match.campeonatoResolved, 'Mineiro');
-    assert.equal(resolved.filled.Adversário, 'Tupi');
-    assert.equal(resolved.match.adversarioResolved, 'Tupi');
+    assert.equal(parsed.match.mandoResolved, 'casa');
+    assert.equal(resolved.filled.Mando, 'Casa');
+    assert.equal(resolved.match.orientationSource, 'mando');
+    assert.equal(resolved.match.mandanteFromStadium, false);
     assert.equal(resolved.match.mandanteResolved, 'Atlético');
-    assert.equal(resolved.match.visitanteResolved, 'Tupi');
-    assert.equal(resolved.match.estadioResolved, 'Mario Helênio');
-    assert.equal(resolved.filled.Árbitro, 'Alício Pena Junior');
-    assert.equal(resolved.tecnicoAdversario, 'José Ângelo');
-    assert.equal(resolved.tecnicoAtletico, 'Celso Roth');
-    assert.equal(resolved.players.length, 5);
-    assert.equal(resolved.players[3].titular, false);
-    assert.equal(resolved.skippedPlayers.length, 0);
+    assert.equal(resolved.match.visitanteResolved, 'Goiás');
+    assert.equal(resolved.match.golsMandante, 3);
+    assert.equal(resolved.match.golsVisitante, 2);
+    assert.equal(resolved.filled.Adversário, 'Goiás');
+    assert.equal(resolved.tecnicoAdversario, 'Cuca');
 });
 
-test('quando o estádio é do adversário, Atlético fica visitante', () => {
-    const parsed = parseGameCsv(SAMPLE_CSV);
+test('Mando Fora coloca Atlético em Fora', () => {
+    const csv = SAMPLE_CSV_MANDO_CASA.replaceAll('\tCasa\t', '\tFora\t');
+    const parsed = parseGameCsv(csv);
+    const resolved = resolveGameCsvAgainstCatalogs(parsed, {
+        competicoes: [{ campeonato: 'Campeonato Brasileiro' }],
+        adversarios: [{ clube: 'Atlético' }, { clube: 'Goiás' }],
+        estadios: [{ nome: 'Ipatingão', mandante: 'Atlético' }],
+        arbitros: [],
+        jogadores: [],
+        tecnicosAdversarios: [],
+        tecnicosAtletico: []
+    });
+
+    assert.equal(parsed.match.mandoResolved, 'fora');
+    assert.equal(resolved.filled.Mando, 'Fora');
+    assert.equal(resolved.match.orientationSource, 'mando');
+    assert.equal(resolved.match.mandanteResolved, 'Goiás');
+    assert.equal(resolved.match.visitanteResolved, 'Atlético');
+});
+
+test('sem Mando, casa/fora ainda usam o mandante do estádio', () => {
+    const csv = `Data\tCampeonato\tAdversário\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
+09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tVelloso\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
+    const parsed = parseGameCsv(csv);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
         competicoes: [{ campeonato: 'Mineiro' }],
         adversarios: [{ clube: 'Atlético' }, { clube: 'Tupi' }],
@@ -96,9 +119,16 @@ test('quando o estádio é do adversário, Atlético fica visitante', () => {
         tecnicosAtletico: []
     });
 
+    assert.equal(resolved.match.orientationSource, 'stadium');
     assert.equal(resolved.match.mandanteResolved, 'Tupi');
     assert.equal(resolved.match.visitanteResolved, 'Atlético');
-    assert.equal(resolved.match.adversarioResolved, 'Tupi');
+});
+
+test('parseMandoCell reconhece Casa e Fora', () => {
+    assert.equal(parseMandoCell('Casa'), 'casa');
+    assert.equal(parseMandoCell('fora'), 'fora');
+    assert.equal(parseMandoCell(''), null);
+    assert.equal(parseMandoCell('neutro'), null);
 });
 
 test('ainda parseia e resolve o formato legado Mandante/Visitante', () => {
@@ -216,7 +246,7 @@ test('campeonato ausente no cadastro vai para missing', () => {
 });
 
 test('casa Campeonato Mineiro com cadastro Mineiro', () => {
-    const csv = SAMPLE_CSV.replaceAll('\tMineiro\t', '\tCampeonato Mineiro\t');
+    const csv = SAMPLE_CSV.replaceAll('\tMineiro\tTupi\t', '\tCampeonato Mineiro\tTupi\t');
     const parsed = parseGameCsv(csv);
     const resolved = resolveGameCsvAgainstCatalogs(parsed, {
         competicoes: [{ campeonato: 'Mineiro' }],
@@ -265,10 +295,10 @@ test('expande forma truncada Gutierrez) (Marquinhos em dois reservas', () => {
 });
 
 test('CSV com cadeia de substituições resolve jogadores separados', () => {
-    const csv = `Data\tCampeonato\tAdversário\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tNem\tJogador\t1\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tGutierrez) (Marquinhos\tJogador\t0\t0\tJosé Ângelo
-09/02/2003\tMineiro\tTupi\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
+    const csv = `Data\tCampeonato\tAdversário\tMando\tGols do mandante\tGols do visitante\tEstádio\tPúblico\tRenda\tÁrbitro\tJogador\tFunção\tTitular\tGols\tTécnico adversário
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tNem\tJogador\t1\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tGutierrez) (Marquinhos\tJogador\t0\t0\tJosé Ângelo
+09/02/2003\tMineiro\tTupi\tCasa\t1\t1\tMario Helênio\t18449\t80872,00\tAlício Pena Junior\tCelso Roth\tTécnico\t\t\tJosé Ângelo`;
     const parsed = parseGameCsv(csv);
     assert.equal(parsed.players.length, 3);
     assert.deepEqual(parsed.players.map(p => p.jogador), ['Nem', 'Gutierrez', 'Marquinhos']);

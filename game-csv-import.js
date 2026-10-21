@@ -3,8 +3,10 @@
  * Aceita TSV (colar do Excel/Sheets) e CSV com ; ou ,.
  *
  * Formato atual:
- * Data, Campeonato, Adversário, Gols do mandante, Gols do visitante,
+ * Data, Campeonato, Adversário, Mando, Gols do mandante, Gols do visitante,
  * Estádio, Público, Renda, Árbitro, Jogador, Função, Titular, Gols, Técnico adversário
+ *
+ * Mando = Casa | Fora (posição do Atlético no jogo).
  *
  * Formato legado (ainda aceito):
  * Data, Mandante, Gols do mandante, Gols do visitante, Visitante, ...
@@ -14,6 +16,7 @@ const GAME_CSV_HEADERS = [
     'Data',
     'Campeonato',
     'Adversário',
+    'Mando',
     'Gols do mandante',
     'Gols do visitante',
     'Estádio',
@@ -31,6 +34,7 @@ const MATCH_UNIQUE_FIELDS = [
     'data',
     'campeonato',
     'adversario',
+    'mando',
     'mandante',
     'golsMandante',
     'golsVisitante',
@@ -91,6 +95,7 @@ const HEADER_ALIASES = {
     data: 'data',
     campeonato: 'campeonato',
     adversario: 'adversario',
+    mando: 'mando',
     mandante: 'mandante',
     'gols do mandante': 'golsMandante',
     'gols do visitante': 'golsVisitante',
@@ -151,6 +156,15 @@ const parseTitularCell = (value) => {
     const raw = String(value ?? '').trim().toLowerCase();
     if (raw === '1' || raw === 'true' || raw === 'sim' || raw === 's') return true;
     if (raw === '0' || raw === 'false' || raw === 'nao' || raw === 'não' || raw === 'n') return false;
+    return null;
+};
+
+/** Normaliza Mando do CSV: 'casa' | 'fora' | null */
+const parseMandoCell = (value) => {
+    const norm = normalizeImportText(value);
+    if (!norm) return null;
+    if (norm === 'casa' || norm === 'home' || norm === 'mandante' || norm === 'c') return 'casa';
+    if (norm === 'fora' || norm === 'away' || norm === 'visitante' || norm === 'f') return 'fora';
     return null;
 };
 
@@ -281,6 +295,7 @@ const parseGameCsv = (text) => {
             data: get('data'),
             campeonato: get('campeonato'),
             adversario: get('adversario'),
+            mando: get('mando'),
             mandante: get('mandante'),
             golsMandante: get('golsMandante'),
             golsVisitante: get('golsVisitante'),
@@ -305,6 +320,8 @@ const parseGameCsv = (text) => {
         temporada: seasonFromIsoDate(parseBrazilianDateToIso(first.data)),
         campeonato: first.campeonato,
         adversario: first.adversario,
+        mando: first.mando,
+        mandoResolved: parseMandoCell(first.mando),
         mandante: first.mandante,
         golsMandante: parseIntegerCell(first.golsMandante) ?? 0,
         golsVisitante: parseIntegerCell(first.golsVisitante) ?? 0,
@@ -426,7 +443,8 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
     const atleticoName = atleticoClub?.clube || 'Atlético';
 
     if (parsed.match.format === 'adversario' || (!parsed.match.mandante && parsed.match.adversario)) {
-        // Formato novo: Adversário + orientação Casa/Fora pelo mandante do estádio (só posição).
+        // Formato novo: Adversário + Mando (Casa/Fora do Atlético).
+        // Sem Mando, cai no fallback pelo mandante do estádio.
         let opponentClub = null;
         tryFill('Adversário', parsed.match.adversario, (value) => {
             if (isAtleticoClub(value)) return null;
@@ -437,9 +455,27 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
         });
 
         const opponentName = opponentClub?.clube || '';
-        const stadiumHome = String(stadium?.mandante || '').trim();
-        const atleticoIsHome = isAtleticoClub(stadiumHome)
-            || (!stadiumHome && !opponentName);
+        const mando = parsed.match.mandoResolved || parseMandoCell(parsed.match.mando);
+        resolved.match.mandoResolved = mando;
+
+        let atleticoIsHome;
+        let orientationSource = 'stadium';
+        if (mando === 'casa') {
+            atleticoIsHome = true;
+            orientationSource = 'mando';
+            resolved.filled.Mando = 'Casa';
+        } else if (mando === 'fora') {
+            atleticoIsHome = false;
+            orientationSource = 'mando';
+            resolved.filled.Mando = 'Fora';
+        } else {
+            if (String(parsed.match.mando || '').trim()) {
+                missing.push({ campo: 'Mando', valor: parsed.match.mando });
+            }
+            const stadiumHome = String(stadium?.mandante || '').trim();
+            atleticoIsHome = isAtleticoClub(stadiumHome) || (!stadiumHome && !opponentName);
+            orientationSource = 'stadium';
+        }
 
         if (atleticoIsHome) {
             resolved.match.mandanteResolved = atleticoName;
@@ -456,7 +492,8 @@ const resolveGameCsvAgainstCatalogs = (parsed, catalogs = {}) => {
             resolved.match.visitanteResolved = atleticoName;
             resolved.match.visitanteId = atleticoClub?.id;
         }
-        resolved.match.mandanteFromStadium = false;
+        resolved.match.mandanteFromStadium = orientationSource === 'stadium';
+        resolved.match.orientationSource = orientationSource;
         if (opponentName) resolved.filled['Adversário'] = opponentName;
     } else {
         // Formato legado: Mandante + Visitante do CSV.
@@ -581,6 +618,7 @@ if (typeof module !== 'undefined') {
         parseBrazilianDateToIso,
         seasonFromIsoDate,
         expandPlayerSubstitutionChain,
+        parseMandoCell,
         findUniqueByNormalizedName,
         findUniquePlayerForSeason,
         findRegisteredCoachName,
