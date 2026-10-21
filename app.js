@@ -81,6 +81,9 @@ const state = {
     currentTab: 'adversarios',
     editingId: null,      // For Cadastros
     editingJogoId: null,  // For Jogos
+    // Após importar CSV com Casa/Fora (via Mando), o change do estádio
+    // não pode sobrescrever os times pelo mandante cadastrado no estádio.
+    csvImportTeamsLocked: false,
     currentPage: 1,
     rowsPerPage: 50,
     sortConfig: { column: null, direction: 'asc', tableId: null },
@@ -3514,8 +3517,26 @@ const setFormattedRendaInput = (value) => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+const applyCsvTeamsToForm = (match) => {
+    if (match.mandanteResolved) {
+        const casaInp = document.getElementById('game-casa');
+        casaInp.value = match.mandanteResolved;
+        if (match.mandanteId != null) casaInp.dataset.adversarioId = String(match.mandanteId);
+        else delete casaInp.dataset.adversarioId;
+        updateGameClubCrest('game-casa');
+    }
+    if (match.visitanteResolved) {
+        const foraInp = document.getElementById('game-fora');
+        foraInp.value = match.visitanteResolved;
+        if (match.visitanteId != null) foraInp.dataset.adversarioId = String(match.visitanteId);
+        else delete foraInp.dataset.adversarioId;
+        updateGameClubCrest('game-fora');
+    }
+};
+
 const applyResolvedGameCsvToForm = (resolved) => {
     const match = resolved.match || {};
+    state.csvImportTeamsLocked = Boolean(match.mandanteResolved || match.visitanteResolved);
 
     // Não dispara input em temporada aqui: o listener recria a escalação vazia
     // e apagaria os jogadores que acabamos de importar do CSV.
@@ -3532,8 +3553,8 @@ const applyResolvedGameCsvToForm = (resolved) => {
         document.getElementById('game-campeonato').value = match.campeonatoResolved;
     }
 
-    // Preenche o estádio sem disparar change (ele sobrescreveria casa/fora
-    // com o mandante cadastrado no estádio). Casa/Fora vêm do Mando/CSV.
+    // Preenche o estádio sem disparar change. Casa/Fora vêm do Mando/CSV e
+    // são reaplicados no fim para ganhar de qualquer listener do estádio.
     if (match.estadioResolved) {
         const estInp = document.getElementById('game-estadio');
         estInp.value = match.estadioResolved;
@@ -3547,18 +3568,7 @@ const applyResolvedGameCsvToForm = (resolved) => {
         updateGameStadiumPhoto();
     }
 
-    if (match.mandanteResolved) {
-        const casaInp = document.getElementById('game-casa');
-        casaInp.value = match.mandanteResolved;
-        if (match.mandanteId != null) casaInp.dataset.adversarioId = String(match.mandanteId);
-        updateGameClubCrest('game-casa');
-    }
-    if (match.visitanteResolved) {
-        const foraInp = document.getElementById('game-fora');
-        foraInp.value = match.visitanteResolved;
-        if (match.visitanteId != null) foraInp.dataset.adversarioId = String(match.visitanteId);
-        updateGameClubCrest('game-fora');
-    }
+    applyCsvTeamsToForm(match);
 
     document.getElementById('game-gols-casa').value = match.golsMandante ?? 0;
     document.getElementById('game-gols-fora').value = match.golsVisitante ?? 0;
@@ -3618,6 +3628,9 @@ const applyResolvedGameCsvToForm = (resolved) => {
     }
     syncLineupSubstitutionsFromEntries();
     syncFirstLineupGoalsConceded();
+
+    // Garante Casa/Fora do Mando após foto/listeners do estádio.
+    applyCsvTeamsToForm(match);
 };
 
 const applyGameCsvImportAndAdvance = () => {
@@ -3670,6 +3683,7 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
 
     state.isFormActive = true; // Ativa trava de segurança
     state.editingJogoId = jogoToEdit ? jogoToEdit.id : null;
+    state.csvImportTeamsLocked = false;
     showSection('novo-jogo');
     novoJogoContainer.innerHTML = `
         <div class="p-4" style="background: white; border-radius: var(--border-radius); box-shadow: var(--shadow);">
@@ -3898,19 +3912,22 @@ const renderNovoJogoPage = (jogoToEdit = null) => {
         if (est) { 
             document.getElementById('game-estadio-estado').value = est.estado; 
             document.getElementById('game-estadio-pais').value = est.pais; 
-            if (est.mandante && est.mandante !== 'Atlético' && est.mandante !== 'Atlético-MG') { 
-                document.getElementById('game-casa').value = est.mandante; 
-                document.getElementById('game-fora').value = 'Atlético'; 
-            } else if (!est.mandante) {
-                // Sem mandante definido: Atlético no Fora, Casa vazio
-                document.getElementById('game-casa').value = ''; 
-                document.getElementById('game-fora').value = 'Atlético';
-            } else {
-                // Mandante é o Atlético
-                document.getElementById('game-casa').value = est.mandante; 
-                document.getElementById('game-fora').value = '';
+            // Com CSV/Mando já aplicado, não sobrescreve Casa/Fora pelo mandante do estádio.
+            if (!state.csvImportTeamsLocked) {
+                if (est.mandante && est.mandante !== 'Atlético' && est.mandante !== 'Atlético-MG') { 
+                    document.getElementById('game-casa').value = est.mandante; 
+                    document.getElementById('game-fora').value = 'Atlético'; 
+                } else if (!est.mandante) {
+                    // Sem mandante definido: Atlético no Fora, Casa vazio
+                    document.getElementById('game-casa').value = ''; 
+                    document.getElementById('game-fora').value = 'Atlético';
+                } else {
+                    // Mandante é o Atlético
+                    document.getElementById('game-casa').value = est.mandante; 
+                    document.getElementById('game-fora').value = '';
+                }
+                updateGameClubCrests();
             }
-            updateGameClubCrests();
         }
         updateGameStadiumPhoto();
     });
